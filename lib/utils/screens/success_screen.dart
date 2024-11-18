@@ -47,15 +47,16 @@ class _SuccessScreenState extends State<SuccessScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Text(
+                  const Text(
                     'User ID:',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       color: Colors.black,
                     ),
                   ),
                   const SizedBox(height: 32),
-                  CustomButtons.primaryButton(text: AppStrings.buttonContinue, onPressed: () {})
+                  CustomButtons.primaryButton(
+                      text: AppStrings.buttonContinue, onPressed: () {})
                 ],
               ),
             ),

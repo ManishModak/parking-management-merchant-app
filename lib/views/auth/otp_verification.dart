@@ -83,7 +83,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.inputBorderFocused,width: 2),
+                        borderSide: const BorderSide(
+                            color: AppColors.inputBorderFocused, width: 2),
                       ),
                     ),
                     onChanged: (value) {

@@ -28,10 +28,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               child: Column(
                 children: [
                   _buildSettingsItem(
-                    icon: Icons.person_outline,
-                    title: 'My Account',
-                    subtitle: 'Make changes to your account'
-                  ),
+                      icon: Icons.person_outline,
+                      title: 'My Account',
+                      subtitle: 'Make changes to your account'),
                   _buildSettingsItem(
                     icon: Icons.lock_outline,
                     title: 'Face ID / Touch ID',
@@ -107,14 +106,15 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       ),
       subtitle: subtitle != null
           ? Text(
-        subtitle,
-        style: const TextStyle(
-          fontSize: 12,
-          color: Colors.grey,
-        ),
-      )
+              subtitle,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+            )
           : null,
-      trailing: trailingIcon ?? const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16),
+      trailing: trailingIcon ??
+          const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16),
       onTap: onTap,
     );
   }

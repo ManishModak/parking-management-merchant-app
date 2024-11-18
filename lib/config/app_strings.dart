@@ -5,10 +5,14 @@ class AppStrings {
   // Screen messages
   static const String welcomeMessage = 'Welcome To Merchant App';
   static const String loginMessage = 'Welcome Back\nYou\'ve Been Missed!';
-  static const String registerMessage = 'Create An Account \nSo You Can Explore The Platform';
-  static const String verificationMessage = 'We Have Sent The Verification Code To Your Mobile No.';
-  static const String loadingMessage = "Please wait while we verify your credentials";
-  static const String successMessage = "Congratulations! You have been\nsuccessfully authenticated";
+  static const String registerMessage =
+      'Create An Account \nSo You Can Explore The Platform';
+  static const String verificationMessage =
+      'We Have Sent The Verification Code To Your Mobile No.';
+  static const String loadingMessage =
+      "Please wait while we verify your credentials";
+  static const String successMessage =
+      "Congratulations! You have been\nsuccessfully authenticated";
 
   // Button labels
   static const String buttonLogin = 'LOGIN';
@@ -25,7 +29,6 @@ class AppStrings {
   static const String titleSuccess = "Success";
   static const String titlePlazas = "Plazas";
   static const String titleDashboard = "Dashboard";
-
 
   // Input field labels
   static const String labelPassword = 'Password';

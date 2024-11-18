@@ -39,4 +39,8 @@ class AppColors {
   static const Color darkThemeBackground = Color(0xFF121212);
   static const Color darkThemeTitle = Color(0xFF00FFFF);
   static const Color lightThemeTitle = Colors.black;
+
+  //Card Colors
+  static Color? primaryCard = Colors.teal[200];
+  static Color? secondaryCard = Colors.teal;
 }

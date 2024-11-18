@@ -62,13 +62,13 @@ class WelcomeScreen extends StatelessWidget {
                   const SizedBox(height: 25),
                   CustomButtons.primaryButton(
                       text: AppStrings.buttonLogin,
-                      onPressed: () =>
-                          Navigator.pushReplacementNamed(context, AppRoutes.login)),
+                      onPressed: () => Navigator.pushReplacementNamed(
+                          context, AppRoutes.login)),
                   const SizedBox(height: 15),
                   CustomButtons.secondaryButton(
                       text: AppStrings.buttonRegister,
-                      onPressed: () =>
-                          Navigator.pushReplacementNamed(context, AppRoutes.register)),
+                      onPressed: () => Navigator.pushReplacementNamed(
+                          context, AppRoutes.register)),
                 ],
               ),
             ),

@@ -1,6 +1,6 @@
 class AppConfig {
-  static var deviceWidth ;
-  static var deviceHeight ;
+  static var deviceWidth;
+  static var deviceHeight;
 
   // Feature flags
   static const bool enableBiometrics = true;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
+import 'package:merchant_app/models/notification_model.dart';
 
 class CustomIcons {
   static Widget backIconBlack() {
@@ -76,6 +77,51 @@ class CustomIcons {
           color: AppColors.iconBlack,
         ),
       ),
+    );
+  }
+
+  static Widget buildNotificationIcon(NotificationModel notification) {
+    IconData iconData;
+    Color iconColor;
+
+    switch (notification.type) {
+      case NotificationType.newBooking:
+        iconData = Icons.local_parking;
+        iconColor = Colors.blue;
+        break;
+      case NotificationType.paymentReceived:
+        iconData = Icons.payment;
+        iconColor = Colors.green;
+        break;
+      case NotificationType.disputeRaised:
+        iconData = Icons.warning;
+        iconColor = Colors.orange;
+        break;
+      case NotificationType.disputeResolved:
+        iconData = Icons.check_circle;
+        iconColor = Colors.green;
+        break;
+      case NotificationType.plazaAlert:
+        iconData = Icons.notifications_active;
+        iconColor = Colors.red;
+        break;
+      case NotificationType.accountUpdate:
+        iconData = Icons.person;
+        iconColor = Colors.purple;
+        break;
+      case NotificationType.system:
+        iconData = Icons.info;
+        iconColor = Colors.grey;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: iconColor.withOpacity(0.1),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(iconData, color: iconColor),
     );
   }
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:merchant_app/utils/components/navigationbar.dart';
-import 'package:merchant_app/views/Transaction.dart';
-import 'package:merchant_app/views/account/settings.dart';
-import 'package:merchant_app/views/control_center.dart';
+import 'package:merchant_app/views/transaction.dart';
+import 'package:merchant_app/views/settings.dart';
+import 'package:merchant_app/views/menu.dart';
 import 'package:merchant_app/views/notification.dart';
 import 'dashboard.dart';
 
@@ -18,7 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> _screens = [
     const TransactionScreen(),
-    const ControlCenterScreen(),
+    const MenuScreen(),
     const DashboardScreen(),
     const NotificationsScreen(),
     const AccountSettingsScreen(),
@@ -33,9 +33,20 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: CustomNavigationBar(selectedIndex: _selectedIndex, onItemTapped: _onItemTapped),
-      //bottomNavigationBar: CustomNavigation.navbar(selectedIndex: _selectedIndex,onItemTapped: _onItemTapped),
+      body: Stack(
+        children: [
+          _screens[_selectedIndex],
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: CustomNavigationBar(
+              selectedIndex: _selectedIndex,
+              onItemTapped: _onItemTapped,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

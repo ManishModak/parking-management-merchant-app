@@ -76,13 +76,21 @@ class CustomButtons {
     required VoidCallback onPressed,
     required bool darkBackground,
   }) {
-    return IconButton(onPressed: onPressed, icon: darkBackground ? CustomIcons.backIconWhite() : CustomIcons.backIconBlack());
+    return IconButton(
+        onPressed: onPressed,
+        icon: darkBackground
+            ? CustomIcons.backIconWhite()
+            : CustomIcons.backIconBlack());
   }
 
   static Widget downloadIconButton({
     required VoidCallback onPressed,
     required bool darkBackground,
   }) {
-    return IconButton(onPressed: onPressed, icon: darkBackground ? CustomIcons.backIconWhite() : CustomIcons.downloadIconBlack());
+    return IconButton(
+        onPressed: onPressed,
+        icon: darkBackground
+            ? CustomIcons.backIconWhite()
+            : CustomIcons.downloadIconBlack());
   }
 }

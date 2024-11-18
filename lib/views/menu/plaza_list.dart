@@ -69,9 +69,8 @@ class _PlazaListScreenState extends State<PlazaListScreen> {
                   ElevatedButton(
                     onPressed: () {
                       // Schedule the fetch after the current build
-                      Future.microtask(() =>
-                          viewModel.fetchUserPlazas('current_user_id')
-                      );
+                      Future.microtask(
+                          () => viewModel.fetchUserPlazas('current_user_id'));
                     },
                     child: const Text('Retry'),
                   ),

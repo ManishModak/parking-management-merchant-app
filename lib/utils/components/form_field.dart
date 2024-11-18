@@ -37,22 +37,25 @@ class CustomFormFields {
                   width: 2,
                 ),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               suffixIcon: isPassword
                   ? Padding(
-                padding: const EdgeInsets.only(right: 10),
-                child: IconButton(
-                  icon: Icon(
-                    hidePassword ? Icons.visibility_off : Icons.visibility,
-                    color: AppColors.primary,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      hidePassword = !hidePassword;
-                    });
-                  },
-                ),
-              )
+                      padding: const EdgeInsets.only(right: 10),
+                      child: IconButton(
+                        icon: Icon(
+                          hidePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: AppColors.primary,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            hidePassword = !hidePassword;
+                          });
+                        },
+                      ),
+                    )
                   : null,
             ),
             style: const TextStyle(fontSize: 16),
@@ -61,5 +64,4 @@ class CustomFormFields {
       },
     );
   }
-
 }

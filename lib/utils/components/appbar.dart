@@ -14,7 +14,8 @@ class CustomAppBar {
         onPressed: onPressed,
         darkBackground: darkBackground,
       ),
-      backgroundColor: darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
+      backgroundColor:
+          darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
       toolbarHeight: 125,
       centerTitle: true,
       title: Text(
@@ -46,7 +47,8 @@ class CustomAppBar {
         darkBackground: darkBackground,
       ),
       actions: actions,
-      backgroundColor: darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
+      backgroundColor:
+          darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
       toolbarHeight: 100,
       centerTitle: true,
       title: Text(
@@ -71,22 +73,26 @@ class CustomAppBar {
     required List<Widget> actions,
   }) {
     return AppBar(
+      automaticallyImplyLeading: false,
       actions: actions,
-      backgroundColor: darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
+      backgroundColor:
+          darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
       toolbarHeight: 100,
-      centerTitle: true,
-      title: Text(
-        screenTitle,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 26,
-          color: darkBackground
-              ? AppColors.darkThemeTitle
-              : AppColors.lightThemeTitle,
+      title: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          screenTitle,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 26,
+            color: darkBackground
+                ? AppColors.darkThemeTitle
+                : AppColors.lightThemeTitle,
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
-        textAlign: TextAlign.center,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -97,7 +103,8 @@ class CustomAppBar {
   }) {
     return AppBar(
       automaticallyImplyLeading: false,
-      backgroundColor: darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
+      backgroundColor:
+          darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
       toolbarHeight: 75,
       centerTitle: true,
       title: Text(

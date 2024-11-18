@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
-import 'package:merchant_app/config/app_config.dart';
 import 'package:merchant_app/config/app_routes.dart';
 import 'package:merchant_app/config/app_strings.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
@@ -48,10 +47,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar:  CustomAppBar.appBarWithNavigation(
+      appBar: CustomAppBar.appBarWithNavigation(
           screenTitle: AppStrings.titleRegister,
           onPressed: () {
-            Navigator.pushReplacementNamed(context,AppRoutes.initial);
+            Navigator.pushReplacementNamed(context, AppRoutes.initial);
           },
           darkBackground: false),
       backgroundColor: AppColors.lightThemeBackground,

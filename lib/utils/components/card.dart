@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/config/app_config.dart';
 import 'package:merchant_app/models/notification_model.dart';
+import 'package:merchant_app/models/transaction_model.dart';
+import 'package:merchant_app/utils/components/icon.dart';
 import 'package:merchant_app/viewmodels/notification_viewmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -38,9 +40,9 @@ class CustomCards {
                     borderRadius: BorderRadius.circular(25),
                     image: imageUrl.isNotEmpty
                         ? DecorationImage(
-                      image: NetworkImage(imageUrl),
-                      fit: BoxFit.cover,
-                    )
+                            image: NetworkImage(imageUrl),
+                            fit: BoxFit.cover,
+                          )
                         : null,
                   ),
                 ),
@@ -119,23 +121,30 @@ class CustomCards {
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (direction) {
-        context.read<NotificationsViewModel>().deleteNotification(notification.id);
+        context
+            .read<NotificationsViewModel>()
+            .deleteNotification(notification.id);
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
         child: Card(
-          elevation: 0,
+          elevation: 5,
           color: Colors.teal[100],
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(24),
+            side: const BorderSide(
+              color: Colors.black, // Set the border color
+              width: 2, // Set the border width
+            ),
           ),
           child: ListTile(
-            leading: _buildNotificationIcon(notification),
+            leading: CustomIcons.buildNotificationIcon(notification),
             title: Text(
               notification.title,
               style: TextStyle(
                 fontSize: 16,
-                fontWeight: notification.isRead ? FontWeight.normal : FontWeight.w500,
+                fontWeight:
+                    notification.isRead ? FontWeight.normal : FontWeight.w500,
               ),
             ),
             subtitle: Column(
@@ -167,52 +176,8 @@ class CustomCards {
     );
   }
 
-  static Widget _buildNotificationIcon(NotificationModel notification) {
-    IconData iconData;
-    Color iconColor;
-
-    switch (notification.type) {
-      case NotificationType.newBooking:
-        iconData = Icons.local_parking;
-        iconColor = Colors.blue;
-        break;
-      case NotificationType.paymentReceived:
-        iconData = Icons.payment;
-        iconColor = Colors.green;
-        break;
-      case NotificationType.disputeRaised:
-        iconData = Icons.warning;
-        iconColor = Colors.orange;
-        break;
-      case NotificationType.disputeResolved:
-        iconData = Icons.check_circle;
-        iconColor = Colors.green;
-        break;
-      case NotificationType.plazaAlert:
-        iconData = Icons.notifications_active;
-        iconColor = Colors.red;
-        break;
-      case NotificationType.accountUpdate:
-        iconData = Icons.person;
-        iconColor = Colors.purple;
-        break;
-      case NotificationType.system:
-        iconData = Icons.info;
-        iconColor = Colors.grey;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: iconColor.withOpacity(0.1),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(iconData, color: iconColor),
-    );
-  }
-
-  static void _handleNotificationTap(BuildContext context, NotificationModel notification) {
+  static void _handleNotificationTap(
+      BuildContext context, NotificationModel notification) {
     if (!notification.isRead) {
       context.read<NotificationsViewModel>().markAsRead(notification.id);
     }
@@ -220,16 +185,19 @@ class CustomCards {
     switch (notification.type) {
       case NotificationType.newBooking:
         if (notification.bookingId != null) {
-          Navigator.pushNamed(context, '/booking-details', arguments: notification.bookingId);
+          Navigator.pushNamed(context, '/booking-details',
+              arguments: notification.bookingId);
         }
         break;
       case NotificationType.disputeRaised:
       case NotificationType.disputeResolved:
-        Navigator.pushNamed(context, '/dispute-details', arguments: notification.bookingId);
+        Navigator.pushNamed(context, '/dispute-details',
+            arguments: notification.bookingId);
         break;
       case NotificationType.plazaAlert:
         if (notification.plazaId != null) {
-          Navigator.pushNamed(context, '/plaza-details', arguments: notification.plazaId);
+          Navigator.pushNamed(context, '/plaza-details',
+              arguments: notification.plazaId);
         }
         break;
       default:
@@ -253,5 +221,98 @@ class CustomCards {
     } else {
       return 'Just now';
     }
+  }
+
+  static Widget transactionCard(
+      {required TransactionModel transaction, required BuildContext context}) {
+    return Card(
+      elevation: 5,
+      color: Colors.teal[100],
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(
+          color: Colors.black, // Set the border color
+          width: 2, // Set the border width
+        ),
+      ),
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      child: ListTile(
+        title: Text(transaction.title),
+        subtitle: Text('${transaction.amount}'),
+        trailing: Icon(
+          transaction.type == TransactionType.payment
+              ? Icons.arrow_downward
+              : Icons.arrow_upward,
+          color: transaction.type == TransactionType.payment
+              ? Colors.green
+              : Colors.red,
+        ),
+        onTap: () {
+          // Handle onTap if needed (e.g., show details or edit transaction)
+        },
+      ),
+    );
+  }
+
+  static Widget menuCard({
+    required String title,
+    required String value,
+    VoidCallback? onTap,
+    Color? backgroundColor,
+    Color? valueColor,
+    Widget? icon,
+  }) {
+    return Card(
+      elevation: 5, // Shadow depth
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(
+          color: Colors.black, // Set the border color
+          width: 2, // Set the border width
+        ),
+      ),
+      color: backgroundColor,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16), // Match card's border radius
+        onTap: onTap,
+        splashColor: Colors.white.withOpacity(0.2), // Optional ripple color
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.black,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: valueColor ?? Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  icon ??
+                      const Icon(
+                        Icons.chevron_right,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

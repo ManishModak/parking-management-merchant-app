@@ -4,14 +4,14 @@ import 'package:merchant_app/utils/screens/success_screen.dart';
 import 'package:merchant_app/views/auth/otp_verification.dart';
 import 'package:merchant_app/views/home.dart';
 import 'package:merchant_app/views/notification.dart';
-import 'package:merchant_app/views/plaza/plaza_info.dart';
+import 'package:merchant_app/views/Menu/plaza_info.dart';
 
 import '../views/auth/login.dart';
 import '../views/auth/register.dart';
 import '../views/auth/forgot_password.dart';
 import '../views/dashboard.dart';
-import '../views/onboarding/welcome.dart';
-import '../views/plaza/plaza_list.dart';
+import '../views/welcome.dart';
+import '../views/Menu/plaza_list.dart';
 
 class AppRoutes {
   static const String initial = '/';

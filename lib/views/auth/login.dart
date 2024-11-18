@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
-import 'package:merchant_app/config/app_config.dart';
 import 'package:merchant_app/config/app_routes.dart';
 import 'package:merchant_app/config/app_strings.dart';
 import 'package:merchant_app/utils/components/appbar.dart';

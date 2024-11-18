@@ -1,3 +1,1 @@
-class AuthService {
-
-}
+class AuthService {}

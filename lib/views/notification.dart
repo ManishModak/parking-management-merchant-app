@@ -11,9 +11,7 @@ class NotificationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar.appBarWithTitle(
-          screenTitle: 'Notifications',
-          darkBackground: false
-      ),
+          screenTitle: 'Notifications', darkBackground: false),
       body: Consumer<NotificationsViewModel>(
         builder: (context, viewModel, child) {
           final notifications = viewModel.getNotifications();
@@ -35,7 +33,8 @@ class NotificationsScreen extends StatelessWidget {
             itemCount: notifications.length,
             itemBuilder: (context, index) {
               final notification = notifications[index];
-              return CustomCards.notificationCard(notification: notification, context: context);
+              return CustomCards.notificationCard(
+                  notification: notification, context: context);
             },
           );
         },

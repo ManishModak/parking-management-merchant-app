@@ -9,7 +9,7 @@ class AuthViewModel extends ChangeNotifier {
   String _userIdError = '';
   String _passwordError = '';
   String _generalError = '';
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   AuthViewModel(this._authService);
 
@@ -37,8 +37,8 @@ class AuthViewModel extends ChangeNotifier {
     bool isValid = true;
     bool shouldNotify = false;
 
-    if(userId.isEmpty) {
-      _userIdError = AppStrings.errorUserIdEmpty ;
+    if (userId.isEmpty) {
+      _userIdError = AppStrings.errorUserIdEmpty;
       isValid = false;
       shouldNotify = true;
     } else if (userId.isNotEmpty) {
@@ -59,15 +59,15 @@ class AuthViewModel extends ChangeNotifier {
       shouldNotify = true;
     }
 
-    if(!isLogin) {
-      if(password != repeatPassword) {
+    if (!isLogin) {
+      if (password != repeatPassword) {
         _passwordError = AppStrings.errorPasswordMismatch;
         isValid = false;
         shouldNotify = true;
       }
     }
 
-    if(shouldNotify) {
+    if (shouldNotify) {
       notifyListeners();
     }
     return isValid;

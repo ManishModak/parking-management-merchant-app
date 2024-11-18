@@ -21,7 +21,7 @@ class PlazaViewModel extends ChangeNotifier {
       _isLoading = true;
       _error = null;
       notifyListeners();
-      await Future.delayed(const Duration(seconds: 5));  // TODO: Remove Future
+      await Future.delayed(const Duration(seconds: 5)); // TODO: Remove Future
       _userPlazas = [
         Plaza(
           id: '1',
