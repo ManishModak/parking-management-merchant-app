@@ -10,9 +10,6 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    AppConfig.deviceWidth = MediaQuery.of(context).size.width;
-    AppConfig.deviceHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(

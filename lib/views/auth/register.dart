@@ -19,13 +19,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _userIdController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _repeatPasswordController =
-      TextEditingController();
+  TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
 
   @override
   void dispose() {
     _userIdController.dispose();
     _passwordController.dispose();
-    _repeatPasswordController.dispose(); // Added missing disposal
+    _repeatPasswordController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -34,25 +36,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     authVM.clearErrors();
   }
 
-  Future<void> _handleRegister(BuildContext context) async {
-    final authVM = Provider.of<AuthViewModel>(context, listen: false);
-    authVM.clearErrors();
-
-    if (authVM.validateCredentials(_userIdController.text,
-        _passwordController.text, _repeatPasswordController.text, false)) {
-      Navigator.pushNamed(context, AppRoutes.otpVerification);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar.appBarWithNavigation(
-          screenTitle: AppStrings.titleRegister,
-          onPressed: () {
-            Navigator.pushReplacementNamed(context, AppRoutes.initial);
-          },
-          darkBackground: false),
+        screenTitle: AppStrings.titleRegister,
+        onPressed: () {
+          Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+        },
+        darkBackground: false,
+      ),
       backgroundColor: AppColors.lightThemeBackground,
       body: Column(
         children: [
@@ -72,64 +65,87 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 40),
                       CustomFormFields.primaryFormField(
-                          label: AppStrings.labelMobileNumber,
-                          controller: _userIdController,
-                          keyboardType: TextInputType.phone,
-                          // Changed to phone type
-                          isPassword: false),
+                        label: AppStrings.labelEmail,
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        isPassword: false,
+                      ),
                       Consumer<AuthViewModel>(
                         builder: (context, authVM, _) =>
-                            authVM.userIdError.isNotEmpty
-                                ? Padding(
-                                    padding:
-                                        const EdgeInsets.only(top: 8, left: 12),
-                                    child: Text(
-                                      authVM.userIdError,
-                                      style: const TextStyle(
-                                          color: Colors.red, fontSize: 12),
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
+                        authVM.emailError.isNotEmpty
+                            ? Padding(
+                          padding:
+                          const EdgeInsets.only(top: 8, left: 12),
+                          child: Text(
+                            authVM.emailError,
+                            style: const TextStyle(
+                                color: Colors.red, fontSize: 12),
+                          ),
+                        )
+                            : const SizedBox.shrink(),
                       ),
                       const SizedBox(height: 16),
                       CustomFormFields.primaryFormField(
-                          label: AppStrings.labelPassword,
-                          controller: _passwordController,
-                          keyboardType: TextInputType.visiblePassword,
-                          isPassword: true),
+                        label: AppStrings.labelMobileNumber,
+                        controller: _userIdController,
+                        keyboardType: TextInputType.phone,
+                        isPassword: false,
+                      ),
                       Consumer<AuthViewModel>(
                         builder: (context, authVM, _) =>
-                            authVM.passwordError.isNotEmpty
-                                ? Padding(
-                                    padding:
-                                        const EdgeInsets.only(top: 8, left: 12),
-                                    child: Text(
-                                      authVM.passwordError,
-                                      style: const TextStyle(
-                                          color: Colors.red, fontSize: 12),
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
+                        authVM.userIdError.isNotEmpty
+                            ? Padding(
+                          padding:
+                          const EdgeInsets.only(top: 8, left: 12),
+                          child: Text(
+                            authVM.userIdError,
+                            style: const TextStyle(
+                                color: Colors.red, fontSize: 12),
+                          ),
+                        )
+                            : const SizedBox.shrink(),
                       ),
                       const SizedBox(height: 16),
                       CustomFormFields.primaryFormField(
-                          label: AppStrings.labelRepeatPassword,
-                          controller: _repeatPasswordController,
-                          keyboardType: TextInputType.visiblePassword,
-                          isPassword: true),
+                        label: AppStrings.labelPassword,
+                        controller: _passwordController,
+                        keyboardType: TextInputType.visiblePassword,
+                        isPassword: true,
+                      ),
                       Consumer<AuthViewModel>(
                         builder: (context, authVM, _) =>
-                            authVM.passwordError.isNotEmpty
-                                ? Padding(
-                                    padding:
-                                        const EdgeInsets.only(top: 8, left: 12),
-                                    child: Text(
-                                      authVM.passwordError,
-                                      style: const TextStyle(
-                                          color: Colors.red, fontSize: 12),
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
+                        authVM.passwordError.isNotEmpty
+                            ? Padding(
+                          padding:
+                          const EdgeInsets.only(top: 8, left: 12),
+                          child: Text(
+                            authVM.passwordError,
+                            style: const TextStyle(
+                                color: Colors.red, fontSize: 12),
+                          ),
+                        )
+                            : const SizedBox.shrink(),
+                      ),
+                      const SizedBox(height: 16),
+                      CustomFormFields.primaryFormField(
+                        label: AppStrings.labelRepeatPassword,
+                        controller: _repeatPasswordController,
+                        keyboardType: TextInputType.visiblePassword,
+                        isPassword: true,
+                      ),
+                      Consumer<AuthViewModel>(
+                        builder: (context, authVM, _) =>
+                        authVM.passwordError.isNotEmpty
+                            ? Padding(
+                          padding:
+                          const EdgeInsets.only(top: 8, left: 12),
+                          child: Text(
+                            authVM.passwordError,
+                            style: const TextStyle(
+                                color: Colors.red, fontSize: 12),
+                          ),
+                        )
+                            : const SizedBox.shrink(),
                       ),
                       const SizedBox(height: 24),
                       Consumer<AuthViewModel>(
@@ -137,19 +153,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           text: AppStrings.buttonRegister,
                           onPressed: authVM.isLoading
                               ? () {}
-                              : () => _handleRegister(context),
+                              : () {
+                            Navigator.pushNamed(
+                              context,
+                              AppRoutes.setUsername,
+                              arguments: {
+                                'email': _emailController.text,
+                                'password': _passwordController.text,
+                                'repeatPassword': _repeatPasswordController.text,
+                                'mobileNo': _userIdController.text,  // Correct key used
+                              },
+                            );
+                          },
                         ),
                       ),
+
                       const SizedBox(height: 16),
                       Consumer<AuthViewModel>(
                         builder: (_, authVM, __) =>
-                            authVM.generalError.isNotEmpty
-                                ? Text(
-                                    authVM.generalError,
-                                    style: const TextStyle(color: Colors.red),
-                                    textAlign: TextAlign.center,
-                                  )
-                                : const SizedBox.shrink(),
+                        authVM.generalError.isNotEmpty
+                            ? Text(
+                          authVM.generalError,
+                          style: const TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
+                        )
+                            : const SizedBox.shrink(),
                       ),
                       const SizedBox(height: 16),
                       TextButton(

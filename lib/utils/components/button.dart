@@ -93,4 +93,43 @@ class CustomButtons {
             ? CustomIcons.backIconWhite()
             : CustomIcons.downloadIconBlack());
   }
+
+  static Widget changeInfoButton({
+    required String text,
+    required VoidCallback onPressed,
+    Color? backgroundColor,
+  }) {
+    double width = AppConfig.deviceWidth;
+    double height = 60;
+
+    return SizedBox(
+      width: width * 0.44,
+      height: height,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          elevation: 10,
+          backgroundColor: backgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(height / 2),
+            side: const BorderSide(
+              color: Colors.black, // Set the border color
+              width: 2, // Set the border width
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+        ),
+        child: Center(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

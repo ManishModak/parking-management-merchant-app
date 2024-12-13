@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
+import 'package:merchant_app/config/app_routes.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 
 class AccountSettingsScreen extends StatefulWidget {
@@ -30,7 +31,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   _buildSettingsItem(
                       icon: Icons.person_outline,
                       title: 'My Account',
-                      subtitle: 'Make changes to your account'),
+                      subtitle: 'Make changes to your account',
+                      onTap: () { Navigator.pushNamed(context, AppRoutes.userProfile); },
+                  ),
                   _buildSettingsItem(
                     icon: Icons.lock_outline,
                     title: 'Face ID / Touch ID',

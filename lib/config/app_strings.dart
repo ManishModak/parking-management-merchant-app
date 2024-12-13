@@ -10,9 +10,9 @@ class AppStrings {
   static const String verificationMessage =
       'We Have Sent The Verification Code To Your Mobile No.';
   static const String loadingMessage =
-      "Please wait while we verify your credentials";
+      'Please wait while we verify your credentials';
   static const String successMessage =
-      "Congratulations! You have been\nsuccessfully authenticated";
+      'Congratulations! You have been\nsuccessfully authenticated';
 
   // Button labels
   static const String buttonLogin = 'LOGIN';
@@ -25,16 +25,20 @@ class AppStrings {
   static const String titleRegister = 'Register';
   static const String titleForgotPassword = 'Forgot Password';
   static const String titleOtpVerification = 'Verification Code';
-  static const String titleLoading = "Loading";
-  static const String titleSuccess = "Success";
-  static const String titlePlazas = "Plazas";
-  static const String titleDashboard = "Dashboard";
+  static const String titleLoading = 'Loading';
+  static const String titleSuccess = 'Success';
+  static const String titlePlazas = 'Plazas';
+  static const String titleDashboard = 'Dashboard';
+  static const String titleSetUsername = 'Set Username';
 
   // Input field labels
   static const String labelPassword = 'Password';
   static const String labelRepeatPassword = 'Repeat Password';
   static const String labelUserId = 'UserID/Mobile No.';
   static const String labelMobileNumber = 'Mobile No.';
+  static const String labelEmail = 'Email Address';
+  static const String labelUsername = 'Username';
+  static const String labelDisplayName = 'How would you like to be called?';
 
   // Links/Actions
   static const String actionForgotPassword = 'Forgot Password?';
@@ -45,4 +49,12 @@ class AppStrings {
   static const String errorUserIdEmpty = 'UserId Cannot Be Empty';
   static const String errorPasswordEmpty = 'Password Cannot Be Empty';
   static const String errorPasswordMismatch = 'Passwords Not Matching';
+  static const String errorRepeatPasswordEmpty =
+      'Repeat Password Cannot Be Empty';
+  static const String errorEmailEmpty = 'Email Address Cannot Be Empty';
+  static const String errorInvalidEmail = 'Invalid Email Address Format';
+  static const String errorPhoneEmpty = 'Phone Number Cannot Be Empty';
+  static const String errorInvalidPhone = 'Invalid Phone Number Format';
+  static const String errorUsernameEmpty = 'Username Cannot Be Empty';
+  static const String errorDisplayNameEmpty = 'Display Name Cannot Be Empty';
 }

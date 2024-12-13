@@ -78,15 +78,14 @@ class CustomCards {
     );
   }
 
-  static Widget addPlazaCard({
+  static Widget addCard({
     VoidCallback? onTap,
     double? width,
     double? height,
   }) {
-    return Container(
+    return SizedBox(
       width: width,
       height: height ?? 80,
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
       child: Card(
         elevation: 0,
         color: Colors.grey[200],
@@ -129,7 +128,7 @@ class CustomCards {
         margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
         child: Card(
           elevation: 5,
-          color: Colors.teal[100],
+          color: AppColors.primaryCard,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
             side: const BorderSide(
@@ -227,7 +226,7 @@ class CustomCards {
       {required TransactionModel transaction, required BuildContext context}) {
     return Card(
       elevation: 5,
-      color: Colors.teal[100],
+      color: AppColors.primaryCard,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
         side: const BorderSide(
@@ -311,6 +310,116 @@ class CustomCards {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  static Widget plazaImageCard({
+    final List<String>? imageUrls,
+    final VoidCallback? onTap,
+  }) {
+    return Container(
+      width: AppConfig.deviceWidth,
+      height: AppConfig.deviceHeight * 0.2,
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Card(
+        elevation: 5,
+        color: Colors.teal[100],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(
+            color: Colors.black,
+            width: 2,
+          ),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                if (imageUrls != null && imageUrls.isNotEmpty)
+                  Expanded(
+                    child: SizedBox(
+                      height: 100,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: imageUrls.length,
+                        itemBuilder: (context, index) => Container(
+                          width: 60,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            image: DecorationImage(
+                              image: NetworkImage(imageUrls[index]),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(width: 8),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: Container(
+                      width: 60,
+                      height: AppConfig.deviceHeight * 0.15,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.grey[300],
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.image_not_supported,
+                          color: Colors.grey,
+                          size: 30,
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(width: 16),
+                addCard(
+                  height: AppConfig.deviceHeight * 0.15,
+                  width: AppConfig.deviceWidth * 0.2,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Widget plazaInfoCard({
+    required TextEditingController controller,
+    required String labelText,
+    TextInputType? keyboardType,
+    VoidCallback? onTap,
+    VoidCallback? onConfirm,
+    required IconData icon,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: TextField(
+        controller: controller,
+        enabled: true,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          labelText: labelText,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          disabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+        ),
+        style: TextStyle(
+          color: true ? Colors.black : Colors.grey.shade700,
         ),
       ),
     );

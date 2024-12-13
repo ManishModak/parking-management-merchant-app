@@ -33,11 +33,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleLogin(BuildContext context) async {
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
-    authVM.clearErrors();
-    if (authVM.validateCredentials(
-        _userIdController.text, _passwordController.text, '', true)) {
-      Navigator.pushNamed(context, AppRoutes.otpVerification);
+    final success = await authVM.login(
+        _userIdController.text,
+        _passwordController.text
+    );
+    print('1');
+    if (success) {
+      print('2');
+      // Navigate to home screen or next page
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
     }
+    // Error handling is already done in the ViewModel
   }
 
   @override
@@ -48,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
           onPressed: () {
             final authVM = Provider.of<AuthViewModel>(context, listen: false);
             authVM.clearErrors();
-            Navigator.pushReplacementNamed(context, AppRoutes.initial);
+            Navigator.pushReplacementNamed(context, AppRoutes.welcome);
           },
           darkBackground: false),
       backgroundColor: AppColors.lightThemeBackground,
@@ -72,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       CustomFormFields.primaryFormField(
                           label: AppStrings.labelUserId,
                           controller: _userIdController,
-                          keyboardType: TextInputType.visiblePassword,
+                          keyboardType: TextInputType.emailAddress,
                           isPassword: false),
                       Consumer<AuthViewModel>(
                         builder: (context, authVM, _) =>

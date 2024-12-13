@@ -41,6 +41,7 @@ class AppColors {
   static const Color lightThemeTitle = Colors.black;
 
   //Card Colors
-  static Color? primaryCard = Colors.teal[200];
-  static Color? secondaryCard = Colors.teal;
+  static Color? primaryCard = const Color(0xFFE2E3FF);
+  static Color? secondaryCard = const Color(0xFF2196F3);
+  static Color? notificationCard = const Color(0xFFE2E3FF);
 }
