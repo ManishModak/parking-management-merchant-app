@@ -65,6 +65,7 @@ class CustomIcons {
     return Container(
       width: 40,
       height: 40,
+      margin: EdgeInsets.zero, // Remove any margin
       decoration: BoxDecoration(
         color: AppColors.iconBackground,
         borderRadius: BorderRadius.circular(12),
@@ -73,6 +74,26 @@ class CustomIcons {
       child: const Center(
         child: Icon(
           Icons.file_download_outlined,
+          size: 40 * 0.7,
+          color: AppColors.iconBlack,
+        ),
+      ),
+    );
+  }
+
+  static Widget searchIconBlack() {
+    return Container(
+      width: 40,
+      height: 40,
+      margin: EdgeInsets.zero, // Remove any margin
+      decoration: BoxDecoration(
+        color: AppColors.iconBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.iconBlack, width: 1),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.search_rounded,
           size: 40 * 0.7,
           color: AppColors.iconBlack,
         ),

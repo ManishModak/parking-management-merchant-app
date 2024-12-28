@@ -26,7 +26,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _handleSubmit(BuildContext context) async {
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
-    authVM.clearErrors();
+    authVM.clearAllErrors();
     // TODO: Implement forgot password logic
   }
 
@@ -68,6 +68,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       controller: _userIdController,
                       keyboardType: TextInputType.phone,
                       isPassword: false,
+                      enabled: true
                     ),
                     Consumer<AuthViewModel>(
                       builder: (context, authVM, _) => authVM

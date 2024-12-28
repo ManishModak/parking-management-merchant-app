@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/config/app_config.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
-import 'package:merchant_app/utils/components/button.dart';
 import 'package:merchant_app/utils/components/card.dart';
 
 class PlazaInfoScreen extends StatefulWidget {
@@ -13,8 +12,8 @@ class PlazaInfoScreen extends StatefulWidget {
 }
 
 class _PlazaInfoScreenState extends State<PlazaInfoScreen> {
-  TextEditingController _plazaNameController = TextEditingController(text: 'MG Plaza');
-  TextEditingController _plazaMobileNoController = TextEditingController();
+  final TextEditingController _plazaNameController = TextEditingController(text: 'MG Plaza');
+  final TextEditingController _plazaMobileNoController = TextEditingController();
   bool _isEditing = false;
 
   void _toggleEditMode() {
@@ -57,22 +56,20 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              child: Column(
-                children: [
-                  CustomCards.plazaImageCard(),
-                  SizedBox(height: 2,),
-                  Row(
+            Column(
+              children: [
+                CustomCards.plazaImageCard(),
+                const SizedBox(height: 2,),
+                const Row(
 
-                  ),
-                  SizedBox(height: 2,),
-                  Row(
+                ),
+                const SizedBox(height: 2,),
+                const Row(
 
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Container(
+            SizedBox(
               height: AppConfig.deviceHeight * 0.50,
               child: SingleChildScrollView(
                 child: Column(

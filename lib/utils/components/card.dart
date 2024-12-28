@@ -8,6 +8,8 @@ import 'package:merchant_app/viewmodels/notification_viewmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
+import '../../models/menu_item.dart';
+
 class CustomCards {
   static Widget plazaCard({
     required String imageUrl,
@@ -102,6 +104,67 @@ class CustomCards {
               color: Colors.grey[600],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  static Widget userProfileCard({
+    required String name,
+    required String userId,
+    String? imageUrl,
+    VoidCallback? onTap,
+  }) {
+    return Card(
+      margin: const EdgeInsets.all(0),
+      elevation: 5,
+      color: const Color(0xFF014245), // Dark teal background like in the image
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(
+          color: Colors.black,
+          width: 2,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 40,
+              backgroundColor: Colors.blue[100],
+              child: const Icon(
+                Icons.person,
+                size: 50,
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Hello! $name",
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "ID: $userId",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[300],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -253,67 +316,6 @@ class CustomCards {
     );
   }
 
-  static Widget menuCard({
-    required String title,
-    required String value,
-    VoidCallback? onTap,
-    Color? backgroundColor,
-    Color? valueColor,
-    Widget? icon,
-  }) {
-    return Card(
-      elevation: 5, // Shadow depth
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(
-          color: Colors.black, // Set the border color
-          width: 2, // Set the border width
-        ),
-      ),
-      color: backgroundColor,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16), // Match card's border radius
-        onTap: onTap,
-        splashColor: Colors.white.withOpacity(0.2), // Optional ripple color
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.black,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: valueColor ?? Colors.red,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  icon ??
-                      const Icon(
-                        Icons.chevron_right,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   static Widget plazaImageCard({
     final List<String>? imageUrls,
@@ -420,6 +422,103 @@ class CustomCards {
         ),
         style: TextStyle(
           color: true ? Colors.black : Colors.grey.shade700,
+        ),
+      ),
+    );
+  }
+
+  static Widget operatorCard({
+    required String imageUrl,
+    required String operatorName,
+    required String role,
+    required String contactNumber,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Card(
+        margin: EdgeInsets.zero,
+        elevation: 5,
+        color: AppColors.primaryCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(
+            color: Colors.black,
+            width: 2,
+          ),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(40),
+                    image: imageUrl.isNotEmpty
+                        ? DecorationImage(
+                      image: NetworkImage(imageUrl),
+                      fit: BoxFit.cover,
+                    )
+                        : null,
+                  ),
+                  child: imageUrl.isEmpty
+                      ? CircleAvatar(
+                    radius: 40,
+                    backgroundColor: Colors.blue[100],
+                    child: const Icon(
+                      Icons.person,
+                      size: 40,
+                      color: Colors.blue,
+                    ),
+                  )
+                      : null,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        operatorName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        role,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        contactNumber,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey[600],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

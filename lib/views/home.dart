@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:merchant_app/services/secure_storage_service.dart';
 import 'package:merchant_app/utils/components/navigationbar.dart';
+import 'package:merchant_app/viewmodels/user_viewmodel.dart';
 import 'package:merchant_app/views/transaction.dart';
 import 'package:merchant_app/views/settings.dart';
 import 'package:merchant_app/views/menu.dart';
 import 'package:merchant_app/views/notification.dart';
+import 'package:provider/provider.dart';
 import 'dashboard.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -31,22 +36,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadProfileData();
+    });
+  }
+
+  Future<void> _loadProfileData() async {
+    final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+    final userId = await SecureStorageService().getUserId();
+    unawaited(userViewModel.fetchUser(userId: userId!, isCurrentAppUser: true));
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          _screens[_selectedIndex],
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: CustomNavigationBar(
-              selectedIndex: _selectedIndex,
-              onItemTapped: _onItemTapped,
-            ),
-          ),
-        ],
+      bottomNavigationBar: CustomNavigationBar(
+        selectedIndex: _selectedIndex,
+        onItemTapped: _onItemTapped,
       ),
+      body: _screens[_selectedIndex],
     );
   }
 }

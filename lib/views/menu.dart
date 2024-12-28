@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
+import 'package:merchant_app/config/app_strings.dart';
 import 'package:merchant_app/config/app_routes.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
-import 'package:merchant_app/utils/components/card.dart';
+import 'package:merchant_app/utils/components/dropdown.dart';
+import '../models/menu_item.dart';
 
 class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
@@ -12,67 +14,81 @@ class MenuScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.lightThemeBackground,
       appBar: CustomAppBar.appBarWithTitle(
-          screenTitle: 'Menu', darkBackground: false),
-      body:GridView.count(
-        crossAxisCount: 2,
-        childAspectRatio: 1.2,
-        padding: const EdgeInsets.all(8),
+        screenTitle: AppStrings.menuTitle,
+        darkBackground: false,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 16),
         children: [
-          CustomCards.menuCard(
-            title: 'Plazas',
-            value: '54',
-            onTap: () {
-              Navigator.pushNamed(context, AppRoutes.plazaList);
-            },
-            backgroundColor: AppColors.primaryCard,
-            valueColor: AppColors.primary,
+          CustomDropDown.expansionDropDown(
+            title: AppStrings.menuPlazas,
+            icon: Icons.store,
+            items: [
+              MenuCardItem(
+                title: AppStrings.menuViewAllPlazas,
+                icon: Icons.list,
+                onTap: () => Navigator.pushNamed(context, AppRoutes.plazaList),
+              ),
+              MenuCardItem(
+                title: AppStrings.menuAddNewPlaza,
+                icon: Icons.add_circle,
+                onTap: () {
+                  // Add plaza navigation logic
+                },
+              ),
+            ],
           ),
-          CustomCards.menuCard(
-            title: 'Add Plaza',
-            value: '',
-            onTap: () {},
-            backgroundColor: AppColors.secondaryCard,
-            icon: const Icon(
-              Icons.add,
-              color: Colors.white,
-              size: 24,
-            ),
+          const SizedBox(height: 8),
+          CustomDropDown.expansionDropDown(
+            title: AppStrings.menuUsers,
+            icon: Icons.people,
+            items: [
+              MenuCardItem(
+                title: AppStrings.menuRegisterUser,
+                icon: Icons.person_add,
+                onTap: () => Navigator.pushNamed(context, AppRoutes.userRegistration),
+              ),
+              MenuCardItem(
+                title: AppStrings.menuModifyViewUser,
+                icon: Icons.manage_accounts,
+                onTap: () => Navigator.pushNamed(context, AppRoutes.userList),
+              ),
+            ],
           ),
-          CustomCards.menuCard(
-            title: 'Disputes Remaining',
-            value: '277',
-            onTap: () {},
-            backgroundColor: AppColors.secondaryCard,
-            valueColor: AppColors.primary,
+          const SizedBox(height: 8),
+          CustomDropDown.expansionDropDown(
+            title: AppStrings.menuDisputes,
+            icon: Icons.warning_rounded,
+            items: [
+              MenuCardItem(
+                title: AppStrings.menuViewAllDisputes,
+                icon: Icons.list_alt,
+                onTap: () {
+                  // Add operator navigation logic
+                },
+              ),
+              MenuCardItem(
+                title: AppStrings.menuManualEntry,
+                icon: Icons.camera_alt,
+                onTap: () {
+                  // Manage operators navigation logic
+                },
+              ),
+            ],
           ),
-          CustomCards.menuCard(
-            title: 'Add Operator',
-            value: '',
-            onTap: () {},
-            backgroundColor: AppColors.primaryCard,
-            icon: const Icon(
-              Icons.add,
-              color: Colors.white,
-              size: 24,
-            ),
-          ),
-          CustomCards.menuCard(
-            title: 'Set Reset Password',
-            value: '',
-            onTap: () {},
-            backgroundColor: AppColors.primaryCard,
-            valueColor: Colors.red,
-          ),
-          CustomCards.menuCard(
-            title: 'Manual Entry',
-            value: '',
-            onTap: () {},
-            backgroundColor: AppColors.secondaryCard,
-            icon: const Icon(
-              Icons.camera_alt,
-              color: Colors.white,
-              size: 24,
-            ),
+          const SizedBox(height: 8),
+          CustomDropDown.expansionDropDown(
+            title: AppStrings.menuSettings,
+            icon: Icons.settings,
+            items: [
+              MenuCardItem(
+                title: AppStrings.menuResetPassword,
+                icon: Icons.password,
+                onTap: () {
+                  // Add operator navigation logic
+                },
+              ),
+            ],
           ),
         ],
       ),

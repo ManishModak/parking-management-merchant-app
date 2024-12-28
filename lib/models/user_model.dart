@@ -1,52 +1,55 @@
 class User {
-  late final String id;
-  final String username;
+  final String id;
+  final String name;
   final String email;
-  final String? mobileNumber;
+  final String role;
+  final String imageUrl;
+  final String mobileNumber;
   final String? address;
-  final String? city;
   final String? state;
-  final String? role;
+  final String? city;
 
   User({
     required this.id,
-    required this.username,
+    required this.name,
     required this.email,
-    this.mobileNumber,
+    required this.role,
+    required this.imageUrl,
+    required this.mobileNumber,
     this.address,
-    this.city,
     this.state,
-    this.role,
+    this.city,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'].toString(),
-      username: json['username'],
-      email: json['email'],
-      mobileNumber: json['mobileNumber'],
+      name: json['username'] ?? '',
+      email: json['email'] ?? '',
+      role: json['role'] ?? '',
+      imageUrl: '',
+      mobileNumber: json['mobileNumber'] ?? '',
       address: json['address'],
-      city: json['city'],
       state: json['state'],
-      role: json['role'],
+      city: json['city'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'username': username,
+      'username': name,
       'email': email,
+      'role': role,
       'mobileNumber': mobileNumber,
       'address': address,
-      'city': city,
       'state': state,
-      'role': role,
+      'city': city,
     };
   }
 
   @override
   String toString() {
-    return 'User(id: $id, username: $username, email: $email, mobileNumber: $mobileNumber, address: $address, city: $city, state: $state, role: $role)';
+    return 'User(id: $id, name: $name, email: $email, mobile: $mobileNumber, address: $address, city: $city, state: $state, role: $role)';
   }
 }

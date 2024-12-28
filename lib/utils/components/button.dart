@@ -88,10 +88,27 @@ class CustomButtons {
     required bool darkBackground,
   }) {
     return IconButton(
-        onPressed: onPressed,
-        icon: darkBackground
-            ? CustomIcons.backIconWhite()
-            : CustomIcons.downloadIconBlack());
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(), // Removes any default constraints
+      onPressed: onPressed,
+      icon: darkBackground
+          ? CustomIcons.backIconWhite()
+          : CustomIcons.downloadIconBlack(),
+    );
+  }
+
+  static Widget searchIconButton({
+    required VoidCallback onPressed,
+    required bool darkBackground,
+  }) {
+    return IconButton(
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(), // Removes any default constraints
+      onPressed: onPressed,
+      icon: darkBackground
+          ? CustomIcons.backIconWhite()
+          : CustomIcons.searchIconBlack(),
+    );
   }
 
   static Widget changeInfoButton({

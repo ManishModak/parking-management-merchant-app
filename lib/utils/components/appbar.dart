@@ -14,9 +14,11 @@ class CustomAppBar {
         onPressed: onPressed,
         darkBackground: darkBackground,
       ),
+      elevation: 0,
+      scrolledUnderElevation: 0,
       backgroundColor:
           darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
-      toolbarHeight: 125,
+      toolbarHeight: 100,
       centerTitle: true,
       title: Text(
         screenTitle,
@@ -46,6 +48,8 @@ class CustomAppBar {
         onPressed: onPressed,
         darkBackground: darkBackground,
       ),
+      elevation: 0,
+      scrolledUnderElevation: 0,
       actions: actions,
       backgroundColor:
           darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
@@ -78,6 +82,8 @@ class CustomAppBar {
       backgroundColor:
           darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
       toolbarHeight: 100,
+      elevation: 0,
+      scrolledUnderElevation: 0,
       title: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Text(
@@ -104,9 +110,11 @@ class CustomAppBar {
     return AppBar(
       automaticallyImplyLeading: false,
       backgroundColor:
-          darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
+      darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
       toolbarHeight: 75,
       centerTitle: true,
+      elevation: 0,
+      scrolledUnderElevation: 0,
       title: Text(
         screenTitle,
         style: TextStyle(

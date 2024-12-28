@@ -1,6 +1,6 @@
 class ApiConfig {
   // Base URL of your backend
-  static const String authBaseUrl = 'http://192.168.208.193:3002/users';
+  static const String baseUrl = 'http://192.168.1.100:3002/users';
 
   // Authentication endpoints
   static const String loginEndpoint = '/login';
@@ -11,6 +11,6 @@ class ApiConfig {
   static const String userListEndpoint = '/userList';
 
   // Password reset endpoints
-  static const String requestPasswordResetEndpoint = '/users/request-password-reset';
+  //static const String requestPasswordResetEndpoint = '/users/request-password-reset';
   static const String resetPasswordEndpoint = '/reset-password';
 }

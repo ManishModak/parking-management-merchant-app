@@ -28,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _clearErrors(BuildContext context) async {
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
-    authVM.clearErrors();
+    authVM.clearAllErrors();
   }
 
   Future<void> _handleLogin(BuildContext context) async {
@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
           screenTitle: AppStrings.titleLogin,
           onPressed: () {
             final authVM = Provider.of<AuthViewModel>(context, listen: false);
-            authVM.clearErrors();
+            authVM.clearAllErrors();
             Navigator.pushReplacementNamed(context, AppRoutes.welcome);
           },
           darkBackground: false),
@@ -79,7 +79,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           label: AppStrings.labelUserId,
                           controller: _userIdController,
                           keyboardType: TextInputType.emailAddress,
-                          isPassword: false),
+                          isPassword: false,
+                        enabled: true
+                      ),
                       Consumer<AuthViewModel>(
                         builder: (context, authVM, _) =>
                             authVM.userIdError.isNotEmpty
@@ -101,7 +103,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           label: AppStrings.labelPassword,
                           controller: _passwordController,
                           keyboardType: TextInputType.visiblePassword,
-                          isPassword: true),
+                          isPassword: true,
+                      enabled: true),
                       Consumer<AuthViewModel>(
                         builder: (context, authVM, _) =>
                             authVM.passwordError.isNotEmpty

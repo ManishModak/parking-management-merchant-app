@@ -33,7 +33,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _clearErrors(BuildContext context) async {
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
-    authVM.clearErrors();
+    authVM.clearAllErrors();
   }
 
   @override
@@ -69,6 +69,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         isPassword: false,
+                        enabled: true
                       ),
                       Consumer<AuthViewModel>(
                         builder: (context, authVM, _) =>
@@ -90,6 +91,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         controller: _userIdController,
                         keyboardType: TextInputType.phone,
                         isPassword: false,
+                        enabled: true
                       ),
                       Consumer<AuthViewModel>(
                         builder: (context, authVM, _) =>
@@ -111,6 +113,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         controller: _passwordController,
                         keyboardType: TextInputType.visiblePassword,
                         isPassword: true,
+                        enabled: true
                       ),
                       Consumer<AuthViewModel>(
                         builder: (context, authVM, _) =>
@@ -128,10 +131,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 16),
                       CustomFormFields.primaryFormField(
-                        label: AppStrings.labelRepeatPassword,
+                        label: AppStrings.labelConfirmPassword,
                         controller: _repeatPasswordController,
                         keyboardType: TextInputType.visiblePassword,
-                        isPassword: true,
+                        isPassword: true, enabled: true,
                       ),
                       Consumer<AuthViewModel>(
                         builder: (context, authVM, _) =>

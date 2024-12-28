@@ -12,14 +12,14 @@ import 'package:provider/provider.dart';
 class SetUsernameScreen extends StatefulWidget {
   final String email;
   final String password;
-  final String repeatPassword;
+  final String confirmPassword;
   final String mobileNo;
 
   const SetUsernameScreen({
     super.key,
     required this.email,
     required this.password,
-    required this.repeatPassword,
+    required this.confirmPassword,
     required this.mobileNo,
   });
 
@@ -38,7 +38,7 @@ class _SetUsernameScreenState extends State<SetUsernameScreen> {
 
   Future<void> _handleRegister(BuildContext context) async {
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
-    authVM.clearErrors();
+    authVM.clearAllErrors();
 
     // Validate display name
     final displayName = _displayNameController.text.trim();
@@ -55,14 +55,14 @@ class _SetUsernameScreenState extends State<SetUsernameScreen> {
     debugPrint('Email: ${widget.email}');
     debugPrint('MobileNo: ${widget.mobileNo}');
     debugPrint('Password: ${widget.password}');
-    debugPrint('RepeatPassword: ${widget.repeatPassword}');
+    debugPrint('RepeatPassword: ${widget.confirmPassword}');
 
     final success = await authVM.register(
       username: displayName,
       email: widget.email,
       mobileNo: widget.mobileNo,
       password: widget.password,
-      repeatPassword: widget.repeatPassword,
+      confirmPassword: widget.confirmPassword, city: 'temp', state: 'temp', address: 'temp', isAppRegister: true, isMobileVerified: true,
     );
 
     if (success) {
@@ -111,10 +111,11 @@ class _SetUsernameScreenState extends State<SetUsernameScreen> {
 
                     // Display Name Field
                     CustomFormFields.primaryFormField(
-                      label: AppStrings.labelDisplayName,
+                      label: AppStrings.labelFullName,
                       controller: _displayNameController,
                       keyboardType: TextInputType.name,
                       isPassword: false,
+                      enabled: true
                     ),
 
                     const SizedBox(height: 35),
