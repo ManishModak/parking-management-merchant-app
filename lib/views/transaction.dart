@@ -39,9 +39,12 @@ class TransactionScreen extends StatelessWidget {
           }
 
           return ListView.builder(
-            itemCount: transactions.length,
+            itemCount: transactions.length + 1,
             itemBuilder: (context, index) {
-              final transaction = transactions[index];
+              if (index == 0) {
+                return const SizedBox(height: 16); // Adding space before the first card
+              }
+              final transaction = transactions[index - 1];
               return CustomCards.transactionCard(
                   transaction: transaction, context: context);
             },

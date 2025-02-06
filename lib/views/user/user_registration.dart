@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
+import 'package:merchant_app/config/app_config.dart';
 import 'package:merchant_app/config/app_strings.dart';
 import 'package:merchant_app/services/secure_storage_service.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
@@ -9,6 +10,7 @@ import 'package:merchant_app/utils/components/dropdown.dart';
 import 'package:provider/provider.dart';
 import '../../utils/components/form_field.dart';
 import '../../viewmodels/auth_viewmodel.dart';
+import '../../viewmodels/plaza_viewmodel/plaza_viewmodel.dart';
 import '../../viewmodels/user_viewmodel.dart';
 import '../onboarding/otp_verification.dart';
 
@@ -28,8 +30,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _stateController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
   // Focus Nodes
   final FocusNode _nameFocus = FocusNode();
@@ -48,21 +49,10 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   bool isMobileVerified = false;
   String? currentUserName;
   String? currentUserRole;
+  String? currentUserId;
+  String? currentUserEntityId;
   List<String> _plazas = [];
   List<String> _entities = [];
-
-  // All possible roles
-  final List<String> allRoles = [
-    'System Admin',
-    'Plaza Owner',
-    'Plaza Admin',
-    'Centralized Controller',
-    'Plaza Operator',
-    'Backend Monitoring Operator',
-    'Cashier',
-    'Supervisor',
-    'IT Operator'
-  ];
 
   // Role-based accessible roles mapping
   final Map<String, List<String>> roleHierarchy = {
@@ -78,9 +68,20 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
     ],
     'Plaza Owner': [
       'Plaza Admin',
-      'Centralized Controller'
+      'Centralized Controller',
+      'Plaza Operator',
+      'Cashier',
+      'Backend Monitoring Operator',
+      'Supervisor'
     ],
     'Plaza Admin': [
+      'Plaza Operator',
+      'Cashier',
+      'Backend Monitoring Operator',
+      'Supervisor'
+    ],
+    'Centralized Controller': [
+      'Plaza Admin',
       'Plaza Operator',
       'Cashier',
       'Backend Monitoring Operator',
@@ -259,24 +260,23 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   }
 
   Future<void> fetchEntities() async {
-    if (currentUserRole == 'System Admin') {
-      try {
-        // TODO: Implement API call to fetch all entities
-        await Future.delayed(const Duration(seconds: 1));
-        _entities = ['Entity A', 'Entity B', 'Entity C'];
-      } catch (e) {
-        debugPrint('Error fetching entities: $e');
-        _entities = [];
-      }
-    } else if (currentUserRole == 'Plaza Owner') {
-      _entities =
-          [currentUserName ?? ''].where((item) => item.isNotEmpty).toList();
-      if (_entities.isNotEmpty) {
-        selectedEntity = _entities.first;
-        await _fetchPlazas(selectedEntity!);
-      }
+    if (currentUserRole == 'Plaza Owner') {
+      // For Plaza Owner, use their name as entity
+      _entities = [currentUserName ?? ''].where((item) => item.isNotEmpty).toList();
     } else {
-      _entities = [];
+      // For other roles, use their entityName from currentUser
+      final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+      final entityName = userViewModel.currentUser?.entityName;
+      _entities = [entityName ?? ''].where((item) => item.isNotEmpty).toList();
+    }
+
+    if (_entities.isNotEmpty) {
+      selectedEntity = _entities.first;
+      // For Plaza Owner, use their ID, otherwise use their entityId
+      String idToUse = currentUserRole == 'Plaza Owner'
+          ? (currentUserId ?? '')
+          : (currentUserEntityId ?? '');
+      await _fetchPlazas(idToUse);
     }
 
     if (mounted) {
@@ -285,22 +285,15 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   }
 
   Future<void> _handleRegister(BuildContext context) async {
-    print('1');
     _clearAllErrors();
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
 
     try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        },
-      );
+      String entityId = currentUserRole == 'Plaza Owner'
+          ? (currentUserId ?? '')
+          : (currentUserEntityId ?? '');
 
-      final success = await authVM.register(
+      final userData = await authVM.register(
         username: _nameController.text,
         email: _emailController.text,
         mobileNo: _mobileNumberController.text,
@@ -310,51 +303,70 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
         password: _newPasswordController.text,
         confirmPassword: _confirmPasswordController.text,
         selectedRole: selectedRole,
-        selectedEntity: selectedEntity,
+        entityName: selectedEntity,
+        selectedSubEntity: selectedPlaza,
+        entityId: entityId,
         isMobileVerified: isMobileVerified,
         isAppRegister: false,
       );
 
-      if (context.mounted) {
-        //Navigator.pop(context);
-      }
+      if (userData != null) {
+        final currentEntityValue = selectedEntity;
 
-      if (success) {
+        _nameController.clear();
+        _emailController.clear();
+        _mobileNumberController.clear();
+        _cityController.clear();
+        _stateController.clear();
+        _addressController.clear();
+        _newPasswordController.clear();
+        _confirmPasswordController.clear();
+
+        setState(() {
+          selectedRole = null;
+          selectedPlaza = null;
+          isMobileVerified = false;
+          selectedEntity = currentEntityValue;
+        });
+
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Registration successful'),
-              backgroundColor: Colors.green,
-            ),
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('Registration Successful'),
+                content: const Text('User has been registered successfully.'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close dialog
+                      Navigator.pop(context); // Pop registration screen
+                    },
+                    child: const Text('OK'),
+                  ),
+                ],
+              );
+            },
           );
-
-          Timer(const Duration(seconds: 2), () {
-            Navigator.pop(context);
-          });
         }
       } else if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(authVM.generalError.isNotEmpty
                 ? authVM.generalError
-                : 'Registration failed. Please check all fields and try again.'),
+                : 'Please check all fields and try again.'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
     } catch (e) {
-
-      print('Error: ${e.toString()}');
-      if (context.mounted && Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-
       if (context.mounted) {
-        print('Error: ${e.toString()}');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -362,6 +374,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   }
 
   Future<void> _fetchPlazas(String entityId) async {
+    final plazaViewModel = Provider.of<PlazaViewModel>(context, listen: false);
+
     if (mounted) {
       setState(() {
         _plazas = [];
@@ -370,12 +384,40 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
     }
 
     try {
-      // TODO: Implement API call to fetch plazas
-      await Future.delayed(const Duration(seconds: 1));
-      _plazas = ['Plaza 1', 'Plaza 2', 'Plaza 3'];
+      // Determine which ID to use based on user role
+      String idToUse;
+      if (currentUserRole == 'Plaza Owner') {
+        // For Plaza Owner, use their own ID
+        idToUse = currentUserId!;
+      } else {
+        // For other roles, use the current user's entityId
+        idToUse = currentUserEntityId ?? entityId;
+      }
+
+      await plazaViewModel.fetchUserPlazas(idToUse);
+
+      if (mounted) {
+        setState(() {
+          _plazas = plazaViewModel.userPlazas
+              .map((plaza) => plaza.plazaName)
+              .toList();
+
+          // Auto-select if only one plaza
+          if (_plazas.length == 1) {
+            selectedPlaza = _plazas.first;
+          }
+        });
+      }
     } catch (e) {
       debugPrint('Error fetching plazas: $e');
-      _plazas = [];
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(plazaViewModel.error ?? 'Failed to fetch plazas'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -389,6 +431,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
         setState(() {
           currentUserRole = userViewModel.currentUser?.role;
           currentUserName = userViewModel.currentUser?.name;
+          currentUserId = userViewModel.currentUser?.id;
+          currentUserEntityId = userViewModel.currentUser?.entityId; // Add this line to get entityId
         });
       }
     } catch (e) {
@@ -402,201 +446,189 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
       appBar: CustomAppBar.appBarWithNavigation(
         screenTitle: 'User\nRegistration',
         onPressed: () => Navigator.pop(context),
-        darkBackground: false,
+        darkBackground: true,
       ),
       backgroundColor: AppColors.lightThemeBackground,
       body: Consumer<AuthViewModel>(
         builder: (context, authVM, child) {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                CustomFormFields.primaryFormField(
-                  label: AppStrings.labelFullName,
-                  controller: _nameController,
-                  focusNode: _nameFocus,
-                  keyboardType: TextInputType.text,
-                  isPassword: false,
-                  enabled: true,
-                  errorText:
-                      authVM.userIdError.isNotEmpty ? authVM.userIdError : null,
-                ),
-                const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
-                  label: AppStrings.labelEmail,
-                  controller: _emailController,
-                  focusNode: _emailFocus,
-                  keyboardType: TextInputType.emailAddress,
-                  isPassword: false,
-                  enabled: true,
-                  errorText:
-                      authVM.emailError.isNotEmpty ? authVM.emailError : null,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CustomFormFields.primaryFormField(
-                        label: AppStrings.labelMobileNumber,
-                        controller: _mobileNumberController,
-                        focusNode: _mobileFocus,
-                        keyboardType: TextInputType.phone,
-                        isPassword: false,
-                        enabled: true,
-                        errorText: authVM.mobileError.isNotEmpty
-                            ? authVM.mobileError
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (!isMobileVerified)
-                      ElevatedButton(
-                        onPressed: verifyMobileNumber,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+            child: SizedBox(
+              width: AppConfig.deviceWidth*0.9,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CustomFormFields.primaryFormField(
+                    label: AppStrings.labelFullName,
+                    controller: _nameController,
+                    focusNode: _nameFocus,
+                    keyboardType: TextInputType.text,
+                    isPassword: false,
+                    enabled: true,
+                    errorText: authVM.usernameError.isNotEmpty ? authVM.usernameError : null,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.primaryFormField(
+                    label: AppStrings.labelEmail,
+                    controller: _emailController,
+                    focusNode: _emailFocus,
+                    keyboardType: TextInputType.emailAddress,
+                    isPassword: false,
+                    enabled: true,
+                    errorText: authVM.emailError.isNotEmpty ? authVM.emailError : null,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CustomFormFields.primaryFormField(
+                          label: AppStrings.labelMobileNumber,
+                          controller: _mobileNumberController,
+                          focusNode: _mobileFocus,
+                          keyboardType: TextInputType.phone,
+                          isPassword: false,
+                          enabled: true,
+                          errorText: authVM.mobileError.isNotEmpty ? authVM.mobileError : null,
                         ),
-                        child: const Text(
-                          'Verify',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                      ),
+                      const SizedBox(width: 8),
+                      if (!isMobileVerified)
+                        ElevatedButton(
+                          onPressed: verifyMobileNumber,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
+                          child: const Text(
+                            'Verify',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        )
+                      else
+                        const Icon(
+                          Icons.check_circle,
+                          color: Colors.green,
+                          size: 24,
                         ),
-                      )
-                    else
-                      const Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
-                        size: 24,
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CustomFormFields.primaryFormField(
+                          label: AppStrings.labelCity,
+                          controller: _cityController,
+                          focusNode: _cityFocus,
+                          keyboardType: TextInputType.text,
+                          isPassword: false,
+                          enabled: true,
+                          errorText: authVM.cityError.isNotEmpty ? authVM.cityError : null,
+                        ),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CustomFormFields.primaryFormField(
-                        label: AppStrings.labelCity,
-                        controller: _cityController,
-                        focusNode: _cityFocus,
-                        keyboardType: TextInputType.text,
-                        isPassword: false,
-                        enabled: true,
-                        errorText: authVM.addressError.isNotEmpty
-                            ? authVM.addressError
-                            : null,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: CustomFormFields.primaryFormField(
+                          label: AppStrings.labelState,
+                          controller: _stateController,
+                          focusNode: _stateFocus,
+                          keyboardType: TextInputType.text,
+                          isPassword: false,
+                          enabled: true,
+                          errorText: authVM.stateError.isNotEmpty ? authVM.stateError : null,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: CustomFormFields.primaryFormField(
-                        label: AppStrings.labelState,
-                        controller: _stateController,
-                        focusNode: _stateFocus,
-                        keyboardType: TextInputType.text,
-                        isPassword: false,
-                        enabled: true,
-                        errorText: authVM.addressError.isNotEmpty
-                            ? authVM.addressError
-                            : null,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
-                  label: AppStrings.labelAddress,
-                  controller: _addressController,
-                  focusNode: _addressFocus,
-                  keyboardType: TextInputType.multiline,
-                  isPassword: false,
-                  enabled: true,
-                  errorText: authVM.addressError.isNotEmpty
-                      ? authVM.addressError
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                CustomDropDown.normalDropDown(
-                  label: AppStrings.labelRole,
-                  value: selectedRole,
-                  items: getAvailableRoles(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedRole = value;
-                    });
-                    Provider.of<AuthViewModel>(context, listen: false)
-                        .clearError('role');
-                  },
-                  errorText:
-                      authVM.roleError.isNotEmpty ? authVM.roleError : null,
-                ),
-                const SizedBox(height: 16),
-                CustomDropDown.normalDropDown(
-                  label: AppStrings.labelEntity,
-                  value: selectedEntity,
-                  items: _entities,
-                  onChanged: (value) {
-                    setState(() {
-                      selectedEntity = value;
-                    });
-                    Provider.of<AuthViewModel>(context, listen: false)
-                        .clearError('entity');
-                    if (value != null) {
-                      _fetchPlazas(value);
-                    }
-                  },
-                  errorText:
-                      authVM.entityError.isNotEmpty ? authVM.entityError : null,
-                ),
-                if (selectedEntity != null) ...[
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.primaryFormField(
+                    label: AppStrings.labelAddress,
+                    controller: _addressController,
+                    focusNode: _addressFocus,
+                    keyboardType: TextInputType.multiline,
+                    isPassword: false,
+                    enabled: true,
+                    errorText: authVM.addressError.isNotEmpty ? authVM.addressError : null,
+                  ),
                   const SizedBox(height: 16),
                   CustomDropDown.normalDropDown(
-                    label: AppStrings.labelSubEntity,
-                    value: selectedPlaza,
-                    items: _plazas,
+                    label: AppStrings.labelAssignRole,
+                    value: selectedRole,
+                    items: getAvailableRoles(),
                     onChanged: (value) {
                       setState(() {
-                        selectedPlaza = value;
+                        selectedRole = value;
                       });
+                      Provider.of<AuthViewModel>(context, listen: false)
+                          .clearError('role');
                     },
+                    errorText: authVM.roleError.isNotEmpty ? authVM.roleError : null,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomDropDown.normalDropDown(
+                    label: AppStrings.labelEntity,
+                    value: selectedEntity,
+                    items: _entities,
+                    onChanged: (value) {
+                      setState(() {
+                        selectedEntity = value;
+                      });
+                      Provider.of<AuthViewModel>(context, listen: false)
+                          .clearError('entity');
+                      if (value != null) {
+                        _fetchPlazas(value);
+                      }
+                    },
+                    errorText: authVM.entityError.isNotEmpty ? authVM.entityError : null,
+                  ),
+                  if (selectedEntity != null) ...[
+                    const SizedBox(height: 16),
+                    CustomDropDown.normalDropDown(
+                      label: AppStrings.labelSubEntity,
+                      value: selectedPlaza,
+                      items: _plazas,
+                      onChanged: (value) {
+                        setState(() {
+                          selectedPlaza = value;
+                        });
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  CustomFormFields.primaryFormField(
+                    label: AppStrings.labelPassword,
+                    controller: _newPasswordController,
+                    focusNode: _passwordFocus,
+                    keyboardType: TextInputType.visiblePassword,
+                    isPassword: true,
+                    enabled: true,
+                    errorText: authVM.passwordError.isNotEmpty ? authVM.passwordError : null,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.primaryFormField(
+                    label: AppStrings.labelConfirmPassword,
+                    controller: _confirmPasswordController,
+                    focusNode: _confirmPasswordFocus,
+                    keyboardType: TextInputType.visiblePassword,
+                    isPassword: true,
+                    enabled: true,
+                    errorText: authVM.confirmPasswordError.isNotEmpty ? authVM.confirmPasswordError : null,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomButtons.primaryButton(
+                    text: AppStrings.buttonRegister,
+                    onPressed: () => _handleRegister(context),
                   ),
                 ],
-                const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
-                  label: 'New Password',
-                  controller: _newPasswordController,
-                  focusNode: _passwordFocus,
-                  keyboardType: TextInputType.visiblePassword,
-                  isPassword: true,
-                  enabled: true,
-                  errorText: authVM.passwordError.isNotEmpty
-                      ? authVM.passwordError
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
-                  label: 'Confirm Password',
-                  controller: _confirmPasswordController,
-                  focusNode: _confirmPasswordFocus,
-                  keyboardType: TextInputType.visiblePassword,
-                  isPassword: true,
-                  enabled: true,
-                  errorText: authVM.passwordError.isNotEmpty
-                      ? authVM.passwordError
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                CustomButtons.primaryButton(
-                  text: AppStrings.buttonRegister,
-                  onPressed: () => _handleRegister(context),
-                ),
-              ],
+              ),
             ),
           );
         },

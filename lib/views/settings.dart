@@ -3,6 +3,8 @@ import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/config/app_routes.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 
+import '../services/secure_storage_service.dart';
+
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({super.key});
 
@@ -12,6 +14,7 @@ class AccountSettingsScreen extends StatefulWidget {
 
 class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   bool isFaceIDEnabled = false; // State variable to control the switch
+  final _secureStorage = SecureStorageService();
 
   @override
   Widget build(BuildContext context) {
@@ -27,12 +30,14 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start, // Align items to start
                 children: [
+                  const SizedBox(height: 24),
                   _buildSettingsItem(
-                      icon: Icons.person_outline,
-                      title: 'My Account',
-                      subtitle: 'Make changes to your account',
-                      onTap: () { Navigator.pushNamed(context, AppRoutes.userProfile); },
+                    icon: Icons.person_outline,
+                    title: 'My Account',
+                    subtitle: 'Make changes to your account',
+                    onTap: () { Navigator.pushNamed(context, AppRoutes.userProfile); },
                   ),
                   _buildSettingsItem(
                     icon: Icons.lock_outline,
@@ -54,19 +59,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     subtitle: 'Further secure your account for safety',
                     onTap: _showLogoutConfirmationDialog,
                   ),
-                  const SizedBox(height: 24),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'More',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   _buildSettingsItem(
                     icon: Icons.help_outline,
                     title: 'Help & Support',
@@ -75,12 +67,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     icon: Icons.info_outline,
                     title: 'About App',
                   ),
-                  const SizedBox(height: 24),
                 ],
               ),
             ),
           ),
-          // You can add a custom navigation bar or footer here if needed.
         ],
       ),
     );
@@ -135,9 +125,13 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             child: const Text("Cancel"),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              // Add your logout logic here
+            onPressed: () async {
+              await _secureStorage.clearAll();
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                AppRoutes.welcome,
+                    (route) => false,
+              );
             },
             child: const Text("Log out"),
           ),

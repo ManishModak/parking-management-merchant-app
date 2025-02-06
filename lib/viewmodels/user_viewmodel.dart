@@ -20,17 +20,24 @@ class UserViewModel extends ChangeNotifier {
 
   UserViewModel(this._userService);
 
-  Future<void> fetchUserList(Future<String?> userId) async {
+
+
+  Future<void> fetchUserList(String userId) async {  // Removed unused Future<String?> userId parameter
     try {
       _setLoading(true);
       _users = await _userService.getUserList();
+      //_users = await _userService.getUsersByEntityId(userId);
       _error = null;
     } catch (e) {
+      print('Failed to fetch operators: ${e.toString()}');
       _setError('Failed to fetch operators: ${e.toString()}');
+      _users = []; // Reset users list on error
     } finally {
       _setLoading(false);
     }
   }
+
+
 
   Future<void> fetchUser({required String userId,required bool isCurrentAppUser}) async {
     try {
@@ -61,6 +68,7 @@ class UserViewModel extends ChangeNotifier {
     String? city,
     String? state,
     String? role,
+    String? subEntity,
     required bool isCurrentAppUser
   }) async {
     try {
@@ -77,7 +85,8 @@ class UserViewModel extends ChangeNotifier {
         address: address,
         city: city,
         state: state,
-        role: role
+        role: role,
+        subEntity: subEntity
       );
 
       if (success) {

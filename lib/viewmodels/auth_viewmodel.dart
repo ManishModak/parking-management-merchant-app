@@ -5,135 +5,56 @@ import '../services/auth_service.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final AuthService _authService;
-
-  // Error states
-  String _userIdError = '';
-  String _passwordError = '';
-  String _generalError = '';
-  String _emailError = '';
-  String _mobileError = '';
-  String _roleError = '';
-  String _entityError = '';
-  String _addressError = '';
+  final Map<String, String> _errors = {
+    'username': '',
+    'password': '',
+    'general': '',
+    'email': '',
+    'mobile': '',
+    'role': '',
+    'entity': '',
+    'address': '',
+    'confirmPassword': '',
+    'city': '',
+    'state': '',
+  };
   bool _isLoading = false;
   User? _currentUser;
 
   // Getters
   bool get isLoading => _isLoading;
-  String get userIdError => _userIdError;
-  String get passwordError => _passwordError;
-  String get generalError => _generalError;
-  String get emailError => _emailError;
-  String get mobileError => _mobileError;
-  String get roleError => _roleError;
-  String get entityError => _entityError;
-  String get addressError => _addressError;
+  String get usernameError => _errors['username'] ?? '';
+  String get passwordError => _errors['password'] ?? '';
+  String get generalError => _errors['general'] ?? '';
+  String get emailError => _errors['email'] ?? '';
+  String get mobileError => _errors['mobile'] ?? '';
+  String get roleError => _errors['role'] ?? '';
+  String get entityError => _errors['entity'] ?? '';
+  String get addressError => _errors['address'] ?? '';
+  String get confirmPasswordError => _errors['confirmPassword'] ?? '';
+  String get cityError => _errors['city'] ?? '';
+  String get stateError => _errors['state'] ?? '';
   User? get currentUser => _currentUser;
 
   AuthViewModel(this._authService);
 
   void clearError(String errorType) {
-    bool shouldNotify = false;
-
-    switch (errorType) {
-      case 'userId':
-        if (_userIdError.isNotEmpty) {
-          _userIdError = '';
-          shouldNotify = true;
-        }
-        break;
-      case 'password':
-        if (_passwordError.isNotEmpty) {
-          _passwordError = '';
-          shouldNotify = true;
-        }
-        break;
-      case 'email':
-        if (_emailError.isNotEmpty) {
-          _emailError = '';
-          shouldNotify = true;
-        }
-        break;
-      case 'mobile':
-        if (_mobileError.isNotEmpty) {
-          _mobileError = '';
-          shouldNotify = true;
-        }
-        break;
-      case 'role':
-        if (_roleError.isNotEmpty) {
-          _roleError = '';
-          shouldNotify = true;
-        }
-        break;
-      case 'entity':
-        if (_entityError.isNotEmpty) {
-          _entityError = '';
-          shouldNotify = true;
-        }
-        break;
-      case 'address':
-        if (_addressError.isNotEmpty) {
-          _addressError = '';
-          shouldNotify = true;
-        }
-        break;
-      case 'general':
-        if (_generalError.isNotEmpty) {
-          _generalError = '';
-          shouldNotify = true;
-        }
-        break;
-    }
-
-    if (shouldNotify) {
+    if (_errors[errorType]?.isNotEmpty ?? false) {
+      _errors[errorType] = '';
       notifyListeners();
     }
   }
 
   void clearAllErrors() {
-    bool shouldNotify = false;
-
-    if (_userIdError.isNotEmpty) {
-      _userIdError = '';
-      shouldNotify = true;
-    }
-    if (_passwordError.isNotEmpty) {
-      _passwordError = '';
-      shouldNotify = true;
-    }
-    if (_generalError.isNotEmpty) {
-      _generalError = '';
-      shouldNotify = true;
-    }
-    if (_emailError.isNotEmpty) {
-      _emailError = '';
-      shouldNotify = true;
-    }
-    if (_mobileError.isNotEmpty) {
-      _mobileError = '';
-      shouldNotify = true;
-    }
-    if (_roleError.isNotEmpty) {
-      _roleError = '';
-      shouldNotify = true;
-    }
-    if (_entityError.isNotEmpty) {
-      _entityError = '';
-      shouldNotify = true;
-    }
-    if (_addressError.isNotEmpty) {
-      _addressError = '';
-      shouldNotify = true;
-    }
-
-    if (shouldNotify) {
+    bool hasChanges = _errors.values.any((error) => error.isNotEmpty);
+    _errors.updateAll((key, value) => '');
+    if (hasChanges) {
       notifyListeners();
     }
   }
 
   bool validateRegistrationData({
-    required String username,
+    required String fullName, // Changed from username to fullName
     required String email,
     required String mobileNo,
     required String password,
@@ -143,99 +64,176 @@ class AuthViewModel extends ChangeNotifier {
     required String address,
     required bool isAppRegister,
     String? selectedRole,
-    String? selectedEntity,
+    String? entityName,
     String? selectedSubEntity,
     required bool isMobileVerified,
+    String? entityId,
   }) {
     bool isValid = true;
-    bool shouldNotify = false;
-
-    // Clear all previous errors first
     clearAllErrors();
 
-    // Basic validations that apply to all registrations
-    if (username.isEmpty) {
-      _userIdError = AppStrings.errorUsernameEmpty;
+    // Full Name validation (previously username)
+    if (fullName.isEmpty || fullName.length > 100) {
+      _errors['username'] = fullName.isEmpty
+          ? AppStrings.errorFullNameRequired // Updated error message
+          : AppStrings.errorFullNameLength;
       isValid = false;
-      shouldNotify = true;
     }
 
-    if (email.isEmpty) {
-      _emailError = AppStrings.errorEmailEmpty;
+    // Entity Name validation (Plaza Owner Name)
+    if (entityName == null || entityName.trim().isEmpty) {
+      _errors['entity'] = AppStrings.errorPlazaOwnerNameRequired;
       isValid = false;
-      shouldNotify = true;
-    } else if (!_isValidEmail(email)) {
-      _emailError = AppStrings.errorInvalidEmail;
+    } else if (entityName.trim().length > 100) {
+      _errors['entity'] = AppStrings.errorPlazaOwnerNameLength;
       isValid = false;
-      shouldNotify = true;
     }
 
-    if (mobileNo.isEmpty) {
-      _mobileError = AppStrings.errorMobileNoEmpty;
+    // Role selection validation (NEW)
+    if (selectedRole == null || selectedRole.isEmpty) {
+      _errors['role'] = AppStrings.errorRoleRequired; // Add to AppStrings
       isValid = false;
-      shouldNotify = true;
-    } else if (!_isValidPhone(mobileNo)) {
-      _mobileError = AppStrings.errorInvalidPhone;
-      isValid = false;
-      shouldNotify = true;
-    } else if (!isMobileVerified) {
-      _mobileError = 'Please verify your mobile number';
-      isValid = false;
-      shouldNotify = true;
     }
 
-    if (address.isEmpty || city.isEmpty || state.isEmpty) {
-      _addressError = 'Please fill in all address fields';
+    // Sub-Entity selection validation (NEW)
+    if (selectedSubEntity == null || selectedSubEntity!.isEmpty) {
+      _errors['subEntity'] = AppStrings.errorSubEntityRequired; // Add to AppStrings
       isValid = false;
-      shouldNotify = true;
     }
 
-    if (password.isEmpty) {
-      _passwordError = AppStrings.errorPasswordEmpty;
+    // Mobile Number validation
+    if (mobileNo.isEmpty || mobileNo.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(mobileNo)) {
+      _errors['mobile'] = mobileNo.isEmpty
+          ? AppStrings.errorMobileRequired
+          : !RegExp(r'^[0-9]+$').hasMatch(mobileNo)
+          ? AppStrings.errorMobileInvalidFormat
+          : AppStrings.errorMobileLength;
       isValid = false;
-      shouldNotify = true;
-    } else if (password.length < 8) {
-      _passwordError = 'Password must be at least 8 characters long';
-      isValid = false;
-      shouldNotify = true;
-    } else if (password != confirmPassword) {
-      _passwordError = AppStrings.errorPasswordMismatch;
-      isValid = false;
-      shouldNotify = true;
     }
 
-    // Only validate role and entity if not app register
-    if (!isAppRegister) {
-      if (selectedRole == null) {
-        _roleError = 'Please select a role';
-        isValid = false;
-        shouldNotify = true;
-      }
-
-      if (selectedEntity == null) {
-        _entityError = 'Please select an entity';
-        isValid = false;
-        shouldNotify = true;
-      }
+    // Email validation (fixed length check and regex)
+    final emailPattern = RegExp(
+      r'^[\w.%+-]+@[\w.-]+\.(com|in)$',
+      caseSensitive: false, // Allow case insensitivity
+    );
+    if (email.isEmpty || email.length < 10 || email.length > 50 || !emailPattern.hasMatch(email)) {
+      _errors['email'] = email.isEmpty
+          ? AppStrings.errorEmailRequired
+          : email.length < 10
+          ? AppStrings.errorEmailMinLength
+          : email.length > 50
+          ? AppStrings.errorEmailLength
+          : AppStrings.errorEmailInvalid;
+      isValid = false;
     }
 
-    if (shouldNotify) {
+    // Address validation
+    if (address.isEmpty || address.length > 256) {
+      _errors['address'] = address.isEmpty
+          ? AppStrings.errorAddressRequired
+          : AppStrings.errorAddressLength;
+      isValid = false;
+    }
+
+    // City validation
+    if (city.isEmpty || city.length > 50) {
+      _errors['city'] = city.isEmpty
+          ? AppStrings.errorCityRequired
+          : AppStrings.errorCityLength;
+      isValid = false;
+    }
+
+    // State validation
+    if (state.isEmpty || state.length > 50) {
+      _errors['state'] = state.isEmpty
+          ? AppStrings.errorStateRequired
+          : AppStrings.errorStateLength;
+      isValid = false;
+    }
+
+    // Password validation
+    final passwordRegEx = RegExp(
+        r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,20}$'
+    );
+    if (password.isEmpty || !passwordRegEx.hasMatch(password)) {
+      _errors['password'] = password.isEmpty
+          ? AppStrings.errorPasswordRequired
+          : AppStrings.errorPasswordFormat;
+      isValid = false;
+    }
+
+    // Confirm Password validation
+    if (confirmPassword.isEmpty || password != confirmPassword) {
+      _errors['confirmPassword'] = confirmPassword.isEmpty
+          ? AppStrings.errorConfirmPasswordRequired
+          : AppStrings.errorPasswordMismatch;
+      isValid = false;
+    }
+
+    if (!isValid) {
       notifyListeners();
     }
     return isValid;
   }
 
-  Future<bool> login(String email, String password) async {
+  bool validateLoginData(String username, String password) {
+    bool isValid = true;
     clearAllErrors();
+
+    // Username/Email validation
+    if (username.isEmpty) {
+      _errors['username'] = 'Email ID/Mobile no. field is required';
+      isValid = false;
+    } else {
+      // Validation for both email and mobile number
+      if (username.contains('@')) {
+        // Email validation
+        final emailPattern = RegExp(
+          r'^[\w.%+-]+@[\w.-]+\.[a-zA-Z]{2,}$',
+          caseSensitive: false,
+        );
+        if (!emailPattern.hasMatch(username)) {
+          _errors['username'] = 'Please enter a valid email or mobile number';
+          isValid = false;
+        }
+      } else {
+        // Mobile number validation
+        final mobilePattern = RegExp(r'^(?:\+?91)?[6-9]\d{9}$');
+        if (!mobilePattern.hasMatch(username.replaceAll(RegExp(r'\D'), ''))) {
+          _errors['username'] = 'Please enter a valid email or mobile number';
+          isValid = false;
+        }
+      }
+    }
+
+    // Password validation
+    if (password.isEmpty) {
+      _errors['password'] = 'Password field is required';
+      isValid = false;
+    } else if (password.length < 8) {
+      _errors['password'] = 'Password must be at least 8 characters long';
+      isValid = false;
+    }
+
+    if (!isValid) {
+      notifyListeners();
+    }
+    return isValid;
+  }
+
+  Future<bool> login(String emailOrMobile, String password) async {
+    if (!validateLoginData(emailOrMobile, password)) {
+      return false;
+    }
 
     _isLoading = true;
     notifyListeners();
 
     try {
-      final success = await _authService.login(email, password);
+      final success = await _authService.login(emailOrMobile, password);
       return success;
     } catch (e) {
-      _generalError = _formatErrorMessage(e);
+      _errors['general'] = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
       return false;
     } finally {
@@ -244,7 +242,7 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> register({
+  Future<Map<String, dynamic>?> register({
     required String username,
     required String email,
     required String mobileNo,
@@ -255,12 +253,13 @@ class AuthViewModel extends ChangeNotifier {
     required String address,
     required bool isAppRegister,
     String? selectedRole,
-    String? selectedEntity,
+    String? entityName,
     String? selectedSubEntity,
     required bool isMobileVerified,
+    String? entityId,
   }) async {
     if (!validateRegistrationData(
-      username: username,
+      fullName: username,
       email: email,
       mobileNo: mobileNo,
       password: password,
@@ -270,53 +269,45 @@ class AuthViewModel extends ChangeNotifier {
       address: address,
       isAppRegister: isAppRegister,
       selectedRole: selectedRole,
-      selectedEntity: selectedEntity,
+      entityName: entityName,
       selectedSubEntity: selectedSubEntity,
       isMobileVerified: isMobileVerified,
     )) {
-      return false;
+      return null;
     }
 
     _isLoading = true;
     notifyListeners();
 
     try {
-      final success = await _authService.register(
-        username: username,
-        email: email,
-        mobileNumber: mobileNo,
-        password: password,
-        city: city,
-        state: state,
-        address: address,
-        isAppUserRegister: isAppRegister,
-        role: selectedRole,
-        entity: selectedEntity,
-        subEntity: selectedSubEntity,
+      final userData = await _authService.register(
+          username: username,
+          email: email,
+          mobileNumber: mobileNo,
+          password: password,
+          city: city,
+          state: state,
+          address: address,
+          isAppUserRegister: isAppRegister,
+          role: selectedRole ?? 'Plaza Owner',
+          entity: entityName,
+          subEntity: selectedSubEntity,
+          entityId: entityId
       );
-      print(success);
-      return success;
+
+      return userData;
     } catch (e) {
-      print(_generalError);
-      _generalError = _formatErrorMessage(e);
+      _errors['general'] = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
-      return false;
+      return null;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  bool _isValidEmail(String email) {
-    return RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-        .hasMatch(email);
-  }
-
-  bool _isValidPhone(String phone) {
-    return RegExp(r"^\d{10}$").hasMatch(phone);
-  }
-
-  String _formatErrorMessage(Object e) {
-    return e.toString().replaceFirst('Exception: ', '');
+  void setError(String field, String message) {
+    _errors[field] = message;
+    notifyListeners();
   }
 }

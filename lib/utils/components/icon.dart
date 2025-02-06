@@ -61,7 +61,7 @@ class CustomIcons {
         ));
   }
 
-  static Widget downloadIconBlack() {
+  static Widget downloadIconWhite() {
     return Container(
       width: 40,
       height: 40,
@@ -69,13 +69,13 @@ class CustomIcons {
       decoration: BoxDecoration(
         color: AppColors.iconBackground,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.iconBlack, width: 1),
+        border: Border.all(color: AppColors.iconWhite, width: 1),
       ),
       child: const Center(
         child: Icon(
           Icons.file_download_outlined,
           size: 40 * 0.7,
-          color: AppColors.iconBlack,
+          color: AppColors.iconWhite,
         ),
       ),
     );

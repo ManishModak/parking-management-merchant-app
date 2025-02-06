@@ -18,6 +18,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _userIdController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isPasswordVisible = false;
 
   @override
   void dispose() {
@@ -34,16 +35,13 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin(BuildContext context) async {
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
     final success = await authVM.login(
-        _userIdController.text,
+        _userIdController.text.trim(),
         _passwordController.text
     );
-    print('1');
+
     if (success) {
-      print('2');
-      // Navigate to home screen or next page
       Navigator.pushReplacementNamed(context, AppRoutes.home);
     }
-    // Error handling is already done in the ViewModel
   }
 
   @override
@@ -75,53 +73,67 @@ class _LoginScreenState extends State<LoginScreen> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 40),
+
+                      // Username/Email Field
                       CustomFormFields.primaryFormField(
-                          label: AppStrings.labelUserId,
-                          controller: _userIdController,
-                          keyboardType: TextInputType.emailAddress,
-                          isPassword: false,
-                        enabled: true
+                        label: AppStrings.labelEmailAndMobileNo,
+                        controller: _userIdController,
+                        keyboardType: TextInputType.emailAddress,
+                        isPassword: false,
+                        enabled: true,
+                        onChanged: (_) {
+                          final authVM = Provider.of<AuthViewModel>(context, listen: false);
+                          authVM.clearError('username');
+                        },
                       ),
                       Consumer<AuthViewModel>(
                         builder: (context, authVM, _) =>
-                            authVM.userIdError.isNotEmpty
-                                ? Padding(
-                                    padding:
-                                        const EdgeInsets.only(top: 8, left: 12),
-                                    child: Text(
-                                      authVM.userIdError,
-                                      style: const TextStyle(
-                                        color: Colors.red,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
+                        authVM.usernameError.isNotEmpty
+                            ? Padding(
+                          padding: const EdgeInsets.only(top: 8, left: 12),
+                          child: Text(
+                            authVM.usernameError,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
+                            ),
+                          ),
+                        )
+                            : const SizedBox.shrink(),
                       ),
+
                       const SizedBox(height: 16),
+
+                      // Password Field
                       CustomFormFields.primaryFormField(
-                          label: AppStrings.labelPassword,
-                          controller: _passwordController,
-                          keyboardType: TextInputType.visiblePassword,
-                          isPassword: true,
-                      enabled: true),
+                        label: AppStrings.labelPassword,
+                        controller: _passwordController,
+                        keyboardType: TextInputType.visiblePassword,
+                        isPassword: true,
+                        enabled: true,
+                        onChanged: (_) {
+                          // Clear error when user starts typing
+                          final authVM = Provider.of<AuthViewModel>(context, listen: false);
+                          authVM.clearError('password');
+                        },
+                      ),
                       Consumer<AuthViewModel>(
                         builder: (context, authVM, _) =>
-                            authVM.passwordError.isNotEmpty
-                                ? Padding(
-                                    padding:
-                                        const EdgeInsets.only(top: 8, left: 12),
-                                    child: Text(
-                                      authVM.passwordError,
-                                      style: const TextStyle(
-                                        color: Colors.red,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
+                        authVM.passwordError.isNotEmpty
+                            ? Padding(
+                          padding: const EdgeInsets.only(top: 8, left: 12),
+                          child: Text(
+                            authVM.passwordError,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
+                            ),
+                          ),
+                        )
+                            : const SizedBox.shrink(),
                       ),
-                      const SizedBox(height: 12),
+
+                      // Forgot Password Button
                       TextButton(
                         onPressed: () {
                           Navigator.pushNamed(
@@ -139,6 +151,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
+
+                      // Login Button
                       Consumer<AuthViewModel>(
                         builder: (_, authVM, __) => CustomButtons.primaryButton(
                           text: AppStrings.buttonLogin,
@@ -147,18 +161,22 @@ class _LoginScreenState extends State<LoginScreen> {
                               : () => _handleLogin(context),
                         ),
                       ),
+
+                      // General Error Message
                       const SizedBox(height: 16),
                       Consumer<AuthViewModel>(
                         builder: (_, authVM, __) =>
-                            authVM.generalError.isNotEmpty
-                                ? Text(
-                                    authVM.generalError,
-                                    style: const TextStyle(color: Colors.red),
-                                    textAlign: TextAlign.center,
-                                  )
-                                : const SizedBox.shrink(),
+                        authVM.generalError.isNotEmpty
+                            ? Text(
+                          authVM.generalError,
+                          style: const TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
+                        )
+                            : const SizedBox.shrink(),
                       ),
                       const SizedBox(height: 16),
+
+                      // Create Account Button
                       TextButton(
                         onPressed: () {
                           _clearErrors(context);

@@ -18,23 +18,23 @@ class MenuScreen extends StatelessWidget {
         darkBackground: false,
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 16),
         children: [
+          const SizedBox(height: 16),
           CustomDropDown.expansionDropDown(
             title: AppStrings.menuPlazas,
-            icon: Icons.store,
+            icon: Icons.business, // or Icons.location_city
             items: [
               MenuCardItem(
-                title: AppStrings.menuViewAllPlazas,
-                icon: Icons.list,
-                onTap: () => Navigator.pushNamed(context, AppRoutes.plazaList),
+                title: AppStrings.menuRegisterPlaza,
+                icon: Icons.add_business,
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.plazaRegistration);
+                },
               ),
               MenuCardItem(
-                title: AppStrings.menuAddNewPlaza,
-                icon: Icons.add_circle,
-                onTap: () {
-                  // Add plaza navigation logic
-                },
+                title: AppStrings.menuModifyViewPlaza,
+                icon: Icons.list,
+                onTap: () => Navigator.pushNamed(context, AppRoutes.plazaList),
               ),
             ],
           ),
@@ -58,7 +58,7 @@ class MenuScreen extends StatelessWidget {
           const SizedBox(height: 8),
           CustomDropDown.expansionDropDown(
             title: AppStrings.menuDisputes,
-            icon: Icons.warning_rounded,
+            icon: Icons.gavel, // or Icons.report_problem
             items: [
               MenuCardItem(
                 title: AppStrings.menuViewAllDisputes,
@@ -69,7 +69,7 @@ class MenuScreen extends StatelessWidget {
               ),
               MenuCardItem(
                 title: AppStrings.menuManualEntry,
-                icon: Icons.camera_alt,
+                icon: Icons.edit_document, // or Icons.input
                 onTap: () {
                   // Manage operators navigation logic
                 },
@@ -78,14 +78,21 @@ class MenuScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           CustomDropDown.expansionDropDown(
-            title: AppStrings.menuSettings,
-            icon: Icons.settings,
+            title: AppStrings.menuPlazaFare,
+            icon: Icons.toll_outlined,
             items: [
               MenuCardItem(
-                title: AppStrings.menuResetPassword,
-                icon: Icons.password,
+                title: AppStrings.menuAddPlazaFare,
+                icon: Icons.price_change, // or Icons.currency_exchange
                 onTap: () {
-                  // Add operator navigation logic
+                  Navigator.pushNamed(context, AppRoutes.plazaAddFare);
+                },
+              ),
+              MenuCardItem(
+                title: AppStrings.menuModifyViewPlazaFare,
+                icon: Icons.edit_note_outlined,
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.modifyViewPlazaFare);
                 },
               ),
             ],

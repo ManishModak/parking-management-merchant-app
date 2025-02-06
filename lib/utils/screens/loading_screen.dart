@@ -16,7 +16,7 @@ class LoadingScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SpinKitPulsingGrid(
+              SpinKitFadingCircle(
                 color: AppColors.primaryLight,
                 size: 50.0,
               ),

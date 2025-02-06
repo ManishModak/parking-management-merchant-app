@@ -8,12 +8,14 @@ class CustomButtons {
   static Widget primaryButton({
     required String text,
     required VoidCallback onPressed,
+    double height = 0,
+    double width = 0
   }) {
-    double width = AppConfig.deviceWidth;
-    double height = 60;
+    width = width != 0 ? width : AppConfig.deviceWidth * 0.8;
+    height = height != 0 ? height : 60;
 
     return SizedBox(
-      width: width * 0.8,
+      width: width,
       height: height,
       child: ElevatedButton(
         onPressed: onPressed,
@@ -91,9 +93,7 @@ class CustomButtons {
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(), // Removes any default constraints
       onPressed: onPressed,
-      icon: darkBackground
-          ? CustomIcons.backIconWhite()
-          : CustomIcons.downloadIconBlack(),
+      icon: CustomIcons.downloadIconWhite(),
     );
   }
 

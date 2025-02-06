@@ -19,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final _secureStorage = SecureStorageService();
   int _selectedIndex = 2;
 
   final List<Widget> _screens = [
@@ -39,8 +40,14 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _printAuthToken();
       _loadProfileData();
     });
+  }
+
+  void _printAuthToken() async {
+    String? token = await _secureStorage.getAuthToken();
+    print("Auth Token: $token");
   }
 
   Future<void> _loadProfileData() async {

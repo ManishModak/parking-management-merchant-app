@@ -1,31 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/config/app_strings.dart';
 import 'package:merchant_app/services/secure_storage_service.dart';
+import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:merchant_app/utils/components/button.dart';
 import 'package:merchant_app/utils/components/card.dart';
+import 'package:merchant_app/utils/components/dropdown.dart';
+import 'package:merchant_app/utils/components/form_field.dart';
+import 'package:merchant_app/viewmodels/plaza_viewmodel/plaza_viewmodel.dart';
 import 'package:merchant_app/viewmodels/user_viewmodel.dart';
 import 'package:merchant_app/views/user/set_reset_password.dart';
+import 'package:merchant_app/views/onboarding/otp_verification.dart';
 import 'package:provider/provider.dart';
-
-import '../../config/app_colors.dart';
-import '../../utils/components/appbar.dart';
-import '../../utils/components/dropdown.dart';
-import '../../utils/components/form_field.dart';
-import '../onboarding/otp_verification.dart';
 
 class UserInfoScreen extends StatefulWidget {
   final String operatorId;
 
   const UserInfoScreen({
-    super.key,
+    Key? key,
     required this.operatorId,
-  });
+  }) : super(key: key);
 
   @override
   State<UserInfoScreen> createState() => _UserInfoScreenState();
 }
 
 class _UserInfoScreenState extends State<UserInfoScreen> {
+  // Controllers for text fields.
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _mobileNumberController = TextEditingController();
@@ -35,102 +37,133 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
 
   bool _isEditMode = false;
   String? selectedRole;
+  String? entityId;
+  String? selectedPlaza;
   String? currentUserRole;
+  String? currentUserId;
   bool isMobileVerified = false;
   String? _originalMobileNumber;
+  List<String> _plazas = [];
 
+  // This variable holds the operator’s subEntity value from user data.
+  String? _userSubEntity;
+
+  // Error states.
+  String? _nameError;
+  String? _emailError;
+  String? _mobileError;
+  String? _roleError;
+  String? _plazaError;
+  String? _addressError;
+  String? _cityError;
+  String? _stateError;
+
+  // Role hierarchy for available roles.
   final Map<String, List<String>> roleHierarchy = {
-    'System Admin': [
-      'System Admin',
-      'Plaza Owner',
-      'IT Operator'
-    ],
+    'System Admin': ['System Admin', 'Plaza Owner', 'IT Operator'],
     'Plaza Owner': [
       'Plaza Admin',
-      'Plaza Owner',
+      'Centralized Controller',
+      'Plaza Operator',
+      'Cashier',
+      'Backend Monitoring Operator',
+      'Supervisor'
     ],
-    'Plaza Admin': [
-      'Plaza Operator'
-    ]
+    'Plaza Admin': ['Plaza Owner', 'Plaza Operator']
   };
-
-  List<String> getAvailableRoles() {
-    if (currentUserRole == null) return [];
-    return roleHierarchy[currentUserRole] ?? [];
-  }
 
   @override
   void initState() {
     super.initState();
+    // First load current user info then operator data.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _fetchUserData();
+      await _loadCurrentUserInfo();
       await _loadOperatorData();
     });
   }
 
-  Future<void> _fetchUserData() async {
+  Future<void> _loadCurrentUserInfo() async {
     try {
-      final userViewModel = Provider.of<UserViewModel>(context, listen: false);
-      final userId = await SecureStorageService().getUserId();
-      await userViewModel.fetchUser(userId: userId!, isCurrentAppUser: true);
-
-      if (mounted) {
+      final storage = SecureStorageService();
+      final userData = await storage.getUserData();
+      if (userData != null && mounted) {
         setState(() {
-          currentUserRole = userViewModel.currentUser?.role;
+          currentUserRole = userData['role'];
+          currentUserId = userData['id']?.toString();
         });
       }
     } catch (e) {
-      debugPrint('Error fetching user data: $e');
+      // Show error if needed.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading current user info: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
-  Map<String, String> _originalValues = {};
+  /// Fetches plazas from the API and then, if possible,
+  /// assigns the operator’s subEntity value to the dropdown.
+  Future<void> _fetchPlazas(String id) async {
+    final plazaViewModel = Provider.of<PlazaViewModel>(context, listen: false);
 
-  void _storeOriginalValues() {
-    _originalValues = {
-      'username': _nameController.text,
-      'email': _emailController.text,
-      'mobileNumber': _mobileNumberController.text,
-      'address': _addressController.text,
-      'city': _cityController.text,
-      'state': _stateController.text,
-      'role': selectedRole!,
-    };
-    _originalMobileNumber = _mobileNumberController.text;
-  }
-
-  void _restoreOriginalValues() {
     setState(() {
-      _nameController.text = _originalValues['username'] ?? '';
-      _emailController.text = _originalValues['email'] ?? '';
-      _mobileNumberController.text = _originalValues['mobileNumber'] ?? '';
-      _addressController.text = _originalValues['address'] ?? '';
-      _cityController.text = _originalValues['city'] ?? '';
-      _stateController.text = _originalValues['state'] ?? '';
-      selectedRole = _originalValues['role'] ?? '';
+      _plazas = [];
     });
-  }
 
-  void _toggleEditMode() {
-    setState(() {
-      _isEditMode = !_isEditMode;
-      if (!_isEditMode) {
-        _restoreOriginalValues();
-      }
-    });
+    try {
+      await plazaViewModel.fetchUserPlazas(id);
+      setState(() {
+        _plazas = plazaViewModel.userPlazas
+            .map((plaza) => plaza.plazaName)
+            .toList();
+
+        // If the user’s subEntity exists in the fetched plazas, select it.
+        if (_userSubEntity != null && _plazas.contains(_userSubEntity)) {
+          selectedPlaza = _userSubEntity;
+        } else if (_plazas.length == 1) {
+          // Otherwise, if there's only one plaza, select that.
+          selectedPlaza = _plazas.first;
+        } else {
+          // If multiple plazas and no match, keep it null.
+          selectedPlaza = null;
+        }
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(plazaViewModel.error ?? 'Failed to fetch plazas: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _loadOperatorData() async {
     try {
-      final operatorViewModel = Provider.of<UserViewModel>(context, listen: false);
-      await operatorViewModel.fetchUser(userId: widget.operatorId, isCurrentAppUser: false);
-      if (mounted) {
-        await _loadUser();
+      final operatorViewModel = context.read<UserViewModel>();
+      await operatorViewModel.fetchUser(
+        userId: widget.operatorId,
+        isCurrentAppUser: false,
+      );
+      await _loadUser();
+
+      final currentOperator = operatorViewModel.currentOperator;
+      if (currentOperator?.entityId != null && mounted) {
+        await _fetchPlazas(currentOperator!.entityId!);
       }
     } catch (e) {
-      print('Error in _loadOperatorData: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to load operator data: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
+
+  List<String> getAvailableRoles() => roleHierarchy[currentUserRole] ?? [];
 
   @override
   void dispose() {
@@ -143,8 +176,10 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     super.dispose();
   }
 
+  /// Loads the operator data into the form fields.
+  /// Also stores the operator’s subEntity value.
   Future<void> _loadUser() async {
-    final operatorViewModel = Provider.of<UserViewModel>(context, listen: false);
+    final operatorViewModel = context.read<UserViewModel>();
     final currentOperator = operatorViewModel.currentOperator;
 
     if (currentOperator != null && mounted) {
@@ -156,23 +191,20 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
         _cityController.text = currentOperator.city ?? '';
         _stateController.text = currentOperator.state ?? '';
         selectedRole = currentOperator.role;
-
-        // Store original values
-        _storeOriginalValues();
+        entityId = currentOperator.entityId;
+        _originalMobileNumber = currentOperator.mobileNumber;
+        // If the subEntity is a list, pick the first element if available.
+        _userSubEntity = (currentOperator.subEntity.isNotEmpty)
+            ? currentOperator.subEntity.first
+            : null;
       });
     }
   }
 
 
   Future<void> verifyMobileNumber() async {
-    if (_mobileNumberController.text.length != 10 ||
-        !RegExp(r'^\d{10}$').hasMatch(_mobileNumberController.text)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(AppStrings.errorMobileNumberInvalid),
-          backgroundColor: Colors.red,
-        ),
-      );
+    if (!RegExp(r'^\d{10}$').hasMatch(_mobileNumberController.text)) {
+      setState(() => _mobileError = AppStrings.errorMobileInvalidFormat);
       return;
     }
 
@@ -185,10 +217,10 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       ),
     );
 
+    if (!mounted) return;
+
     if (result == true) {
-      setState(() {
-        isMobileVerified = true;
-      });
+      setState(() => isMobileVerified = true);
     } else {
       setState(() {
         _mobileNumberController.text = _originalMobileNumber ?? '';
@@ -204,31 +236,111 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   }
 
   Future<void> _confirmUpdate() async {
+    final validationErrors = <String, String>{};
+
+    // Name validation.
     if (_nameController.text.isEmpty) {
+      validationErrors['name'] = AppStrings.errorFullNameRequired;
+    } else if (_nameController.text.length > 100) {
+      validationErrors['name'] = AppStrings.errorFullNameLength;
+    }
+
+    // Email validation.
+    if (_emailController.text.isEmpty) {
+      validationErrors['email'] = AppStrings.errorEmailRequired;
+    } else if (!RegExp(r'^[\w.%+-]+@[\w.-]+\.(com|in)$', caseSensitive: false)
+        .hasMatch(_emailController.text)) {
+      validationErrors['email'] = AppStrings.errorEmailInvalid;
+    } else if (_emailController.text.length > 50) {
+      validationErrors['email'] = AppStrings.errorEmailLength;
+    }
+
+    // Mobile validation.
+    if (_mobileNumberController.text.isEmpty) {
+      validationErrors['mobile'] = AppStrings.errorMobileRequired;
+    } else if (!RegExp(r'^\d{10}$').hasMatch(_mobileNumberController.text)) {
+      validationErrors['mobile'] = AppStrings.errorMobileInvalidFormat;
+    }
+
+    // Role validation.
+    if (selectedRole == null || selectedRole!.isEmpty) {
+      validationErrors['role'] = AppStrings.errorRoleRequired;
+    }
+
+    // Plaza (SubEntity) validation.
+    if (selectedPlaza == null || selectedPlaza!.isEmpty) {
+      validationErrors['plaza'] = AppStrings.errorSubEntityRequired;
+    }
+
+    // Address validation.
+    if (_addressController.text.isEmpty) {
+      validationErrors['address'] = AppStrings.errorAddressRequired;
+    } else if (_addressController.text.length > 256) {
+      validationErrors['address'] = AppStrings.errorAddressLength;
+    }
+
+    // City validation.
+    if (_cityController.text.isEmpty) {
+      validationErrors['city'] = AppStrings.errorCityRequired;
+    } else if (_cityController.text.length > 50) {
+      validationErrors['city'] = AppStrings.errorCityLength;
+    }
+
+    // State validation.
+    if (_stateController.text.isEmpty) {
+      validationErrors['state'] = AppStrings.errorStateRequired;
+    } else if (_stateController.text.length > 50) {
+      validationErrors['state'] = AppStrings.errorStateLength;
+    }
+
+    setState(() {
+      _nameError = validationErrors['name'];
+      _emailError = validationErrors['email'];
+      _mobileError = validationErrors['mobile'];
+      _roleError = validationErrors['role'];
+      _plazaError = validationErrors['plaza'];
+      _addressError = validationErrors['address'];
+      _cityError = validationErrors['city'];
+      _stateError = validationErrors['state'];
+    });
+
+    if (validationErrors.isNotEmpty) {
+      // Show validation error SnackBar.
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.errorUsernameEmpty)),
+        SnackBar(
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: validationErrors.values.map((e) => Text('• $e')).toList(),
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
       );
       return;
     }
 
-    if (_mobileNumberController.text != _originalMobileNumber && !isMobileVerified) {
+    // If mobile number was changed, verify it.
+    if (_mobileNumberController.text != _originalMobileNumber &&
+        !isMobileVerified) {
       await verifyMobileNumber();
-      if (!isMobileVerified) {
-        return;
-      }
+      if (!isMobileVerified) return;
     }
 
-    final operatorViewModel = Provider.of<UserViewModel>(context, listen: false);
+    final operatorViewModel = context.read<UserViewModel>();
     final success = await operatorViewModel.updateUser(
-        username: _nameController.text,
-        email: _emailController.text,
-        mobileNumber: _mobileNumberController.text,
-        address: _addressController.text,
-        city: _cityController.text,
-        state: _stateController.text,
-        role: selectedRole,
-        isCurrentAppUser: false
+      username: _nameController.text,
+      email: _emailController.text,
+      mobileNumber: _mobileNumberController.text,
+      address: _addressController.text,
+      city: _cityController.text,
+      state: _stateController.text,
+      role: selectedRole,
+      subEntity: selectedPlaza,
+      isCurrentAppUser: false,
     );
+
+    if (!mounted) return;
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -236,7 +348,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       );
       setState(() {
         _isEditMode = false;
-        _storeOriginalValues();
+        _originalMobileNumber = _mobileNumberController.text;
         isMobileVerified = false;
       });
     } else {
@@ -246,6 +358,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     }
   }
 
+  /// Builds the mobile number field along with a verification warning.
   Widget _buildMobileNumberField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,31 +369,65 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
           keyboardType: TextInputType.phone,
           isPassword: false,
           enabled: _isEditMode,
+          errorText: _mobileError,
           onChanged: (value) {
             if (value != _originalMobileNumber) {
               setState(() {
                 isMobileVerified = false;
+                _mobileError = null;
               });
             }
           },
         ),
-        if (_isEditMode && _mobileNumberController.text != _originalMobileNumber && !isMobileVerified)
+        if (_isEditMode &&
+            _mobileNumberController.text != _originalMobileNumber &&
+            !isMobileVerified)
           const Padding(
             padding: EdgeInsets.only(top: 8.0),
             child: Text(
               AppStrings.warningMobileVerificationRequired,
-              style: TextStyle(
-                color: Colors.red,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.red, fontSize: 12),
             ),
           ),
       ],
     );
   }
 
+  /// Builds a dropdown field using the custom normal dropdown widget.
+  /// The dropdown is enabled only in edit mode.
+  Widget _buildDropdown({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required Function(String?) onChanged,
+    String? error,
+  }) {
+    return CustomDropDown.normalDropDown(
+      label: label,
+      value: value,
+      items: items,
+      onChanged: onChanged,
+      enabled: _isEditMode,
+      errorText: error,
+    );
+  }
+  void _clearErrors() {
+    setState(() {
+      _nameError = null;
+      _emailError = null;
+      _mobileError = null;
+      _roleError = null;
+      _plazaError = null;
+      _addressError = null;
+      _cityError = null;
+      _stateError = null;
+    });
+  }
+
+
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: CustomAppBar.appBarWithNavigation(
         screenTitle: AppStrings.titleUserInfo,
@@ -294,100 +441,92 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
           if (operatorVM.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
-
-          if (operatorVM.currentOperator == null) {
-            return const Center(child: Text(AppStrings.errorLoadOperator));
-          }
-
-          return Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Form(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          CustomCards.userProfileCard(
-                              name: operatorVM.currentOperator!.name,
-                              userId: operatorVM.currentOperator!.id
-                          ),
-                          const SizedBox(height: 20),
-                          CustomFormFields.primaryFormField(
-                            label: AppStrings.labelFullName,
-                            controller: _nameController,
-                            keyboardType: TextInputType.text,
-                            isPassword: false,
-                            enabled: _isEditMode,
-                          ),
-                          const SizedBox(height: 16),
-                          CustomFormFields.primaryFormField(
-                            label: AppStrings.labelEmail,
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            isPassword: false,
-                            enabled: _isEditMode,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildMobileNumberField(),
-                          const SizedBox(height: 16),
-                          CustomDropDown.normalDropDown(
-                            label: AppStrings.labelRole,
-                            value: selectedRole,
-                            enabled: _isEditMode,
-                            items: getAvailableRoles(),
-                            onChanged: (value) async {
-                              setState(() {
-                                selectedRole = value;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          CustomFormFields.primaryFormField(
-                            label: AppStrings.labelAddress,
-                            controller: _addressController,
-                            keyboardType: TextInputType.streetAddress,
-                            isPassword: false,
-                            enabled: _isEditMode,
-                          ),
-                          const SizedBox(height: 16),
-                          CustomFormFields.primaryFormField(
-                            label: AppStrings.labelCity,
-                            controller: _cityController,
-                            keyboardType: TextInputType.text,
-                            isPassword: false,
-                            enabled: _isEditMode,
-                          ),
-                          const SizedBox(height: 16),
-                          CustomFormFields.primaryFormField(
-                            label: AppStrings.labelState,
-                            controller: _stateController,
-                            keyboardType: TextInputType.text,
-                            isPassword: false,
-                            enabled: _isEditMode,
-                          ),
-                          const SizedBox(height: 30),
-                          CustomButtons.primaryButton(
-                              text: AppStrings.buttonSetResetPassword,
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => UserSetResetPasswordScreen(
-                                        operatorId: widget.operatorId
-                                    ),
-                                  ),
-                                );
-                              }
-                          )
-                        ],
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                if (operatorVM.currentOperator != null)
+                  CustomCards.userProfileCard(
+                    name: operatorVM.currentOperator!.name,
+                    userId: operatorVM.currentOperator!.id,
+                  ),
+                const SizedBox(height: 20),
+                CustomFormFields.primaryFormField(
+                  label: AppStrings.labelFullName,
+                  controller: _nameController,
+                  keyboardType: TextInputType.text,
+                  isPassword: false,
+                  enabled: _isEditMode,
+                  errorText: _nameError,
+                ),
+                const SizedBox(height: 16),
+                CustomFormFields.primaryFormField(
+                  label: AppStrings.labelEmail,
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  isPassword: false,
+                  enabled: _isEditMode,
+                  errorText: _emailError,
+                ),
+                const SizedBox(height: 16),
+                _buildMobileNumberField(),
+                const SizedBox(height: 16),
+                _buildDropdown(
+                  label: AppStrings.labelAssignRole,
+                  value: selectedRole,
+                  items: getAvailableRoles(),
+                  onChanged: (value) => setState(() => selectedRole = value),
+                  error: _roleError,
+                ),
+                const SizedBox(height: 16),
+                _buildDropdown(
+                  label: AppStrings.labelSubEntity,
+                  value: selectedPlaza,
+                  items: _plazas,
+                  onChanged: (value) => setState(() => selectedPlaza = value),
+                  error: _plazaError,
+                ),
+                const SizedBox(height: 16),
+                CustomFormFields.primaryFormField(
+                  label: AppStrings.labelAddress,
+                  controller: _addressController,
+                  keyboardType: TextInputType.streetAddress,
+                  isPassword: false,
+                  enabled: _isEditMode,
+                  errorText: _addressError,
+                ),
+                const SizedBox(height: 16),
+                CustomFormFields.primaryFormField(
+                  label: AppStrings.labelCity,
+                  controller: _cityController,
+                  keyboardType: TextInputType.text,
+                  isPassword: false,
+                  enabled: _isEditMode,
+                  errorText: _cityError,
+                ),
+                const SizedBox(height: 16),
+                CustomFormFields.primaryFormField(
+                  label: AppStrings.labelState,
+                  controller: _stateController,
+                  keyboardType: TextInputType.text,
+                  isPassword: false,
+                  enabled: _isEditMode,
+                  errorText: _stateError,
+                ),
+                const SizedBox(height: 30),
+                CustomButtons.primaryButton(
+                  text: AppStrings.buttonSetResetPassword,
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => UserSetResetPasswordScreen(
+                        operatorId: widget.operatorId,
                       ),
                     ),
                   ),
-                ),
-              ),
-            ],
+                )
+              ],
+            ),
           );
         },
       ),
@@ -397,8 +536,10 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   Widget _buildFloatingActionButtons() {
     if (!_isEditMode) {
       return FloatingActionButton(
-        heroTag: 'editButton',  // Unique hero tag
-        onPressed: _toggleEditMode,
+        heroTag: 'editButton',
+        onPressed: () => setState(() {
+          _isEditMode = true;
+        }),
         child: const Icon(Icons.edit),
       );
     }
@@ -409,14 +550,19 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FloatingActionButton(
-            heroTag: 'cancelButton',  // Unique hero tag
-            onPressed: _toggleEditMode,
+            heroTag: 'cancelButton',
+            onPressed: () => setState(() {
+              _isEditMode = false;
+              _clearErrors();
+              // Reload user data to reset any unsaved changes.
+              _loadUser();
+            }),
             backgroundColor: Colors.red,
             child: const Icon(Icons.close),
           ),
           const SizedBox(width: 16),
           FloatingActionButton(
-            heroTag: 'saveButton',  // Unique hero tag
+            heroTag: 'saveButton',
             onPressed: _confirmUpdate,
             backgroundColor: Colors.green,
             child: const Icon(Icons.check),
@@ -426,4 +572,3 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     );
   }
 }
-

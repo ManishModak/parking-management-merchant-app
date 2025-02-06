@@ -30,9 +30,12 @@ class NotificationsScreen extends StatelessWidget {
           }
 
           return ListView.builder(
-            itemCount: notifications.length,
+            itemCount: notifications.length + 1,
             itemBuilder: (context, index) {
-              final notification = notifications[index];
+              if (index == 0) {
+                return const SizedBox(height: 16); // Adding space before the first card
+              }
+              final notification = notifications[index - 1];
               return CustomCards.notificationCard(
                   notification: notification, context: context);
             },

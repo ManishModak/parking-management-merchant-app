@@ -8,39 +8,42 @@ import 'package:merchant_app/viewmodels/notification_viewmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
-import '../../models/menu_item.dart';
 
 class CustomCards {
   static Widget plazaCard({
-    required String imageUrl,
+    String? imageUrl,
     required String plazaName,
     required String location,
+    required String plazaId,
     VoidCallback? onTap,
   }) {
-    return Container(
-      width: AppConfig.deviceWidth * 0.9,
-      height: 160,
-      margin: const EdgeInsets.fromLTRB(0, 0, 0, 16),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
       child: Card(
-        elevation: 0,
-        color: Colors.grey[200],
+        margin: EdgeInsets.zero,
+        elevation: 5,
+        color: AppColors.primaryCard,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(25),
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(
+            color: Colors.black,
+            width: 2,
+          ),
         ),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(25),
+          borderRadius: BorderRadius.circular(24),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
                 Container(
-                  width: 115,
-                  height: 135,
+                  width: 100,
+                  height: 100,
                   decoration: BoxDecoration(
                     color: AppColors.lightThemeBackground,
                     borderRadius: BorderRadius.circular(25),
-                    image: imageUrl.isNotEmpty
+                    image: (imageUrl != null && imageUrl.isNotEmpty)
                         ? DecorationImage(
                             image: NetworkImage(imageUrl),
                             fit: BoxFit.cover,
@@ -57,8 +60,16 @@ class CustomCards {
                       Text(
                         plazaName,
                         style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Plaza ID: $plazaId",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -71,6 +82,56 @@ class CustomCards {
                       ),
                     ],
                   ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey[600],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Widget menuCard({
+    required String menu,
+    VoidCallback? onTap,
+  }) {
+    return Container(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      width: (AppConfig.deviceWidth) * 0.9, // Null check added
+      child: Card(
+        margin: EdgeInsets.zero,
+        elevation: 5,
+        color: AppColors.primaryCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(
+            color: Colors.black,
+            width: 2,
+          ),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    menu,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey[600],
                 ),
               ],
             ),
@@ -118,7 +179,8 @@ class CustomCards {
     return Card(
       margin: const EdgeInsets.all(0),
       elevation: 5,
-      color: const Color(0xFF014245), // Dark teal background like in the image
+      color: const Color(0xFF014245),
+      // Dark teal background like in the image
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
         side: const BorderSide(
@@ -146,7 +208,7 @@ class CustomCards {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    "Hello! $name",
+                    name,
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
@@ -316,7 +378,6 @@ class CustomCards {
     );
   }
 
-
   static Widget plazaImageCard({
     final List<String>? imageUrls,
     final VoidCallback? onTap,
@@ -421,7 +482,7 @@ class CustomCards {
           ),
         ),
         style: TextStyle(
-          color: true ? Colors.black : Colors.grey.shade700,
+          color: Colors.black,
         ),
       ),
     );
@@ -462,21 +523,21 @@ class CustomCards {
                     borderRadius: BorderRadius.circular(40),
                     image: imageUrl.isNotEmpty
                         ? DecorationImage(
-                      image: NetworkImage(imageUrl),
-                      fit: BoxFit.cover,
-                    )
+                            image: NetworkImage(imageUrl),
+                            fit: BoxFit.cover,
+                          )
                         : null,
                   ),
                   child: imageUrl.isEmpty
                       ? CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Colors.blue[100],
-                    child: const Icon(
-                      Icons.person,
-                      size: 40,
-                      color: Colors.blue,
-                    ),
-                  )
+                          radius: 40,
+                          backgroundColor: Colors.blue[100],
+                          child: const Icon(
+                            Icons.person,
+                            size: 40,
+                            color: Colors.blue,
+                          ),
+                        )
                       : null,
                 ),
                 const SizedBox(width: 16),

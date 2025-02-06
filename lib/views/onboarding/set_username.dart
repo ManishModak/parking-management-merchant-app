@@ -57,7 +57,7 @@ class _SetUsernameScreenState extends State<SetUsernameScreen> {
     debugPrint('Password: ${widget.password}');
     debugPrint('RepeatPassword: ${widget.confirmPassword}');
 
-    final success = await authVM.register(
+    final userData = await authVM.register(
       username: displayName,
       email: widget.email,
       mobileNo: widget.mobileNo,
@@ -65,7 +65,7 @@ class _SetUsernameScreenState extends State<SetUsernameScreen> {
       confirmPassword: widget.confirmPassword, city: 'temp', state: 'temp', address: 'temp', isAppRegister: true, isMobileVerified: true,
     );
 
-    if (success) {
+    if (userData != null) {
       // Navigate to home screen or dashboard
       Navigator.pushReplacementNamed(context, AppRoutes.home);
     }

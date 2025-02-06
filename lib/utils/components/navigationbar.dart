@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:merchant_app/config/app_colors.dart';
 
 class CustomNavigationBar extends StatelessWidget {
   final int selectedIndex;
@@ -14,8 +15,8 @@ class CustomNavigationBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
-      decoration: const BoxDecoration(
-        color: Color(0xFF014245), // Dark teal background color
+      decoration: BoxDecoration(
+        color: AppColors.primary, // Dark teal background color
         borderRadius: BorderRadius.vertical(
             top: Radius.circular(50)), // Rounded edges for container
       ),
@@ -40,7 +41,7 @@ class CustomNavigationBar extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color:
-              selectedIndex == index ? Colors.tealAccent : Colors.transparent,
+              selectedIndex == index ? AppColors.primaryCard : Colors.transparent,
           shape: BoxShape.circle,
         ),
         child: Icon(

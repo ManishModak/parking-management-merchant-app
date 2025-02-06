@@ -36,18 +36,16 @@ class _UserSetResetPasswordScreenState
   String? currentUserRole;
 
   final Map<String, List<String>> roleHierarchy = {
-    'System Admin': [
-      'System Admin',
-      'Plaza Owner',
+    'System Admin': ['System Admin', 'Plaza Owner', 'IT Operator'],
+    'Plaza Owner': [
       'Plaza Admin',
       'Centralized Controller',
       'Plaza Operator',
-      'Backend Monitoring Operator',
       'Cashier',
-      'Supervisor',
-      'IT Operator'
+      'Backend Monitoring Operator',
+      'Supervisor'
     ],
-    'Plaza Owner': ['Plaza Admin', 'Plaza Owner', 'Cashier', 'Supervisor'],
+    'Plaza Admin': ['Plaza Owner', 'Plaza Operator']
   };
 
   List<String> getAvailableRoles() {

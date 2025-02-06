@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
+import 'package:merchant_app/config/app_config.dart';
 
 class CustomFormFields {
   static Widget primaryFormField({
@@ -8,78 +9,84 @@ class CustomFormFields {
     required TextInputType keyboardType,
     required bool isPassword,
     required bool enabled,
-    String? errorText, FocusNode? focusNode, Null Function(dynamic value)? onChanged,
+    String? errorText,
+    FocusNode? focusNode,
+    Null Function(dynamic value)? onChanged,
   }) {
     bool hidePassword = isPassword;
 
     return StatefulBuilder(
       builder: (BuildContext context, StateSetter setState) {
-        // Calculate dynamic height based on error text
-        final double containerHeight = errorText != null ? 80 : 60;
-
-        return Container(
-          height: containerHeight,
-          width: 350,
-          decoration: const BoxDecoration(
-            color: AppColors.formBackground,
-          ),
-          child: TextFormField(
-            enabled: enabled,
-            controller: controller,
-            keyboardType: keyboardType,
-            obscureText: hidePassword,
-            onChanged: onChanged,
-            decoration: InputDecoration(
-              errorText: errorText,
-              errorStyle: const TextStyle(
-                height: 0.8, // Reduce space between error text and field
-              ),
-              labelText: label,
-              labelStyle: const TextStyle(color: AppColors.primary),
-              floatingLabelBehavior: FloatingLabelBehavior.always,
-              disabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.primary),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.primary),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: AppColors.inputBorderFocused,
-                  width: 2,
-                ),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.red),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.red, width: 2),
-              ),
-              contentPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              suffixIcon: isPassword
-                  ? Padding(
-                padding: const EdgeInsets.only(right: 10),
-                child: IconButton(
-                  icon: Icon(
-                    hidePassword ? Icons.visibility_off : Icons.visibility,
-                    color: AppColors.primary,
+        return SizedBox(
+          width: AppConfig.deviceWidth*0.9,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height:  errorText != null ? 80 : 60,
+                child: TextFormField(
+                  enabled: enabled,
+                  controller: controller,
+                  keyboardType: keyboardType,
+                  obscureText: hidePassword,
+                  onChanged: onChanged,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: AppColors.formBackground,
+                    errorText: errorText,
+                    errorStyle: const TextStyle(
+                      height: 0.8,
+                    ),
+                    labelText: label,
+                    labelStyle: const TextStyle(color: AppColors.primary),
+                    floatingLabelBehavior: FloatingLabelBehavior.always,
+                    disabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.primary),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.primary),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppColors.inputBorderFocused,
+                        width: 2,
+                      ),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.red),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.red, width: 2),
+                    ),
+                    contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                    suffixIcon: isPassword
+                        ? Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: IconButton(
+                        icon: Icon(
+                          hidePassword ? Icons.visibility_off : Icons.visibility,
+                          color: AppColors.primary,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            hidePassword = !hidePassword;
+                          });
+                        },
+                      ),
+                    )
+                        : null,
                   ),
-                  onPressed: () {
-                    setState(() {
-                      hidePassword = !hidePassword;
-                    });
-                  },
+                  style: const TextStyle(fontSize: 16),
                 ),
-              )
-                  : null,
-            ),
-            style: const TextStyle(fontSize: 16),
+              ),
+            ],
           ),
         );
       },
@@ -91,7 +98,7 @@ class CustomFormFields {
     String hintText = 'Search users...',
   }) {
     return Padding(
-      padding: const EdgeInsets.all(14.0),
+      padding: const EdgeInsets.all(16.0),
       child: TextField(
         controller: controller,
         decoration: InputDecoration(

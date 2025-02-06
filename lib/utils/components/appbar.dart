@@ -16,8 +16,7 @@ class CustomAppBar {
       ),
       elevation: 0,
       scrolledUnderElevation: 0,
-      backgroundColor:
-          darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
+      backgroundColor: darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
       toolbarHeight: 100,
       centerTitle: true,
       title: Text(
@@ -25,9 +24,7 @@ class CustomAppBar {
         style: TextStyle(
           fontWeight: FontWeight.bold,
           fontSize: 26,
-          color: darkBackground
-              ? AppColors.darkThemeTitle
-              : AppColors.lightThemeTitle,
+          color: darkBackground ? AppColors.textLight : AppColors.textPrimary,
         ),
         textAlign: TextAlign.center,
         maxLines: 2,
@@ -46,13 +43,12 @@ class CustomAppBar {
       leadingWidth: 80,
       leading: CustomButtons.backIconButton(
         onPressed: onPressed,
-        darkBackground: darkBackground,
+        darkBackground: true,
       ),
       elevation: 0,
       scrolledUnderElevation: 0,
       actions: actions,
-      backgroundColor:
-          darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
+      backgroundColor: AppColors.primary,
       toolbarHeight: 100,
       centerTitle: true,
       title: Text(
@@ -60,9 +56,7 @@ class CustomAppBar {
         style: TextStyle(
           fontWeight: FontWeight.bold,
           fontSize: 26,
-          color: darkBackground
-              ? AppColors.darkThemeTitle
-              : AppColors.lightThemeTitle,
+          color: AppColors.textLight,
         ),
         textAlign: TextAlign.center,
         maxLines: 2,
@@ -79,9 +73,8 @@ class CustomAppBar {
     return AppBar(
       automaticallyImplyLeading: false,
       actions: actions,
-      backgroundColor:
-          darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
-      toolbarHeight: 100,
+      backgroundColor: AppColors.primary,
+      toolbarHeight: 75,
       elevation: 0,
       scrolledUnderElevation: 0,
       title: Padding(
@@ -91,9 +84,7 @@ class CustomAppBar {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 26,
-            color: darkBackground
-                ? AppColors.darkThemeTitle
-                : AppColors.lightThemeTitle,
+            color: AppColors.textLight,
           ),
           textAlign: TextAlign.center,
           maxLines: 2,
@@ -109,8 +100,7 @@ class CustomAppBar {
   }) {
     return AppBar(
       automaticallyImplyLeading: false,
-      backgroundColor:
-      darkBackground ? AppColors.primary : AppColors.lightThemeBackground,
+      backgroundColor: AppColors.primary,
       toolbarHeight: 75,
       centerTitle: true,
       elevation: 0,
@@ -120,9 +110,7 @@ class CustomAppBar {
         style: TextStyle(
           fontWeight: FontWeight.bold,
           fontSize: 26,
-          color: darkBackground
-              ? AppColors.darkThemeTitle
-              : AppColors.lightThemeTitle,
+          color: AppColors.textLight,
         ),
         textAlign: TextAlign.center,
         maxLines: 2,

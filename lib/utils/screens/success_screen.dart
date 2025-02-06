@@ -2,17 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_config.dart';
 import 'package:merchant_app/config/app_strings.dart';
 import 'package:merchant_app/config/app_colors.dart';
+import 'package:merchant_app/config/app_routes.dart';
 import 'package:merchant_app/utils/components/button.dart';
 import 'package:merchant_app/utils/components/icon.dart';
 
 class SuccessScreen extends StatefulWidget {
-  const SuccessScreen({super.key});
+  final String userId;
+
+  const SuccessScreen({
+    super.key,
+    required this.userId,
+  });
 
   @override
   State<SuccessScreen> createState() => _SuccessScreenState();
 }
 
 class _SuccessScreenState extends State<SuccessScreen> {
+  void _navigateToHome() {
+    Navigator.pushReplacementNamed(context, AppRoutes.home);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,9 +64,20 @@ class _SuccessScreenState extends State<SuccessScreen> {
                       color: Colors.black,
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  SelectableText(
+                    widget.userId,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
                   const SizedBox(height: 32),
                   CustomButtons.primaryButton(
-                      text: AppStrings.buttonContinue, onPressed: () {})
+                    text: AppStrings.buttonContinue,
+                    onPressed: _navigateToHome,
+                  ),
                 ],
               ),
             ),
