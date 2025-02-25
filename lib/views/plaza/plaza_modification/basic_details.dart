@@ -6,7 +6,7 @@ import '../../../models/plaza.dart';
 import '../../../utils/components/appbar.dart';
 import '../../../utils/components/dropdown.dart';
 import '../../../utils/components/form_field.dart';
-import '../../../viewmodels/plaza_viewmodel/plaza_viewmodel.dart';
+import '../../../viewmodels/plaza/plaza_viewmodel.dart';
 
 class BasicDetailsModificationScreen extends StatefulWidget {
   const BasicDetailsModificationScreen({super.key});

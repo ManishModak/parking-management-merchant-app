@@ -4,7 +4,7 @@ import 'package:merchant_app/utils/components/form_field.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/app_strings.dart';
-import '../../services/secure_storage_service.dart';
+import '../../services/storage/secure_storage_service.dart';
 import '../../utils/components/appbar.dart';
 import '../../utils/components/button.dart';
 import '../../utils/components/dropdown.dart';

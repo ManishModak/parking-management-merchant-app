@@ -1,131 +1,168 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:merchant_app/services/plaza_service.dart';
-import '../config/app_strings.dart';
 import '../models/plaza.dart';
 import '../models/plaza_fare.dart';
-import '../services/fare_service.dart';
-import '../services/secure_storage_service.dart';
+import '../services/core/plaza_service.dart';
+import '../services/payment/fare_service.dart';
+import '../services/storage/secure_storage_service.dart';
+import '../config/app_strings.dart';
 
+/// ViewModel for managing plaza fare operations including creation, validation,
+/// and submission of fares.
 class PlazaFareViewModel extends ChangeNotifier {
-  final _plazaService = PlazaService();
-  final _fareService = FareService();
-  final SecureStorageService _storageService = SecureStorageService();
+  final PlazaService _plazaService;
+  final FareService _fareService;
+  final SecureStorageService _storageService;
+
+  PlazaFareViewModel({
+    PlazaService? plazaService,
+    FareService? fareService,
+    SecureStorageService? storageService,
+  })  : _plazaService = plazaService ?? PlazaService(),
+        _fareService = fareService ?? FareService(),
+        _storageService = storageService ?? SecureStorageService();
 
   // State variables
-  String? selectedFareType;
-  String? selectedVehicleType;
-  String? selectedPlazaId;
-  Plaza? selectedPlaza;
-  bool isLoading = false;
-  List<Plaza> plazaList = [];
-  List<PlazaFare> temporaryFares = [];
-  List<PlazaFare> existingFares = [];
-  Map<String, dynamic>? createdBy;
+  bool _isLoading = false;
+  String? _selectedFareType;
+  String? _selectedVehicleType;
+  String? _selectedPlazaId;
+  Plaza? _selectedPlaza;
+  List<Plaza> _plazaList = [];
+  final List<PlazaFare> _temporaryFares = [];
+  List<PlazaFare> _existingFares = [];
+  Map<String, dynamic>? _createdBy;
+
+  // Flag to indicate if a plaza is pre-selected (passed from another screen)
+  bool _isPlazaPreSelected = false;
+  bool get isPlazaPreSelected => _isPlazaPreSelected;
+
+  // Getters
+  bool get isLoading => _isLoading;
+  String? get selectedFareType => _selectedFareType;
+  String? get selectedVehicleType => _selectedVehicleType;
+  String? get selectedPlazaId => _selectedPlazaId;
+  Plaza? get selectedPlaza => _selectedPlaza;
+  List<Plaza> get plazaList => _plazaList;
+  List<PlazaFare> get temporaryFares => _temporaryFares;
+  List<PlazaFare> get existingFares => _existingFares;
+  Map<String, dynamic>? get createdBy => _createdBy;
 
   // Controllers
   final TextEditingController dailyFareController = TextEditingController();
   final TextEditingController hourlyFareController = TextEditingController();
+  final TextEditingController baseHoursController = TextEditingController();
   final TextEditingController baseHourlyFareController = TextEditingController();
   final TextEditingController monthlyFareController = TextEditingController();
   final TextEditingController discountController = TextEditingController();
   final TextEditingController startDateController = TextEditingController();
   final TextEditingController endDateController = TextEditingController();
+  final TextEditingController plazaController = TextEditingController();
 
-  // Validation
-  Map<String, String?> validationErrors = {
-    'plaza': null,
-    'fareType': null,
-    'vehicleType': null,
-    'dailyFare': null,
-    'hourlyFare': null,
-    'baseHourlyFare': null,
-    'monthlyFare': null,
-    'discount': null,
-    'startDate': null,
-    'endDate': null,
-  };
+  // Validation errors
+  Map<String, String?> validationErrors = {};
 
   // Constants
-  final List<String> fareTypes = [
-    "Fixed 24-Hour Fare",
-    "Hourly Fare",
-    "Hour-wise Custom Fare",
-    "Monthly Pass"
-  ];
+  List<String> get fareTypes => FareTypes.values;
+  List<String> get vehicleTypes => VehicleTypes.values;
 
-  final List<String> vehicleTypes = [
-    "Bike", "3-wheeler", "Car", "Jeep",
-    "Van", "Bus", "Truck", "Heavy Machinery Vehicle"
-  ];
+  // Visibility flags
+  bool get isDailyFareVisible => _selectedFareType == FareTypes.daily;
+  bool get isHourlyFareVisible => _selectedFareType == FareTypes.hourly;
+  bool get isHourWiseCustomVisible => _selectedFareType == FareTypes.hourWiseCustom;
+  bool get isMonthlyFareVisible => _selectedFareType == FareTypes.monthlyPass;
+  bool get canAddFare => _selectedPlazaId != null;
+  // If a plaza is pre-selected, disable changing it
+  bool get canChangePlaza => !_isPlazaPreSelected && _temporaryFares.isEmpty;
 
-  // Getters for visibility in UI
-  bool get isDailyFareVisible => selectedFareType == "Fixed 24-Hour Fare";
-  bool get isHourlyFareVisible => selectedFareType == "Hourly Fare";
-  bool get isBaseHourVisible => selectedFareType == "Hour-wise Custom Fare";
-  bool get isMonthlyFareVisible => selectedFareType == "Monthly Pass";
-
+  /// Initializes the ViewModel by fetching necessary data.
   Future<void> initialize() async {
-    isLoading = true;
-    notifyListeners();
-
+    _setLoading(true);
     try {
-      await fetchPlazas();
-      final userData = await _storageService.getUserData();
-      createdBy = userData;
+      await Future.wait([
+        _fetchPlazas(),
+        _fetchUserData(),
+      ]);
     } catch (e) {
       print('Initialization error: $e');
     } finally {
-      isLoading = false;
+      _setLoading(false);
+    }
+  }
+
+  /// Fetches plazas associated with the current user.
+  Future<void> _fetchPlazas() async {
+    try {
+      final userId = await _storageService.getUserId();
+      if (userId != null) {
+        _plazaList = await _plazaService.fetchUserPlazas(userId);
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error fetching plazas: $e');
+      _plazaList = [];
+    }
+  }
+
+  /// Fetches user data from secure storage.
+  Future<void> _fetchUserData() async {
+    try {
+      _createdBy = await _storageService.getUserData();
+      notifyListeners();
+    } catch (e) {
+      print('Error fetching user data: $e');
+      _createdBy = null;
+    }
+  }
+
+  /// Fetches existing fares for a given plaza.
+  Future<void> fetchExistingFares(String plazaId) async {
+    try {
+      _existingFares = await _fareService.getFaresByPlazaId(plazaId);
+      notifyListeners();
+    } catch (e) {
+      print('Error in fetchExistingFares: $e');
+      _existingFares = [];
       notifyListeners();
     }
   }
 
-  Future<void> fetchPlazas() async {
-    final userId = await _storageService.getUserId();
-    if (userId != null) {
-      try {
-        plazaList = await _plazaService.fetchUserPlazas(userId);
-      } catch (e) {
-        print("Error fetching plazas: $e");
-      }
-    }
-  }
-
-  Future<void> fetchExistingFares(String plazaId) async {
-    try {
-      // Uncomment and implement when _plazaService.getExistingFares is available:
-      // existingFares = await _plazaService.getExistingFares(plazaId);
-    } catch (e) {
-      print("Error fetching existing fares: $e");
-    }
-  }
-
+  /// Sets the selected plaza and fetches its existing fares.
   void setSelectedPlaza(Plaza plaza) {
-    selectedPlaza = plaza;
-    selectedPlazaId = plaza.plazaId; // Assuming plazaId is stored as a String.
-    fetchExistingFares(selectedPlazaId!);
-    notifyListeners();
-  }
-
-  void setFareType(String fareType) {
-    selectedFareType = fareType;
-    _autoPopulateFareFields();
-    notifyListeners();
-  }
-
-  void _autoPopulateFareFields() {
-    if (selectedFareType == "Fixed 24-Hour Fare") {
-      dailyFareController.text = "100";
-    } else if (selectedFareType == "Hourly Fare") {
-      hourlyFareController.text = "20";
-    } else if (selectedFareType == "Hour-wise Custom Fare") {
-      baseHourlyFareController.text = "50";
-    } else if (selectedFareType == "Monthly Pass") {
-      monthlyFareController.text = "500";
+    if (canChangePlaza) {
+      _selectedPlaza = plaza;
+      _selectedPlazaId = plaza.plazaId;
+      fetchExistingFares(_selectedPlazaId!);
+      notifyListeners();
     }
   }
 
+  /// Sets a pre-selected plaza (passed from another screen).
+  void setPreSelectedPlaza(Plaza plaza) {
+    _selectedPlaza = plaza;
+    _selectedPlazaId = plaza.plazaId;
+    _isPlazaPreSelected = true;
+    fetchExistingFares(_selectedPlazaId!);
+    notifyListeners();
+  }
+
+  void setPlazaName(String plazaName) {
+    plazaController.text = plazaName;
+  }
+
+  /// Sets the selected fare type.
+  void setFareType(String fareType) {
+    _selectedFareType = fareType;
+    notifyListeners();
+  }
+
+  /// Sets the selected vehicle type.
+  void setVehicleType(String vehicleType) {
+    _selectedVehicleType = vehicleType;
+    notifyListeners();
+  }
+
+  /// Handles the selection of start date.
   Future<void> selectStartDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -139,11 +176,18 @@ class PlazaFareViewModel extends ChangeNotifier {
     }
   }
 
+  /// Handles the selection of end date.
   Future<void> selectEndDate(BuildContext context) async {
+    if (startDateController.text.isEmpty) {
+      _showValidationError(context, 'Please select start date first');
+      return;
+    }
+
+    final DateTime startDate = DateTime.parse(startDateController.text);
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
+      initialDate: startDate.add(const Duration(days: 1)),
+      firstDate: startDate.add(const Duration(days: 1)),
       lastDate: DateTime(2100),
     );
     if (picked != null) {
@@ -152,192 +196,243 @@ class PlazaFareViewModel extends ChangeNotifier {
     }
   }
 
-  void setVehicleType(String vehicleType) {
-    selectedVehicleType = vehicleType;
-    notifyListeners();
-  }
-
+  /// Validates all input fields.
   bool validateFields() {
+
+    validationErrors = {};
     bool isValid = true;
-    // Reset all validation errors.
-    validationErrors = {
-      'plaza': null,
-      'fareType': null,
-      'vehicleType': null,
-      'dailyFare': null,
-      'hourlyFare': null,
-      'baseHourlyFare': null,
-      'monthlyFare': null,
-      'discount': null,
-      'startDate': null,
-      'endDate': null,
-    };
 
-    // Plaza validation
-    if (selectedPlazaId == null || selectedPlazaId!.isEmpty) {
-      validationErrors['plaza'] = AppStrings.errorPlazaSelectionRequired;
+    // Required field validations
+    if (_selectedFareType == null) {
+      validationErrors['fareType'] = 'Fare type selection is required';
       isValid = false;
     }
 
-    if (selectedFareType == null || selectedFareType!.isEmpty) {
-      validationErrors['fareType'] = AppStrings.errorFareTypeSelectionRequired;
-      isValid = false;
-    }
-
-    if (selectedVehicleType == null || selectedVehicleType!.isEmpty) {
-      validationErrors['vehicleType'] = AppStrings.errorVehicleTypeSelectionRequired;
+    if (_selectedVehicleType == null) {
+      validationErrors['vehicleType'] = 'Vehicle type selection is required';
       isValid = false;
     }
 
     // Fare amount validations
-    _validateFareAmounts();
+    if (!_validateFareAmount()) {
+      isValid = false;
+    }
+
+    // Base hours validation for Hour-wise Custom
+    if (!_validateBaseHours()) {
+      isValid = false;
+    }
 
     // Date validations
-    _validateDates();
+    if (!_validateDates()) {
+      isValid = false;
+    }
 
     // Discount validation
-    _validateDiscount();
+    if (!_validateDiscount()) {
+      isValid = false;
+    }
 
     notifyListeners();
     return isValid;
   }
 
-  void _validateFareAmounts() {
-    if (isDailyFareVisible) {
-      _validateAmountField(
-        controller: dailyFareController,
-        fieldName: 'dailyFare',
-        errorMessage: 'Please enter Daily Fare',
-      );
+  /// Validates the fare amount based on selected fare type.
+  bool _validateFareAmount() {
+    switch (_selectedFareType) {
+      case FareTypes.daily:
+        if (dailyFareController.text.isEmpty) {
+          validationErrors['dailyFare'] = 'Daily fare is required';
+          return false;
+        }
+        final dailyFare = double.tryParse(dailyFareController.text);
+        if (dailyFare == null || dailyFare <= 0) {
+          validationErrors['dailyFare'] = 'Daily fare must be greater than 0';
+          return false;
+        }
+        break;
+      case FareTypes.hourly:
+        if (hourlyFareController.text.isEmpty) {
+          validationErrors['hourlyFare'] = 'Hourly fare is required';
+          return false;
+        }
+        final hourlyFare = double.tryParse(hourlyFareController.text);
+        if (hourlyFare == null || hourlyFare <= 0) {
+          validationErrors['hourlyFare'] = 'Hourly fare must be greater than 0';
+          return false;
+        }
+        break;
+      case FareTypes.hourWiseCustom:
+        if (baseHourlyFareController.text.isEmpty) {
+          validationErrors['baseHourlyFare'] = 'Base hourly fare is required';
+          return false;
+        }
+        final baseHourlyFare = double.tryParse(baseHourlyFareController.text);
+        if (baseHourlyFare == null || baseHourlyFare <= 0) {
+          validationErrors['baseHourlyFare'] = 'Base hourly fare must be greater than 0';
+          return false;
+        }
+        break;
+      case FareTypes.monthlyPass:
+        if (monthlyFareController.text.isEmpty) {
+          validationErrors['monthlyFare'] = 'Monthly fare is required';
+          return false;
+        }
+        final monthlyFare = double.tryParse(monthlyFareController.text);
+        if (monthlyFare == null || monthlyFare <= 0) {
+          validationErrors['monthlyFare'] = 'Monthly fare must be greater than 0';
+          return false;
+        }
+        break;
+      default:
+        validationErrors['fareRate'] = 'Invalid fare type selected';
+        return false;
     }
-
-    if (isHourlyFareVisible) {
-      _validateAmountField(
-        controller: hourlyFareController,
-        fieldName: 'hourlyFare',
-        errorMessage: 'Please enter Hourly Fare',
-      );
-    }
-
-    if (isBaseHourVisible) {
-      _validateAmountField(
-        controller: baseHourlyFareController,
-        fieldName: 'baseHourlyFare',
-        errorMessage: 'Please enter Base Hourly Fare',
-      );
-    }
-
-    if (isMonthlyFareVisible) {
-      _validateAmountField(
-        controller: monthlyFareController,
-        fieldName: 'monthlyFare',
-        errorMessage: 'Please enter Monthly Fare',
-      );
-    }
+    return true;
   }
 
-  void _validateAmountField({
-    required TextEditingController controller,
-    required String fieldName,
-    required String errorMessage,
-  }) {
-    if (controller.text.isEmpty) {
-      validationErrors[fieldName] = errorMessage;
-    } else {
-      final amount = double.tryParse(controller.text);
-      if (amount == null || amount <= 0) {
-        validationErrors[fieldName] = 'Amount must be greater than 0';
+  /// Validates base hours for Hour-wise Custom fare type.
+  bool _validateBaseHours() {
+    if (_selectedFareType == FareTypes.hourWiseCustom) {
+      if (baseHoursController.text.isEmpty) {
+        validationErrors['baseHours'] = 'Base hours is required';
+        return false;
+      }
+
+      final hours = int.tryParse(baseHoursController.text);
+      if (hours == null || hours <= 0) {
+        validationErrors['baseHours'] = 'Base hours must be a positive integer';
+        return false;
       }
     }
+    return true;
   }
 
-  void _validateDates() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+  /// Validates the start and end dates.
+  /// - Both start date and end date are required.
+  /// - End date must be later than the start date.
+  bool _validateDates() {
+    bool isValid = true;
 
     if (startDateController.text.isEmpty) {
-      validationErrors['startDate'] = AppStrings.errorStartDateRequired;
-    } else {
-      final startDate = DateTime.parse(startDateController.text);
-      if (startDate.isBefore(today)) {
-        validationErrors['startDate'] = AppStrings.errorPastDateNotAllowed;
-      }
+      validationErrors['startDate'] = 'Start date is required';
+      isValid = false;
     }
 
     if (endDateController.text.isEmpty) {
-      validationErrors['endDate'] = AppStrings.errorEndDateRequired;
-    } else if (startDateController.text.isNotEmpty) {
-      final startDate = DateTime.parse(startDateController.text);
-      final endDate = DateTime.parse(endDateController.text);
-
-      // Allow end date to be equal to the start date.
-      if (endDate.isBefore(startDate)) {
-        validationErrors['endDate'] = 'End date must be later than or equal to the start date';
-      }
+      validationErrors['endDate'] = 'End date is required';
+      isValid = false;
     }
+
+    if (!isValid) {
+      return false;
+    }
+
+    final startDate = DateTime.parse(startDateController.text);
+    final endDate = DateTime.parse(endDateController.text);
+
+    if (!endDate.isAfter(startDate)) {
+      validationErrors['endDate'] = 'End date must be later than start date';
+      return false;
+    }
+
+    return true;
   }
 
-  void _validateDiscount() {
-    if (discountController.text.isEmpty) {
-      validationErrors['discount'] = AppStrings.errorDiscountRequired;
-    } else {
+  /// Validates discount rate if provided.
+  bool _validateDiscount() {
+    if (_selectedFareType == FareTypes.hourWiseCustom) {
+      if (discountController.text.isEmpty) {
+        validationErrors['discount'] = 'Discount for extended hours is required';
+        return false;
+      }
+    }
+    if (discountController.text.isNotEmpty) {
       final discount = double.tryParse(discountController.text);
       if (discount == null || discount <= 0) {
-        validationErrors['discount'] = AppStrings.errorInvalidDiscount;
+        validationErrors['discount'] = 'Discount must be greater than 0';
+        return false;
       }
     }
+    return true;
   }
 
-  /// Helper method to convert a vehicle type string into the corresponding enum.
-  VehicleType _convertStringToVehicleType(String vehicleType) {
-    if (vehicleType == "Bike") {
-      return VehicleType.Bike;
-    } else if (vehicleType == "3-wheeler" || vehicleType == "ThreeWheeler") {
-      return VehicleType.ThreeWheeler;
-    } else if (vehicleType == "Car" || vehicleType == "FourWheeler") {
-      return VehicleType.FourWheeler;
-    } else if (vehicleType == "Bus") {
-      return VehicleType.Bus;
-    } else if (vehicleType == "Truck") {
-      return VehicleType.Truck;
-    } else if (vehicleType == "Heavy Machinery Vehicle") {
-      return VehicleType.HeavyMachineryVehicle;
-    } else {
-      return VehicleType.InvalidCarriage;
+  /// Creates a new PlazaFare object from the current input values.
+  PlazaFare _createFareObject() {
+    double fareRate;
+    switch (_selectedFareType) {
+      case FareTypes.daily:
+        fareRate = double.parse(dailyFareController.text);
+        break;
+      case FareTypes.hourly:
+        fareRate = double.parse(hourlyFareController.text);
+        break;
+      case FareTypes.hourWiseCustom:
+        fareRate = double.parse(baseHourlyFareController.text);
+        break;
+      case FareTypes.monthlyPass:
+        fareRate = double.parse(monthlyFareController.text);
+        break;
+      default:
+        throw Exception('Invalid fare type');
     }
+
+    return PlazaFare(
+      plazaId: int.parse(_selectedPlazaId!),
+      vehicleType: _selectedVehicleType!,
+      fareType: _selectedFareType!,
+      baseHours: _selectedFareType == FareTypes.hourWiseCustom
+          ? int.parse(baseHoursController.text)
+          : null,
+      fareRate: fareRate,
+      discountRate: discountController.text.isNotEmpty
+          ? double.parse(discountController.text)
+          : null,
+      startEffectDate: DateTime.parse(startDateController.text),
+      endEffectDate: endDateController.text.isNotEmpty
+          ? DateTime.parse(endDateController.text)
+          : null,
+    );
   }
 
+  /// Adds a new fare to the temporary fares list.
   Future<bool> addFareToList(BuildContext context) async {
     if (!validateFields()) {
-      _showValidationError(context, 'Please correct errors');
-      return false;
-    }
-
-    // Convert the selected plaza ID to an int.
-    final int parsedPlazaId = int.parse(selectedPlazaId!);
-    // Convert the selected vehicle type to the corresponding enum.
-    final VehicleType selectedVehicleEnum = _convertStringToVehicleType(selectedVehicleType!);
-
-    // Check against existing system fares.
-    if (existingFares.any((fare) => fare.plazaId == parsedPlazaId)) {
-      _showValidationError(context, 'Fare already exists for this plaza in system');
-      return false;
-    }
-
-    // Check temporary fares.
-    if (temporaryFares.any((fare) => fare.plazaId == parsedPlazaId)) {
-      _showValidationError(context, 'Fare already exists for this plaza');
-      return false;
-    }
-
-    if (temporaryFares.any((fare) =>
-    fare.plazaId == parsedPlazaId && fare.vehicleType == selectedVehicleEnum)) {
-      _showValidationError(context, 'Vehicle class already exists for this plaza');
+      _showValidationError(context, 'Please correct the errors before adding the fare');
       return false;
     }
 
     try {
-      temporaryFares.add(_createFareObject());
+      final newFare = _createFareObject();
+
+      bool duplicate = false;
+      if (_isPlazaPreSelected) {
+        // Check both temporary and existing fares if plaza is pre-selected.
+        duplicate = _temporaryFares.any((fare) =>
+        fare.plazaId == newFare.plazaId &&
+            fare.vehicleType == newFare.vehicleType &&
+            fare.fareType == newFare.fareType) ||
+            _existingFares.any((fare) =>
+            fare.plazaId == newFare.plazaId &&
+                fare.vehicleType == newFare.vehicleType &&
+                fare.fareType == newFare.fareType);
+      } else {
+        // Otherwise, check only temporary fares.
+        duplicate = _temporaryFares.any((fare) =>
+        fare.plazaId == newFare.plazaId &&
+            fare.vehicleType == newFare.vehicleType &&
+            fare.fareType == newFare.fareType);
+      }
+
+      if (duplicate) {
+        validationErrors['duplicateFare'] = 'A similar fare already exists';
+        notifyListeners();
+        return false;
+      } else {
+        validationErrors.remove('duplicateFare');
+      }
+
+      _temporaryFares.add(newFare);
       notifyListeners();
       return true;
     } catch (e) {
@@ -346,130 +441,196 @@ class PlazaFareViewModel extends ChangeNotifier {
     }
   }
 
-  PlazaFare _createFareObject() {
-    // Convert selectedFareType string to enum FareType.
-    FareType fareTypeEnum;
-    if (selectedFareType == "Fixed 24-Hour Fare") {
-      fareTypeEnum = FareType.Fixed24Hour;
-    } else if (selectedFareType == "Hourly Fare") {
-      fareTypeEnum = FareType.Hourly;
-    } else if (selectedFareType == "Hour-wise Custom Fare") {
-      fareTypeEnum = FareType.HourWiseCustom;
-    } else if (selectedFareType == "Monthly Pass") {
-      fareTypeEnum = FareType.MonthlyPass;
-    } else {
-      throw Exception("Invalid fare type selected");
+  /// Submits all temporary fares to the backend.
+  Future<void> submitAllFares(BuildContext context) async {
+    if (_temporaryFares.isEmpty) {
+      _showValidationError(context, AppStrings.warningNoFaresAdded);
+      return;
     }
 
-    // Convert selectedVehicleType string to enum VehicleType.
-    VehicleType vehicleTypeEnum = _convertStringToVehicleType(selectedVehicleType!);
-
-    // Determine fareRate and baseHours based on the fare type.
-    double fareRate;
-    int? baseHours;
-    if (fareTypeEnum == FareType.Fixed24Hour) {
-      fareRate = double.parse(dailyFareController.text);
-    } else if (fareTypeEnum == FareType.Hourly) {
-      fareRate = double.parse(hourlyFareController.text);
-    } else if (fareTypeEnum == FareType.HourWiseCustom) {
-      // For Hour-wise Custom Fare, assume the input is used for both rate and base hours.
-      fareRate = double.parse(baseHourlyFareController.text);
-      baseHours = int.tryParse(baseHourlyFareController.text);
-    } else if (fareTypeEnum == FareType.MonthlyPass) {
-      fareRate = double.parse(monthlyFareController.text);
-    } else {
-      fareRate = 0;
+    _setLoading(true);
+    try {
+      await _fareService.addFare(_temporaryFares);
+      _temporaryFares.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(AppStrings.successFareSubmission)),
+      );
+    } catch (e) {
+      _showValidationError(context, '${AppStrings.errorSubmissionFailed} $e');
+    } finally {
+      _setLoading(false);
     }
-
-    return PlazaFare(
-      // Convert selectedPlazaId (if stored as String) to int.
-      plazaId: int.parse(selectedPlazaId!),
-      vehicleType: vehicleTypeEnum,
-      fareType: fareTypeEnum,
-      baseHours: baseHours,
-      fareRate: fareRate,
-      discountRate: double.tryParse(discountController.text),
-      startEffectDate: DateTime.parse(startDateController.text),
-      endEffectDate: endDateController.text.isNotEmpty
-          ? DateTime.parse(endDateController.text)
-          : null,
-    );
   }
 
+  bool isLoadingFare = false;
+  void setLoadingFare(bool loading) {
+    isLoadingFare = loading;
+  }
+
+  Future<PlazaFare?> getFareById(int fareId) async {
+    try {
+      final fare = await _fareService.getFareById(fareId);
+      return fare;
+    } catch (e) {
+      print('Error fetching fare by ID: $e');
+      return null;
+    }
+  }
+
+  bool _isUpdating = false;
+  bool get isUpdating => _isUpdating;
+
+  // Method to update a fare
+  Future<bool> updateFare(int fareId) async {
+    if (!validateFields()) {
+      return false;
+    }
+
+    _isUpdating = true;
+    notifyListeners();
+
+    try {
+      double? fareRate;
+      switch (selectedFareType) {
+        case FareTypes.daily:
+          fareRate = double.tryParse(dailyFareController.text);
+          break;
+        case FareTypes.hourly:
+          fareRate = double.tryParse(hourlyFareController.text);
+          break;
+        case FareTypes.hourWiseCustom:
+          fareRate = double.tryParse(baseHourlyFareController.text);
+          break;
+        case FareTypes.monthlyPass:
+          fareRate = double.tryParse(monthlyFareController.text);
+          break;
+        default:
+      }
+
+      if (fareRate == null) {
+        throw Exception("Invalid fare rate");
+      }
+
+      final double? discountRate = discountController.text.isNotEmpty
+          ? double.tryParse(discountController.text)
+          : null;
+
+
+      final int? baseHours = baseHoursController.text.isNotEmpty
+          ? int.tryParse(baseHoursController.text)
+          : null;
+
+
+      final startEffectDate = DateTime.parse(startDateController.text);
+
+      DateTime? endEffectDate;
+      if (endDateController.text.isNotEmpty) {
+        endEffectDate = DateTime.parse(endDateController.text);
+
+      }
+
+      final updatedFare = PlazaFare(
+        fareId: fareId,
+        plazaId: selectedPlazaId != null ? int.parse(selectedPlazaId!) : 0,
+        vehicleType: selectedVehicleType!,
+        fareType: selectedFareType!,
+        baseHours: baseHours,
+        fareRate: fareRate,
+        discountRate: discountRate,
+        startEffectDate: startEffectDate,
+        endEffectDate: endEffectDate,
+        isDeleted: false,
+      );
+      final success = await _fareService.updateFare(updatedFare);
+      if (success) {
+        final index = _existingFares.indexWhere((f) => f.fareId == fareId);
+        if (index != -1) {
+          _existingFares[index] = updatedFare;
+          notifyListeners();
+        }
+      } else {
+      }
+      return success;
+    } catch (e) {
+      return false;
+    } finally {
+      _isUpdating = false;
+      notifyListeners();
+    }
+  }
+
+  // Helper method to populate controllers with fare data
+  void populateFareData(PlazaFare fare) {
+    setFareType(fare.fareType);
+    setVehicleType(fare.vehicleType);
+
+    startDateController.text = DateFormat('yyyy-MM-dd').format(fare.startEffectDate);
+    if (fare.endEffectDate != null) {
+      endDateController.text = DateFormat('yyyy-MM-dd').format(fare.endEffectDate!);
+    } else {
+      endDateController.clear();
+    }
+
+    discountController.text = fare.discountRate?.toString() ?? "";
+    baseHoursController.text = fare.baseHours?.toString() ?? "";
+
+    switch (fare.fareType) {
+      case FareTypes.daily:
+        dailyFareController.text = fare.fareRate.toString();
+        break;
+      case FareTypes.hourly:
+        hourlyFareController.text = fare.fareRate.toString();
+        break;
+      case FareTypes.hourWiseCustom:
+        baseHourlyFareController.text = fare.fareRate.toString();
+        break;
+      case FareTypes.monthlyPass:
+        monthlyFareController.text = fare.fareRate.toString();
+        break;
+    }
+    notifyListeners();
+  }
+
+  /// Shows a validation error message.
   void _showValidationError(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
   }
 
-  Future<void> submitAllFares(BuildContext context) async {
-    if (temporaryFares.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.warningNoFaresAdded)),
-      );
-      return;
-    }
-
-    isLoading = true;
+  /// Updates the loading state.
+  void _setLoading(bool loading) {
+    _isLoading = loading;
     notifyListeners();
+  }
 
-    try {
-      // Call addFare with the list of fares.
-      final responseFares = await _fareService.addFare(temporaryFares);
-
-      // Optionally update state with responseFares if needed.
-      // For now, clear the temporary fares list.
-      temporaryFares.clear();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.successFareSubmission)),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${AppStrings.errorSubmissionFailed} $e')),
-      );
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
+  /// Resets all input fields except plaza selection.
+  void resetFields() {
+    _selectedFareType = null;
+    _selectedVehicleType = null;
+    dailyFareController.clear();
+    hourlyFareController.clear();
+    baseHoursController.clear();
+    baseHourlyFareController.clear();
+    monthlyFareController.clear();
+    discountController.clear();
+    startDateController.clear();
+    endDateController.clear();
+    validationErrors.clear();
+    notifyListeners();
   }
 
   @override
   void dispose() {
+    plazaController.dispose();
     dailyFareController.dispose();
     hourlyFareController.dispose();
+    baseHoursController.dispose();
     baseHourlyFareController.dispose();
     monthlyFareController.dispose();
     discountController.dispose();
     startDateController.dispose();
     endDateController.dispose();
     super.dispose();
-  }
-
-  void resetFields() {
-    selectedPlaza = null;
-    selectedPlazaId = null;
-    selectedFareType = null;
-    selectedVehicleType = null;
-    validationErrors = {
-      'plaza': null,
-      'fareType': null,
-      'vehicleType': null,
-      'dailyFare': null,
-      'hourlyFare': null,
-      'baseHourlyFare': null,
-      'monthlyFare': null,
-      'discount': null,
-      'startDate': null,
-      'endDate': null,
-    };
-    dailyFareController.clear();
-    hourlyFareController.clear();
-    baseHourlyFareController.clear();
-    monthlyFareController.clear();
-    discountController.clear();
-    startDateController.clear();
-    endDateController.clear();
-    notifyListeners();
   }
 }

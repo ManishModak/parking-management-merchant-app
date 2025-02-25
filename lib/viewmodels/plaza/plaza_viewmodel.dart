@@ -1,54 +1,47 @@
 import 'dart:async';
+import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:merchant_app/services/bank_service.dart';
-import 'package:merchant_app/services/image_service.dart';
-import 'package:merchant_app/services/lane_service.dart';
-import 'package:merchant_app/viewmodels/plaza_viewmodel/plaza_form_validation.dart';
-import 'package:merchant_app/viewmodels/plaza_viewmodel/restoration_helper.dart';
-import '../../config/api_config.dart';
+import 'package:merchant_app/services/payment/bank_service.dart';
+import 'package:merchant_app/services/utils/image_service.dart';
+import 'package:merchant_app/services/core/lane_service.dart';
+import 'package:merchant_app/viewmodels/plaza/plaza_form_validation.dart';
+import 'package:merchant_app/viewmodels/plaza/restoration_helper.dart';
 import '../../models/bank.dart';
 import '../../models/lane.dart';
 import '../../models/plaza.dart';
 import '../../models/user_model.dart';
-import '../../services/plaza_service.dart';
-import '../../services/secure_storage_service.dart';
+import '../../services/core/plaza_service.dart';
+import '../../services/storage/secure_storage_service.dart';
 import '../../utils/exceptions.dart';
 
 class PlazaFormState {
   final PlazaFormValidation formValidation = PlazaFormValidation();
   final Map<String, String?> errors = {};
 
-  // Consolidate all fields into basicDetails
   Map<String, dynamic> basicDetails = {};
   Map<String, dynamic> laneDetails = {};
   Map<String, dynamic> bankDetails = {};
-  List<String> fetchedImages = []; // Existing list of image URLs
-  List<String> plazaImages = []; // Used for UI display
-  Map<String, String> imageIds =
-      {}; // New map to store image URLs and their IDs
+  List<String> fetchedImages = [];
+  List<String> plazaImages = [];
+  Map<String, String> imageIds = {};
 
   bool validateStep(int step) {
-    errors.clear(); // Clear previous errors for the step
-
+    errors.clear();
     switch (step) {
       case 0:
         formValidation.validateBasicDetails(basicDetails, errors);
         break;
-
       case 1:
         break;
-
       case 2:
         formValidation.validateBankDetails(bankDetails, errors);
         break;
-
       case 3:
         break;
     }
-
     return errors.isEmpty;
   }
 
@@ -81,61 +74,56 @@ class PlazaViewModel extends ChangeNotifier {
   final BankService _bankService = BankService();
   final PlazaFormState formState = PlazaFormState();
   final SecureStorageService _secureStorageService = SecureStorageService();
-  final formValidation = PlazaFormValidation();
 
   int _currentStep = 0;
   int _completeTillStep = -1;
 
-  // API-related state
   List<Plaza> _userPlazas = [];
-  final Map<String, String> plazaImages =
-      {}; // Store plaza ID and corresponding image URL
+  final Map<String, String> plazaImages = {};
   bool _isLoading = false;
-  String? _error;
+  Exception? _error; // Changed to Exception?
   String? _plazaId;
-  final List<Lane> _temporaryLanes = []; // To store newly added lanes
-  late List<Lane> _existingLanes = []; // To store existing lanes from the backend
+  final List<Lane> _temporaryLanes = [];
+  late List<Lane> _existingLanes = [];
   List<Lane> lanes = [];
-
 
   List<Lane> get temporaryLanes => List.unmodifiable(_temporaryLanes);
   List<Lane> get existingLanes => List.unmodifiable(_existingLanes);
+  List<Plaza> get userPlazas => _userPlazas;
+  bool get isLoading => _isLoading;
+  Exception? get error => _error;
+  String? get plazaId => _plazaId;
+  int get currentStep => _currentStep;
+  int get completeTillStep => _completeTillStep;
 
-  // Step 1: Basic Details
   bool _isBasicDetailsEditable = false;
-
   bool get isBasicDetailsEditable => _isBasicDetailsEditable;
-
   bool _isBasicDetailsFirstTime = true;
-
   bool get isBasicDetailsFirstTime => _isBasicDetailsFirstTime;
 
-  // Step 2: Lane Details
   bool _isLaneEditable = false;
-
   bool get isLaneEditable => _isLaneEditable;
-
   bool _isLaneDetailsFirstTime = true;
-
   bool get isLaneDetailsFirstTime => _isLaneDetailsFirstTime;
 
-  bool _isBankEditable = false; // Tracks edit mode for Step 3
+  bool _isBankEditable = false;
   bool get isBankEditable => _isBankEditable;
-
-  bool _isBankDetailsFirstTime = true; // Tracks first-time entry for Step 3
+  bool _isBankDetailsFirstTime = true;
   bool get isBankDetailsFirstTime => _isBankDetailsFirstTime;
 
   final Map<String, dynamic> _laneDetails = {};
-
   Map<String, dynamic> get laneDetails => _laneDetails;
 
-  // Step completion flags
   bool _isBasicDetailsCompleted = false;
   bool _isLaneDetailsCompleted = false;
   bool _isBankDetailsCompleted = false;
   bool _isPlazaImagesCompleted = false;
 
-  // Controllers for form fields
+  bool get isBasicDetailsCompleted => _isBasicDetailsCompleted;
+  bool get isLaneDetailsCompleted => _isLaneDetailsCompleted;
+  bool get isBankDetailsCompleted => _isBankDetailsCompleted;
+  bool get isPlazaImagesCompleted => _isPlazaImagesCompleted;
+
   TextEditingController plazaNameController = TextEditingController();
   TextEditingController plazaOwnerController = TextEditingController();
   TextEditingController operatorNameController = TextEditingController();
@@ -160,28 +148,6 @@ class PlazaViewModel extends ChangeNotifier {
   TextEditingController accountNumberController = TextEditingController();
   TextEditingController accountHolderController = TextEditingController();
   TextEditingController ifscCodeController = TextEditingController();
-
-
-  // Getters
-  List<Plaza> get userPlazas => _userPlazas;
-
-  bool get isLoading => _isLoading;
-
-  String? get error => _error;
-
-  String? get plazaId => _plazaId;
-
-  int get currentStep => _currentStep;
-
-  int get completeTillStep => _completeTillStep;
-
-  bool get isBasicDetailsCompleted => _isBasicDetailsCompleted;
-
-  bool get isLaneDetailsCompleted => _isLaneDetailsCompleted;
-
-  bool get isBankDetailsCompleted => _isBankDetailsCompleted;
-
-  bool get isPlazaImagesCompleted => _isPlazaImagesCompleted;
 
   bool isStepValid(int step) {
     switch (step) {
@@ -223,7 +189,6 @@ class PlazaViewModel extends ChangeNotifier {
         (isBasicDetailsEditable && !isBasicDetailsFirstTime);
   }
 
-  // Initialize controllers
   void initControllers() async {
     final cachedUserData = await _secureStorageService.getUserData();
     if (cachedUserData == null) {
@@ -231,25 +196,19 @@ class PlazaViewModel extends ChangeNotifier {
     }
 
     var currentUser = User.fromJson(cachedUserData);
-    print(currentUser.toString());
+    log('Current user: $currentUser');
 
-    // Set text for existing controller instead of creating new one
     if (currentUser.role == "Plaza Owner") {
-      formState.basicDetails['plazaOwner'] =
-          currentUser.entityName?.trim() ?? '';
+      formState.basicDetails['plazaOwner'] = currentUser.entityName?.trim() ?? '';
       formState.basicDetails['ownerId'] = currentUser.id.trim();
-      plazaOwnerController.text =
-          '${currentUser.entityName?.trim()} (ID:${currentUser.id.trim()})';
+      plazaOwnerController.text = '${currentUser.entityName?.trim()} (ID:${currentUser.id.trim()})';
     } else {
-      formState.basicDetails['plazaOwner'] =
-          plazaOwnerController.text = currentUser.entityName?.trim() ?? '';
+      formState.basicDetails['plazaOwner'] = plazaOwnerController.text = currentUser.entityName?.trim() ?? '';
       formState.basicDetails['ownerId'] = currentUser.entityId?.trim() ?? '';
-      plazaOwnerController.text =
-          '${currentUser.entityName?.trim()} (ID:${currentUser.entityId?.trim()})';
+      plazaOwnerController.text = '${currentUser.entityName?.trim()} (ID:${currentUser.entityId?.trim()})';
     }
 
     _completeTillStep = -1;
-
     addListeners();
   }
 
@@ -257,10 +216,8 @@ class PlazaViewModel extends ChangeNotifier {
     plazaNameController.addListener(() {
       formState.basicDetails['plazaName'] = plazaNameController.text.trim();
     });
-
     operatorNameController.addListener(() {
-      formState.basicDetails['operatorName'] =
-          operatorNameController.text.trim();
+      formState.basicDetails['operatorName'] = operatorNameController.text.trim();
     });
     operatorIdController.addListener(() {
       formState.basicDetails['operatorId'] = operatorIdController.text.trim();
@@ -292,15 +249,11 @@ class PlazaViewModel extends ChangeNotifier {
     longitudeController.addListener(() {
       formState.basicDetails['longitude'] = longitudeController.text.trim();
     });
-
-    // Capacity fields
     totalParkingSlotsController.addListener(() {
-      formState.basicDetails['totalParkingSlots'] =
-          totalParkingSlotsController.text.trim();
+      formState.basicDetails['totalParkingSlots'] = totalParkingSlotsController.text.trim();
     });
     twoWheelerCapacityController.addListener(() {
-      formState.basicDetails['twoWheelerCapacity'] =
-          twoWheelerCapacityController.text.trim();
+      formState.basicDetails['twoWheelerCapacity'] = twoWheelerCapacityController.text.trim();
     });
     lmvCapacityController.addListener(() {
       formState.basicDetails['lmvCapacity'] = lmvCapacityController.text.trim();
@@ -311,25 +264,20 @@ class PlazaViewModel extends ChangeNotifier {
     hmvCapacityController.addListener(() {
       formState.basicDetails['hmvCapacity'] = hmvCapacityController.text.trim();
     });
-
-    // Timing fields
     openingTimeController.addListener(() {
       formState.basicDetails['openingTime'] = openingTimeController.text.trim();
     });
     closingTimeController.addListener(() {
       formState.basicDetails['closingTime'] = closingTimeController.text.trim();
     });
-
     bankNameController.addListener(() {
       formState.bankDetails['bankName'] = bankNameController.text.trim();
     });
     accountNumberController.addListener(() {
-      formState.bankDetails['accountNumber'] =
-          accountNumberController.text.trim();
+      formState.bankDetails['accountNumber'] = accountNumberController.text.trim();
     });
     accountHolderController.addListener(() {
-      formState.bankDetails['accountHolderName'] =
-          accountHolderController.text.trim();
+      formState.bankDetails['accountHolderName'] = accountHolderController.text.trim();
     });
     ifscCodeController.addListener(() {
       formState.bankDetails['ifscCode'] = ifscCodeController.text.trim();
@@ -337,99 +285,90 @@ class PlazaViewModel extends ChangeNotifier {
   }
 
   void validateBasicDetailsStep() {
-    print('Basic Details Before Validation: ${formState.basicDetails}');
+    log('Basic Details Before Validation: ${formState.basicDetails}');
     formState.errors.clear();
 
-    final validationError = formValidation.validateBasicDetails(
+    final validationError = formState.formValidation.validateBasicDetails(
       formState.basicDetails,
       formState.errors,
     );
 
     _isBasicDetailsCompleted = validationError == null;
 
-    print('Validation Errors: ${formState.errors}');
+    log('Validation Errors: ${formState.errors}');
     notifyListeners();
   }
 
   void validateBankDetailsStep() {
-    print('Bank Details Before Validation: ${formState.bankDetails}');
+    log('Bank Details Before Validation: ${formState.bankDetails}');
     formState.errors.clear();
 
-    // Use the updated validateBankDetails method
-    formValidation.validateBankDetails(formState.bankDetails, formState.errors);
+    formState.formValidation.validateBankDetails(formState.bankDetails, formState.errors);
 
     _isBankDetailsCompleted = formState.errors.isEmpty;
 
-    print('Validation Errors: ${formState.errors}');
+    log('Validation Errors: ${formState.errors}');
     notifyListeners();
   }
 
   String? validateLaneDetailsStep() {
-    print('Lane Details Before Validation: $_laneDetails');
+    log('Lane Details Before Validation: $_laneDetails');
     formState.errors.clear();
 
-    final validationResult = formValidation.validateLaneDetails(_laneDetails, formState.errors);
+    final validationResult = formState.formValidation.validateLaneDetails(_laneDetails, formState.errors);
     _isLaneDetailsCompleted = formState.errors.isEmpty;
 
-    print('Validation Errors: ${formState.errors}');
+    log('Validation Errors: ${formState.errors}');
     notifyListeners();
     return validationResult;
   }
 
-  // Form validation
   void validateStepCompletion() {
     switch (_currentStep) {
       case 0:
         validateBasicDetailsStep();
         break;
       case 1:
-        // Add Lane Details validation logic
         break;
       case 2:
         validateBankDetailsStep();
         break;
       case 3:
-        // Add Plaza Images validation logic
         break;
     }
     notifyListeners();
   }
 
-  // Navigation methods
   void goToStep(int step) {
     if (step <= _completeTillStep + 1) {
       _currentStep = step;
-      // If going to lane details step (step 1), fetch lanes
       if (step == 1 && plazaId != null) {
-        print('Fetching lanes for plaza: $plazaId'); // Debug print
+        log('Fetching lanes for plaza: $plazaId');
         fetchExistingLanes(plazaId!);
       }
       notifyListeners();
     }
   }
 
-  // Complete Step 1 (Basic Details)
   void completeBasicDetails() {
     _isBasicDetailsFirstTime = false;
     _isBasicDetailsEditable = false;
-    if (_completeTillStep < 0) _completeTillStep = 0; // Update progress
+    if (_completeTillStep < 0) _completeTillStep = 0;
     notifyListeners();
   }
 
-// Complete Step 2 (Lane Details)
   void completeLaneDetails() {
     _isLaneDetailsFirstTime = false;
     _isLaneEditable = false;
-    if (_completeTillStep < 1) _completeTillStep = 1; // Update progress
+    if (_completeTillStep < 1) _completeTillStep = 1;
     notifyListeners();
   }
 
-// Move to the next step
   void nextStep() {
     if (_currentStep < 3) {
       _currentStep++;
       if (_currentStep > _completeTillStep) {
-        _completeTillStep = _currentStep; // Ensure step is marked as completed
+        _completeTillStep = _currentStep;
       }
       notifyListeners();
     }
@@ -458,15 +397,15 @@ class PlazaViewModel extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      print('ViewModel: Fetching lanes for Plaza ID: $plazaId');
+      log('ViewModel: Fetching lanes for Plaza ID: $plazaId');
       final newLanes = await _laneService.getLanesByPlazaId(plazaId);
-      print('Fetched lanes: $newLanes');
+      log('Fetched lanes: $newLanes');
 
       lanes = newLanes;
       _error = null;
     } catch (e) {
-      _error = e.toString();
-      print('Error in fetchLanes: $e');
+      _error = e is Exception ? e : Exception('Error fetching lanes: $e');
+      log('Error in fetchLanes: $e');
       lanes = [];
     } finally {
       _isLoading = false;
@@ -476,33 +415,28 @@ class PlazaViewModel extends ChangeNotifier {
 
   Future<void> addLane(List<Lane> lanes) async {
     try {
-      // Send the array of lanes to the service
       final newLaneId = await _laneService.addLane(lanes);
-
-      // Update the local data or refresh the UI
       for (var lane in lanes) {
         lane.laneId = newLaneId;
       }
-      notifyListeners(); // Notify listeners to refresh UI
+      notifyListeners();
     } catch (e) {
-      print(e.toString());
-      _error = 'Error adding lanes: ${e.toString()}';
+      _error = Exception('Error adding lanes: $e');
+      log('Error adding lanes: $e');
       notifyListeners();
     }
   }
 
   Future<void> updateLane(String laneId, Lane updatedLane) async {
     try {
-      // Update the lane using the service layer
       final success = await _laneService.updateLane(updatedLane);
-
       if (success) {
-        notifyListeners(); // Notify listeners to update UI
+        notifyListeners();
       } else {
-        _error = 'Failed to update lane';
+        _error = Exception('Failed to update lane');
       }
     } catch (e) {
-      _error = 'Error updating lane: ${e.toString()}';
+      _error = Exception('Error updating lane: $e');
       notifyListeners();
     }
   }
@@ -510,13 +444,13 @@ class PlazaViewModel extends ChangeNotifier {
   void setBasicDetailsEditable(bool setValue) {
     _isBasicDetailsEditable = setValue;
   }
+
   void setBankDetailsEditable(bool setValue) {
     _isBankEditable = setValue;
   }
 
   void toggleBasicDetailsEditable() {
     if (!isBasicDetailsEditable) {
-      // Save the current state before editing
       RestorationHelper.saveOriginalBasicDetails(formState.basicDetails);
     }
     _isBasicDetailsEditable = !_isBasicDetailsEditable;
@@ -531,21 +465,18 @@ class PlazaViewModel extends ChangeNotifier {
   }
 
   void toggleLaneEditable() {
-    _isLaneEditable = !_isLaneEditable; // Toggle the edit mode
+    _isLaneEditable = !_isLaneEditable;
     notifyListeners();
   }
 
-  // When enabling edit mode for Bank Details
   void toggleBankEditable() {
     if (!isBankEditable) {
-      // Save the current state before editing
       RestorationHelper.saveOriginalBankDetails(formState.bankDetails);
     }
     _isBankEditable = !_isBankEditable;
     notifyListeners();
   }
 
-  // When canceling changes for Bank Details
   void cancelBankDetailsEdit() {
     RestorationHelper.restoreBankDetails(formState.bankDetails);
     _populateBankDetailsControllers();
@@ -554,16 +485,16 @@ class PlazaViewModel extends ChangeNotifier {
   }
 
   void setLaneDetailsCompleted() {
-    _isLaneDetailsFirstTime = false; // Mark Lane Details as completed
+    _isLaneDetailsFirstTime = false;
     notifyListeners();
   }
 
   Future<void> saveBankDetails(BuildContext context, {bool? modify}) async {
-    print("Bank Details before validation: ${formState.bankDetails}");
+    log("Bank Details before validation: ${formState.bankDetails}");
     validateBankDetailsStep();
 
     if (!_isBankDetailsCompleted) {
-      print("Validation failed: ${formState.errors}");
+      log("Validation failed: ${formState.errors}");
       showSnackBar(context, 'Please correct the errors in Bank Details.');
       return;
     }
@@ -576,36 +507,34 @@ class PlazaViewModel extends ChangeNotifier {
       'plazaId': plazaId,
     };
 
-    print("Prepared Bank Details: $bankDetails");
-
-    print(isBankEditable);
+    log("Prepared Bank Details: $bankDetails");
 
     try {
       String operation = "added";
       bool isOperationSuccessful = false;
 
       if (modify == true) {
-        print("Updating existing Bank Details...");
+        log("Updating existing Bank Details...");
         isOperationSuccessful = await updateBankDetails();
         if (isOperationSuccessful) {
           toggleBankEditable();
           operation = "updated";
         }
       } else if (_isBankDetailsFirstTime) {
-        print("Adding new Bank Details...");
+        log("Adding new Bank Details...");
         isOperationSuccessful = await addBankDetails();
         if (isOperationSuccessful) {
           completeBankDetails();
         }
       } else if (_isBankEditable) {
-        print("Updating existing Bank Details...");
+        log("Updating existing Bank Details...");
         isOperationSuccessful = await updateBankDetails();
         if (isOperationSuccessful) {
           toggleBankEditable();
           operation = "updated";
         }
       } else {
-        print("Toggling edit mode...");
+        log("Toggling edit mode...");
         toggleBankEditable();
         return;
       }
@@ -620,15 +549,14 @@ class PlazaViewModel extends ChangeNotifier {
           },
         );
       } else {
-        showSnackBar(
-            context, 'Failed to $operation bank details. Please try again.');
+        showSnackBar(context, 'Failed to $operation bank details. Please try again.');
       }
     } catch (e) {
-      print("Error in saveBankDetails: $e");
+      log("Error in saveBankDetails: $e");
       showSnackBar(context, 'Error: Failed to save Bank Details: $e');
     }
   }
-  // Save all lanes
+
   Future<void> saveLanes(String plazaId) async {
     try {
       if (_isLaneDetailsFirstTime) {
@@ -637,14 +565,14 @@ class PlazaViewModel extends ChangeNotifier {
           _temporaryLanes.clear();
         }
         _isLaneDetailsFirstTime = false;
-        await fetchExistingLanes(plazaId); // Refresh existing lanes
+        await fetchExistingLanes(plazaId);
         nextStep();
       } else if (_isLaneEditable) {
         if (_temporaryLanes.isNotEmpty) {
           await _laneService.addLane(_temporaryLanes);
           _temporaryLanes.clear();
         }
-        await fetchExistingLanes(plazaId); // Refresh existing lanes
+        await fetchExistingLanes(plazaId);
         toggleLaneEditable();
         nextStep();
       } else {
@@ -652,14 +580,14 @@ class PlazaViewModel extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      print('Error saving lanes: $e');
+      log('Error saving lanes: $e');
     }
   }
 
   Future<void> saveBasicDetails(BuildContext context) async {
-    validateStepCompletion(); // Validate Step 0
+    validateStepCompletion();
     if (!isBasicDetailsCompleted) {
-      print("Validation failed: ${formState.errors}");
+      log("Validation failed: ${formState.errors}");
       showSnackBar(context, 'Please correct the errors in Basic Details.');
       return;
     }
@@ -669,32 +597,29 @@ class PlazaViewModel extends ChangeNotifier {
       bool isOperationSuccessful = false;
 
       if (_isBasicDetailsFirstTime) {
-        print("Adding new Basic Details...");
-        isOperationSuccessful = await registerPlaza(); // Add a new plaza
+        log("Adding new Basic Details...");
+        isOperationSuccessful = await registerPlaza();
         if (!isOperationSuccessful) {
-          showSnackBar(context,
-              'API Error: Failed to register plaza. Please try again.');
+          showSnackBar(context, 'API Error: Failed to register plaza. Please try again.');
           return;
         }
         completeBasicDetails();
         operation = "added";
       } else if (_isBasicDetailsEditable) {
-        print("Updating existing Basic Details...");
-        isOperationSuccessful = await updatePlaza(); // Save updates
+        log("Updating existing Basic Details...");
+        isOperationSuccessful = await updatePlaza();
         if (!isOperationSuccessful) {
-          showSnackBar(
-              context, 'API Error: Failed to update plaza. Please try again.');
+          showSnackBar(context, 'API Error: Failed to update plaza. Please try again.');
           return;
         }
         completeBasicDetails();
         operation = "updated";
       } else {
-        print("Toggling edit mode...");
+        log("Toggling edit mode...");
         toggleBasicDetailsEditable();
         return;
       }
 
-      // Only show success dialog if API call succeeded
       await showSuccessDialog(
         context,
         title: "Success",
@@ -704,20 +629,20 @@ class PlazaViewModel extends ChangeNotifier {
         },
       );
     } catch (e) {
-      print("Error in saveBasicDetails: $e");
+      log("Error in saveBasicDetails: $e");
       showSnackBar(context, 'API Error: Failed to save Basic Details: $e');
     }
   }
 
   Future<void> updateBasicDetails(BuildContext context) async {
-    validateStepCompletion(); // Validate the form data
+    validateStepCompletion();
     if (!isBasicDetailsCompleted) {
       showSnackBar(context, 'Please correct the errors in Basic Details.');
       return;
     }
 
     try {
-      print("Updating existing plaza with ID: $_plazaId...");
+      log("Updating existing plaza with ID: $_plazaId...");
       final isUpdated = await updatePlaza();
       if (isUpdated) {
         await showSuccessDialog(
@@ -746,14 +671,13 @@ class PlazaViewModel extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print("Error picking images: $e");
+      log("Error picking images: $e");
       throw Exception('Failed to pick images. Please try again.');
     }
   }
 
   Future<void> saveImages(BuildContext context, {bool wantPop = true}) async {
     try {
-      // Only upload new images
       final newImages = formState.plazaImages
           .where((image) => !formState.fetchedImages.contains(image))
           .toList();
@@ -767,8 +691,7 @@ class PlazaViewModel extends ChangeNotifier {
         newImages.map((path) => File(path)).toList(),
       );
 
-      formState.fetchedImages
-          .addAll(newImages); // Merge new images with fetched images
+      formState.fetchedImages.addAll(newImages);
 
       await showSuccessDialog(
         context,
@@ -788,59 +711,90 @@ class PlazaViewModel extends ChangeNotifier {
 
   Future<void> fetchPlazaImages(List<String?> plazaIds) async {
     try {
+      log('Starting fetchPlazaImages with plazaIds: $plazaIds');
+      log('Current formState.plazaImages before fetch: ${formState.plazaImages}');
+
       final validIds = plazaIds.whereType<String>().toList();
+      if (validIds.isEmpty) {
+        log('No valid plaza IDs provided');
+        return;
+      }
 
       final fetchTasks = validIds.map((plazaId) async {
-        if (plazaImages.containsKey(plazaId)) return;
+        if (plazaImages.containsKey(plazaId) && plazaImages[plazaId] != null) {
+          log('Skipping fetch for plazaId $plazaId - already in cache');
+          return;
+        }
 
         try {
           final imageDataList = await _imageService.getImagesByPlazaId(plazaId);
+          log('Fetched image data for plazaId $plazaId: $imageDataList');
 
-          // Clear previous data
-          formState.fetchedImages.removeWhere((url) => url.startsWith(plazaId));
+          formState.fetchedImages.clear();
           formState.imageIds.clear();
+          formState.plazaImages.clear();
 
           if (imageDataList.isNotEmpty) {
-            // Process new images
             for (var imageData in imageDataList) {
-              final url = imageData['imageUrl'];
-              final imageId = imageData['imageId'];
+              final url = imageData['imageUrl'] as String;
+              final imageId = imageData['imageId'] as String;
 
               formState.fetchedImages.add(url);
               formState.imageIds[url] = imageId;
+              formState.plazaImages.add(url);
+              log('Added image URL: $url with ID: $imageId');
             }
 
-            // Store first image for thumbnail
-            plazaImages[plazaId] = imageDataList.first['imageUrl'];
+            plazaImages[plazaId] = imageDataList.first['imageUrl'] as String;
           } else {
             plazaImages[plazaId] = '';
+            log('No images found for plazaId $plazaId');
           }
+
+          log('Updated formState.plazaImages: ${formState.plazaImages}');
         } catch (e) {
           plazaImages[plazaId] = '';
+          log('Error fetching images for plazaId $plazaId: $e');
+          _error = e is Exception ? e : Exception('Image fetch error: $e');
         }
       });
 
       await Future.wait(fetchTasks);
+      log('Completed fetchPlazaImages - final formState.plazaImages: ${formState.plazaImages}');
       notifyListeners();
     } catch (e) {
-      _error = 'Image load failed: ${e.toString()}';
+      _error = e is Exception ? e : Exception('Image load failed: $e');
+      log('fetchPlazaImages failed: $_error');
       notifyListeners();
     }
   }
 
-  void removeImage(String imageUrl) async {
+  Future<bool> removeImage(String imageUrl) async {
     final index = formState.plazaImages.indexOf(imageUrl);
-    if (index != -1) {
-      String? imageId = formState.fetchedImages.contains(imageUrl)
-          ? formState.imageIds[imageUrl] // Fetch stored ID
-          : null;
+    if (index == -1) {
+      log('[REMOVE IMAGE] Image not found in the list.');
+      return false;
+    }
 
-      if (imageId != null) {
-        await _imageService.deleteImage(imageId);
-      }
+    String? imageId = formState.fetchedImages.contains(imageUrl)
+        ? formState.imageIds[imageUrl]
+        : null;
+
+    bool success = true;
+
+    if (imageId != null) {
+      success = await _imageService.deleteImage(imageId);
+    }
+
+    if (success) {
       formState.plazaImages.removeAt(index);
       notifyListeners();
+      log('[REMOVE IMAGE] Image removed successfully.');
+    } else {
+      log('[REMOVE IMAGE] Failed to delete image from the server.');
     }
+
+    return success;
   }
 
   void removeImageAt(int index) {
@@ -857,7 +811,7 @@ class PlazaViewModel extends ChangeNotifier {
     _temporaryLanes[index] = updatedLane;
     notifyListeners();
   }
-  // Complete Bank Details Step
+
   void completeBankDetails() {
     _isBankDetailsFirstTime = false;
     _isBankEditable = false;
@@ -902,10 +856,11 @@ class PlazaViewModel extends ChangeNotifier {
   }
 
   Future<void> showSuccessDialog(
-    BuildContext context, {
-    required String title,
-    required String message, VoidCallback? onConfirmed,
-  }) async {
+      BuildContext context, {
+        required String title,
+        required String message,
+        VoidCallback? onConfirmed,
+      }) async {
     await showDialog(
       context: context,
       builder: (context) {
@@ -915,8 +870,8 @@ class PlazaViewModel extends ChangeNotifier {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-                onConfirmed!(); // Execute the callback
+                Navigator.of(context).pop();
+                onConfirmed?.call();
               },
               child: const Text('OK'),
             ),
@@ -926,18 +881,22 @@ class PlazaViewModel extends ChangeNotifier {
     );
   }
 
-// Helper function to parse and format time
+  void clearPlazaImages() {
+    plazaImages.clear();
+    notifyListeners();
+  }
+
   String formatTime(String? time) {
-    print("Formatting time: $time");
-    if (time == null || time.isEmpty) return ''; // Handle null/empty time
+    log("Formatting time: $time");
+    if (time == null || time.isEmpty) return '';
     try {
-      final parsedTime = DateFormat('HH:mm:ss').parse(time); // Backend format
+      final parsedTime = DateFormat('HH:mm:ss').parse(time);
       final formattedTime = DateFormat('HH:mm').format(parsedTime);
-      print("Formatted Time: $formattedTime");
+      log("Formatted Time: $formattedTime");
       return formattedTime;
     } catch (e) {
-      print("Error formatting time: $e");
-      return ''; // Fallback if parsing fails
+      log("Error formatting time: $e");
+      return '';
     }
   }
 
@@ -954,77 +913,80 @@ class PlazaViewModel extends ChangeNotifier {
   }
 
   Future<void> fetchPlazaDetailsById(String plazaId) async {
-    print('Starting fetchPlazaDetailsById for plaza: $plazaId');
-    resetState(); // Reset state before fetching new data
-    print('State reset completed');
+    log('Starting fetchPlazaDetailsById for plaza: $plazaId');
+    resetState();
+    log('State reset completed');
 
     try {
       _isLoading = true;
       notifyListeners();
-      print('Loading state set to true');
+      log('Loading state set to true');
 
-      // Fetch Plaza Details
       Plaza? plaza;
       try {
-        print('Attempting to fetch plaza details...');
+        log('Attempting to fetch plaza details...');
         plaza = await _plazaService.getPlazaById(plazaId);
-        print('Successfully fetched plaza details');
+        log('Successfully fetched plaza details');
       } catch (e) {
-        print('Error fetching plaza details: $e');
+        log('Error fetching plaza details: $e');
         throw Exception('Failed to fetch plaza details: $e');
       }
 
-      // Fetch Images
       List<dynamic> images = [];
       try {
-        print('Attempting to fetch plaza images...');
+        log('Attempting to fetch plaza images...');
         images = await _imageService.getImagesByPlazaId(plazaId);
-        print('Successfully fetched ${images.length} images');
+        log('Successfully fetched ${images.length} images');
       } catch (e) {
-        print("Error fetching images: $e");
-        // Proceed without images, but log the error
+        log("Error fetching images: $e");
       }
 
-      // Clear previous image data
-      print('Clearing previous image data');
+      log('Clearing previous image data');
       formState.fetchedImages.clear();
       formState.imageIds.clear();
+      formState.plazaImages.clear();
 
-      // Process fetched images
-      print('Processing fetched images...');
-      final String baseUrl = ApiConfig.getFullUrl(''); // Use ApiConfig to get base URL
-      String? imageUrl;
+      log('Processing fetched images...');
       for (var image in images) {
         try {
-          String relativePath = image['imageUrl']?.toString() ?? '';
-
-          // Add this validation:
-          if (relativePath.startsWith(baseUrl)) {
-            // If server returns full URL, use directly
-            imageUrl = relativePath;
-          } else {
-            // Handle relative paths
-            imageUrl = '$baseUrl${relativePath.startsWith('/') ? relativePath : '/$relativePath'}';
-          }
-
+          String imageUrl = image['imageUrl']?.toString() ?? '';
           String imageId = image['imageId']?.toString() ?? '';
+
           if (imageUrl.isNotEmpty && imageId.isNotEmpty) {
             formState.fetchedImages.add(imageUrl);
             formState.imageIds[imageUrl] = imageId;
+            formState.plazaImages.add(imageUrl);
+            log('Added image URL: $imageUrl with ID: $imageId');
           }
         } catch (e) {
-          print("Error processing image data: $e");
+          log("Error processing image data: $e");
         }
       }
-      formState.plazaImages = List.from(formState.fetchedImages);
-      print('Finished processing ${formState.fetchedImages.length} valid images');
+      log('Finished processing ${formState.fetchedImages.length} valid images');
 
       _plazaId = plazaId;
-      print('Setting plaza basic details...');
+      log('Setting plaza basic details...');
+
+      String convertTimeFormat(String? time) {
+        if (time == null || time.isEmpty) return '';
+        try {
+          final parts = time.split(':');
+          if (parts.length >= 2) {
+            return '${parts[0]}:${parts[1]}';
+          }
+          return time;
+        } catch (e) {
+          log('Error converting time format: $e');
+          return time;
+        }
+      }
+
+      String formattedOpeningTime = convertTimeFormat(plaza.plazaOpenTimings);
+      String formattedClosingTime = convertTimeFormat(plaza.plazaClosingTime);
 
       formState.basicDetails.addAll({
         'plazaName': plaza.plazaName,
-        'plazaId' : plaza.plazaId,
+        'plazaId': plaza.plazaId,
         'operatorName': plaza.plazaOperatorName,
         'operatorId': plaza.plazaOperatorId,
         'plazaOwner': plaza.plazaOwner,
@@ -1048,33 +1010,28 @@ class PlazaViewModel extends ChangeNotifier {
         'structureType': plaza.structureType,
         'priceCategory': plaza.priceCategory,
         'plazaStatus': plaza.plazaStatus,
-        'openingTime': plaza.plazaOpenTimings,    // Added opening time
-        'closingTime': plaza.plazaClosingTime,    // Added closing time
+        'openingTime': formattedOpeningTime,
+        'closingTime': formattedClosingTime,
       });
-      print('Basic details set successfully');
+      log('Basic details set successfully');
 
-      // Fetch Bank Details
-      print('Attempting to fetch bank details...');
+      log('Attempting to fetch bank details...');
       await _fetchBankDetails(plazaId);
-      print('Bank details fetched successfully');
+      log('Bank details fetched successfully');
 
-      // Update UI Controllers
-      print('Updating UI controllers...');
+      log('Updating UI controllers...');
       _populateBasicDetailsControllers();
       _populateBankDetailsControllers();
-      print('UI controllers updated successfully');
-
+      log('UI controllers updated successfully');
     } catch (e) {
-      print('Error in fetchPlazaDetailsById: $e');
-      _error = 'Failed to fetch plaza details: ${e.toString()}';
-      // Reset partial state on error
-      print('Resetting state due to error');
+      log('Error in fetchPlazaDetailsById: $e');
+      _error = Exception('Failed to fetch plaza details: $e');
       resetState();
       rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
-      print('fetchPlazaDetailsById completed. Loading state set to false');
+      log('fetchPlazaDetailsById completed. Loading state set to false');
     }
   }
 
@@ -1088,20 +1045,19 @@ class PlazaViewModel extends ChangeNotifier {
         'ifscCode': bank.ifscCode
       });
     } on HttpException catch (e) {
-      if (e.message.contains('404')) {
-        // Handle optional bank details without error
+      if (e.statusCode == 404) {
         formState.bankDetails.addAll({
           'bankName': '',
           'accountNumber': '',
           'accountHolderName': '',
           'ifscCode': ''
         });
-        _error = null; // Clear any previous error
+        _error = null;
       } else {
-        _error = 'Bank details error: ${e.message}';
+        _error = e;
       }
     } catch (e) {
-      _error = 'Unexpected error: $e';
+      _error = Exception('Unexpected error: $e');
       formState.bankDetails.addAll({
         'bankName': '',
         'accountNumber': '',
@@ -1124,10 +1080,8 @@ class PlazaViewModel extends ChangeNotifier {
     pincodeController.text = formState.basicDetails['pincode'] ?? '';
     latitudeController.text = formState.basicDetails['latitude'] ?? '';
     longitudeController.text = formState.basicDetails['longitude'] ?? '';
-    totalParkingSlotsController.text =
-        formState.basicDetails['totalParkingSlots'] ?? '';
-    twoWheelerCapacityController.text =
-        formState.basicDetails['twoWheelerCapacity'] ?? '';
+    totalParkingSlotsController.text = formState.basicDetails['totalParkingSlots'] ?? '';
+    twoWheelerCapacityController.text = formState.basicDetails['twoWheelerCapacity'] ?? '';
     lmvCapacityController.text = formState.basicDetails['lmvCapacity'] ?? '';
     lcvCapacityController.text = formState.basicDetails['lcvCapacity'] ?? '';
     hmvCapacityController.text = formState.basicDetails['hmvCapacity'] ?? '';
@@ -1137,41 +1091,38 @@ class PlazaViewModel extends ChangeNotifier {
   }
 
   void _populateBankDetailsControllers() {
-    bankNameController.text = formState.bankDetails['bankName'];
-    accountNumberController.text = formState.bankDetails['accountNumber'];
-    accountHolderController.text = formState.bankDetails['accountHolderName'];
-    ifscCodeController.text = formState.bankDetails['ifscCode'];
+    bankNameController.text = formState.bankDetails['bankName'] ?? '';
+    accountNumberController.text = formState.bankDetails['accountNumber'] ?? '';
+    accountHolderController.text = formState.bankDetails['accountHolderName'] ?? '';
+    ifscCodeController.text = formState.bankDetails['ifscCode'] ?? '';
     notifyListeners();
   }
 
   Future<void> fetchExistingLanes(String plazaId) async {
     try {
-      print('Starting fetchExistingLanes for plaza: $plazaId');
-      // Instead of just clearing and then adding, directly assign the new list
+      log('Starting fetchExistingLanes for plaza: $plazaId');
       final lanes = await _laneService.getLanesByPlazaId(plazaId);
-      print('Received lanes: ${lanes.length}');
+      log('Received lanes: ${lanes.length}');
 
-      _existingLanes = List<Lane>.from(lanes); // Replace instead of add
-      print('Updated existingLanes length: ${_existingLanes.length}');
+      _existingLanes = List<Lane>.from(lanes);
+      log('Updated existingLanes length: ${_existingLanes.length}');
 
       notifyListeners();
     } catch (e) {
-      print('Error fetching lanes: $e');
+      log('Error fetching lanes: $e');
       throw PlazaException('Failed to fetch lanes: $e');
     }
   }
 
-  // Update an existing lane
   Future<void> updateExistingLane(Lane lane) async {
     try {
       await _laneService.updateLane(lane);
       notifyListeners();
     } catch (e) {
-      print('Error updating lane: $e');
+      log('Error updating lane: $e');
     }
   }
 
-  // API Methods
   Future<void> fetchUserPlazas(String userId) async {
     try {
       _isLoading = true;
@@ -1180,10 +1131,8 @@ class PlazaViewModel extends ChangeNotifier {
 
       _userPlazas = await _plazaService.fetchUserPlazas(userId);
     } catch (e) {
-      print(e.toString());
-      _error = e is PlazaException || e is HttpException
-          ? e.toString()
-          : 'Failed to fetch plazas: ${e.toString()}';
+      log('Error in fetchUserPlazas: $e');
+      _error = e is Exception ? e : Exception('Unknown error: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -1191,12 +1140,10 @@ class PlazaViewModel extends ChangeNotifier {
   }
 
   Future<bool> registerPlaza() async {
-    print("Step1");
     try {
       _isLoading = true;
       notifyListeners();
-      print("step2");
-      print('Plaza details: ${formState.basicDetails}');
+      log('Plaza details: ${formState.basicDetails}');
 
       String formatCoordinate(String? value) {
         if (value == null || value.isEmpty) return "0.00000000";
@@ -1217,24 +1164,13 @@ class PlazaViewModel extends ChangeNotifier {
         district: formState.basicDetails['district'] ?? '',
         state: formState.basicDetails['state'] ?? '',
         pincode: formState.basicDetails['pincode'] ?? '',
-        geoLatitude: double.parse(
-            formatCoordinate(formState.basicDetails['latitude'])
-        ),
-        geoLongitude: double.parse(
-            formatCoordinate(formState.basicDetails['longitude'])
-        ),
-        noOfParkingSlots:
-            int.tryParse(formState.basicDetails['totalParkingSlots'] ?? '') ??
-                0,
-        capacityTwoWheeler:
-            int.tryParse(formState.basicDetails['twoWheelerCapacity'] ?? '') ??
-                0,
-        capacityFourLMV:
-            int.tryParse(formState.basicDetails['lmvCapacity'] ?? '') ?? 0,
-        capacityFourLCV:
-            int.tryParse(formState.basicDetails['lcvCapacity'] ?? '') ?? 0,
-        capacityHMV:
-            int.tryParse(formState.basicDetails['hmvCapacity'] ?? '') ?? 0,
+        geoLatitude: double.parse(formatCoordinate(formState.basicDetails['latitude'])),
+        geoLongitude: double.parse(formatCoordinate(formState.basicDetails['longitude'])),
+        noOfParkingSlots: int.tryParse(formState.basicDetails['totalParkingSlots'] ?? '') ?? 0,
+        capacityTwoWheeler: int.tryParse(formState.basicDetails['twoWheelerCapacity'] ?? '') ?? 0,
+        capacityFourLMV: int.tryParse(formState.basicDetails['lmvCapacity'] ?? '') ?? 0,
+        capacityFourLCV: int.tryParse(formState.basicDetails['lcvCapacity'] ?? '') ?? 0,
+        capacityHMV: int.tryParse(formState.basicDetails['hmvCapacity'] ?? '') ?? 0,
         plazaOpenTimings: formState.basicDetails['openingTime'] ?? '',
         plazaClosingTime: formState.basicDetails['closingTime'] ?? '',
         plazaCategory: formState.basicDetails['plazaCategory'] ?? '',
@@ -1245,16 +1181,14 @@ class PlazaViewModel extends ChangeNotifier {
         priceCategory: formState.basicDetails['priceCategory'] ?? '',
       );
 
-      print("Step3");
-      // Call addPlaza and get the plazaId
       final plazaId = await _plazaService.addPlaza(plaza);
-      print(plazaId);
-      _plazaId = plazaId; // Store plazaId in the ViewModel
+      log('Plaza ID: $plazaId');
+      _plazaId = plazaId;
       notifyListeners();
 
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = e is Exception ? e : Exception('Error registering plaza: $e');
       return false;
     } finally {
       _isLoading = false;
@@ -1286,24 +1220,13 @@ class PlazaViewModel extends ChangeNotifier {
         district: formState.basicDetails['district'] ?? '',
         state: formState.basicDetails['state'] ?? '',
         pincode: formState.basicDetails['pincode'] ?? '',
-        geoLatitude: double.parse(
-            formatCoordinate(formState.basicDetails['latitude'])
-        ),
-        geoLongitude: double.parse(
-            formatCoordinate(formState.basicDetails['longitude'])
-        ),
-        noOfParkingSlots:
-            int.tryParse(formState.basicDetails['totalParkingSlots'] ?? '') ??
-                0,
-        capacityTwoWheeler:
-            int.tryParse(formState.basicDetails['twoWheelerCapacity'] ?? '') ??
-                0,
-        capacityFourLMV:
-            int.tryParse(formState.basicDetails['lmvCapacity'] ?? '') ?? 0,
-        capacityFourLCV:
-            int.tryParse(formState.basicDetails['lcvCapacity'] ?? '') ?? 0,
-        capacityHMV:
-            int.tryParse(formState.basicDetails['hmvCapacity'] ?? '') ?? 0,
+        geoLatitude: double.parse(formatCoordinate(formState.basicDetails['latitude'])),
+        geoLongitude: double.parse(formatCoordinate(formState.basicDetails['longitude'])),
+        noOfParkingSlots: int.tryParse(formState.basicDetails['totalParkingSlots'] ?? '') ?? 0,
+        capacityTwoWheeler: int.tryParse(formState.basicDetails['twoWheelerCapacity'] ?? '') ?? 0,
+        capacityFourLMV: int.tryParse(formState.basicDetails['lmvCapacity'] ?? '') ?? 0,
+        capacityFourLCV: int.tryParse(formState.basicDetails['lcvCapacity'] ?? '') ?? 0,
+        capacityHMV: int.tryParse(formState.basicDetails['hmvCapacity'] ?? '') ?? 0,
         plazaOpenTimings: formState.basicDetails['openingTime'] ?? '',
         plazaClosingTime: formState.basicDetails['closingTime'] ?? '',
         plazaCategory: formState.basicDetails['plazaCategory'] ?? '',
@@ -1318,7 +1241,7 @@ class PlazaViewModel extends ChangeNotifier {
 
       return success;
     } catch (e) {
-      _error = e.toString();
+      _error = e is Exception ? e : Exception('Error updating plaza: $e');
       return false;
     } finally {
       _isLoading = false;
@@ -1335,9 +1258,7 @@ class PlazaViewModel extends ChangeNotifier {
       _userPlazas.removeWhere((plaza) => plaza.plazaId == plazaId);
       return true;
     } catch (e) {
-      _error = e is PlazaException || e is HttpException
-          ? e.toString()
-          : 'Failed to delete plaza: ${e.toString()}';
+      _error = e is Exception ? e : Exception('Failed to delete plaza: $e');
       return false;
     } finally {
       _isLoading = false;
@@ -1357,13 +1278,13 @@ class PlazaViewModel extends ChangeNotifier {
       final success = await _bankService.addBankDetails(bank);
 
       if (success) {
-        print("Bank Details Added Successfully");
+        log("Bank Details Added Successfully");
         notifyListeners();
       }
       return success;
     } catch (e) {
-      _error = e.toString();
-      print("Error adding bank details: $e");
+      _error = Exception('Error adding bank details: $e');
+      log("Error adding bank details: $e");
       notifyListeners();
       return false;
     }
@@ -1383,8 +1304,8 @@ class PlazaViewModel extends ChangeNotifier {
 
       return success;
     } catch (e) {
-      _error = e.toString();
-      print("Error updating bank details: $e");
+      _error = Exception('Error updating bank details: $e');
+      log("Error updating bank details: $e");
       notifyListeners();
       return false;
     }
@@ -1392,18 +1313,18 @@ class PlazaViewModel extends ChangeNotifier {
 
   Future<void> deleteBankDetails(String id) async {
     try {
-      print("Deleting Bank Details with ID: $id");
+      log("Deleting Bank Details with ID: $id");
       final success = await _bankService.deleteBankDetails(id);
       if (success) {
-        print("Bank Details Deleted Successfully");
-        formState.bankDetails.clear(); // Clear local data
+        log("Bank Details Deleted Successfully");
+        formState.bankDetails.clear();
         notifyListeners();
       } else {
         throw Exception("Failed to delete bank details");
       }
     } catch (e) {
-      _error = e.toString();
-      print("Error deleting bank details: $e");
+      _error = Exception('Error deleting bank details: $e');
+      log("Error deleting bank details: $e");
       notifyListeners();
     }
   }
@@ -1435,7 +1356,7 @@ class PlazaViewModel extends ChangeNotifier {
     hmvCapacityController.dispose();
     openingTimeController.dispose();
     closingTimeController.dispose();
-    formState.basicDetails.clear(); // Clear state to avoid residual values
+    formState.basicDetails.clear();
     super.dispose();
   }
 }

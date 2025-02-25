@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/lane.dart';
-import '../config/api_config.dart';
-import '../utils/exceptions.dart';
+import '../../models/lane.dart';
+import '../../config/api_config.dart';
+import '../../utils/exceptions.dart';
 
 class LaneService {
   final http.Client _client;
@@ -129,14 +129,15 @@ class LaneService {
 
   Future<Lane> getLaneById(String laneId) async {
     try {
+      // Use 'id' as the query parameter key
       final uri = Uri.parse(ApiConfig.getFullUrl(ApiConfig.getLaneByIdEndpoint))
-          .replace(queryParameters: {'laneId': laneId});
+          .replace(queryParameters: {'id': laneId});
 
       print('Request - Get Lane By ID:');
       print('  Base URL: $baseUrl');
       print('  Endpoint: ${ApiConfig.getLaneByIdEndpoint}');
       print('  Full URL: $uri');
-      print('  Parameters: laneId=$laneId');
+      print('  Parameters: id=$laneId');
 
       final response = await _client.get(
         uri,
@@ -148,9 +149,11 @@ class LaneService {
       print('  Body: ${response.body}');
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
-        if (responseData['success'] == true && responseData['lane'] != null) {
-          return Lane.fromJson(responseData['lane']);
+        final Map<String, dynamic> responseData = json.decode(response.body) as Map<String, dynamic>;
+
+        // Check for laneData in the response
+        if (responseData['success'] == true && responseData['laneData'] != null) {
+          return Lane.fromJson(responseData['laneData']);
         }
         throw HttpException('Failed to fetch lane: Invalid response format');
       }

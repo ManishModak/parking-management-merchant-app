@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 import '../../utils/components/button.dart';
-import '../../viewmodels/plaza_viewmodel/plaza_viewmodel.dart';
+import '../../viewmodels/plaza/plaza_viewmodel.dart';
 
 class PlazaRegistrationScreen extends StatelessWidget {
   const PlazaRegistrationScreen({super.key});

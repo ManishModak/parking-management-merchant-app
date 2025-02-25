@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:merchant_app/models/user_model.dart';
-import 'package:merchant_app/services/secure_storage_service.dart';
-import 'package:merchant_app/services/user_service.dart';
+import 'package:merchant_app/services/storage/secure_storage_service.dart';
+import 'package:merchant_app/services/core/user_service.dart';
 
 class UserViewModel extends ChangeNotifier {
   final UserService _userService;
@@ -22,11 +22,12 @@ class UserViewModel extends ChangeNotifier {
 
 
 
-  Future<void> fetchUserList(String userId) async {  // Removed unused Future<String?> userId parameter
+  Future<void> fetchUserList(String userId) async {
     try {
       _setLoading(true);
       _users = await _userService.getUserList();
-      //_users = await _userService.getUsersByEntityId(userId);
+      // Remove user with ID 47 from the list
+      _users = _users.where((user) => user.id != '47').toList();
       _error = null;
     } catch (e) {
       print('Failed to fetch operators: ${e.toString()}');
@@ -37,6 +38,10 @@ class UserViewModel extends ChangeNotifier {
     }
   }
 
+  void clearUserImages() {
+    // userImages.clear();
+    notifyListeners();
+  }
 
 
   Future<void> fetchUser({required String userId,required bool isCurrentAppUser}) async {

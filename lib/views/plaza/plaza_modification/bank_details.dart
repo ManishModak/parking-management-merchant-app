@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:merchant_app/viewmodels/plaza_viewmodel/plaza_viewmodel.dart';
 import 'package:provider/provider.dart';
-
 import '../../../utils/components/appbar.dart';
 import '../../../utils/components/form_field.dart';
+import '../../../viewmodels/plaza/plaza_viewmodel.dart';
 
 class BankDetailsModificationScreen extends StatefulWidget {
   const BankDetailsModificationScreen({super.key});

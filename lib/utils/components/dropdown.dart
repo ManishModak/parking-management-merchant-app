@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:merchant_app/models/menu_item.dart';
 import '../../config/app_colors.dart';
 import '../../config/app_config.dart';
 import '../../models/plaza.dart';
+import '../../views/menu.dart';
 
 class CustomDropDown {
   static Widget normalDropDown({
@@ -96,7 +96,6 @@ class CustomDropDown {
   }) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      color: AppColors.primaryCard,
       child: ExpansionTile(
         leading: Icon(icon, color: iconColor),
         title: Text(
@@ -144,7 +143,7 @@ class SearchableDropdown extends StatefulWidget {
 
   // Default methods if not provided
   static String _defaultItemText(dynamic item) {
-    if (item is Plaza) return item.plazaName ?? '';
+    if (item is Plaza) return item.plazaName;
     return item.toString();
   }
 

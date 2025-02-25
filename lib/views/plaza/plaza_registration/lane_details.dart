@@ -4,7 +4,7 @@ import 'package:merchant_app/utils/components/form_field.dart';
 import 'package:provider/provider.dart';
 import '../../../config/app_config.dart';
 import '../../../models/lane.dart';
-import '../../../viewmodels/plaza_viewmodel/plaza_viewmodel.dart';
+import '../../../viewmodels/plaza/plaza_viewmodel.dart';
 
 class LaneDetailsStep extends StatefulWidget {
   const LaneDetailsStep({super.key});
@@ -477,6 +477,7 @@ class _AddLaneDialogState extends State<_AddLaneDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                const SizedBox(height: 16),
                 CustomFormFields.primaryFormField(
                   label: "Lane Name",
                   controller: laneNameController,
@@ -711,6 +712,7 @@ class _EditLaneDialogState extends State<_EditLaneDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                const SizedBox(height: 16),
                 CustomFormFields.primaryFormField(
                   label: "Lane Name",
                   controller: laneNameController,

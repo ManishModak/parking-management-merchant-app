@@ -5,6 +5,20 @@ import 'package:merchant_app/utils/components/card.dart';
 import 'package:merchant_app/viewmodels/transaction_viewmodel.dart';
 import 'package:provider/provider.dart';
 
+
+class TransactionScreenWrapper extends StatelessWidget {
+  const TransactionScreenWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider<TransactionViewModel>(
+      create: (_) => TransactionViewModel(),
+      child: const TransactionScreen(),
+    );
+  }
+}
+
+
 class TransactionScreen extends StatelessWidget {
   const TransactionScreen({super.key});
 

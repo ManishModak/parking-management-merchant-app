@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:merchant_app/services/secure_storage_service.dart';
+import 'package:merchant_app/services/storage/secure_storage_service.dart';
 import 'package:merchant_app/utils/components/navigationbar.dart';
 import 'package:merchant_app/viewmodels/user_viewmodel.dart';
 import 'package:merchant_app/views/transaction.dart';
@@ -23,7 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 2;
 
   final List<Widget> _screens = [
-    const TransactionScreen(),
+    const TransactionScreenWrapper(),
     const MenuScreen(),
     const DashboardScreen(),
     const NotificationsScreen(),

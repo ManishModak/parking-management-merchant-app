@@ -3,14 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/config/app_config.dart';
 import 'package:merchant_app/config/app_strings.dart';
-import 'package:merchant_app/services/secure_storage_service.dart';
+import 'package:merchant_app/services/storage/secure_storage_service.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:merchant_app/utils/components/button.dart';
 import 'package:merchant_app/utils/components/dropdown.dart';
 import 'package:provider/provider.dart';
 import '../../utils/components/form_field.dart';
+import '../../utils/exceptions.dart';
 import '../../viewmodels/auth_viewmodel.dart';
-import '../../viewmodels/plaza_viewmodel/plaza_viewmodel.dart';
+import '../../viewmodels/plaza/plaza_viewmodel.dart';
 import '../../viewmodels/user_viewmodel.dart';
 import '../onboarding/otp_verification.dart';
 
@@ -88,7 +89,6 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
       'Supervisor'
     ]
   };
-
 
   @override
   void initState() {
@@ -261,10 +261,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
 
   Future<void> fetchEntities() async {
     if (currentUserRole == 'Plaza Owner') {
-      // For Plaza Owner, use their name as entity
       _entities = [currentUserName ?? ''].where((item) => item.isNotEmpty).toList();
     } else {
-      // For other roles, use their entityName from currentUser
       final userViewModel = Provider.of<UserViewModel>(context, listen: false);
       final entityName = userViewModel.currentUser?.entityName;
       _entities = [entityName ?? ''].where((item) => item.isNotEmpty).toList();
@@ -272,7 +270,6 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
 
     if (_entities.isNotEmpty) {
       selectedEntity = _entities.first;
-      // For Plaza Owner, use their ID, otherwise use their entityId
       String idToUse = currentUserRole == 'Plaza Owner'
           ? (currentUserId ?? '')
           : (currentUserEntityId ?? '');
@@ -384,15 +381,9 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
     }
 
     try {
-      // Determine which ID to use based on user role
-      String idToUse;
-      if (currentUserRole == 'Plaza Owner') {
-        // For Plaza Owner, use their own ID
-        idToUse = currentUserId!;
-      } else {
-        // For other roles, use the current user's entityId
-        idToUse = currentUserEntityId ?? entityId;
-      }
+      String idToUse = currentUserRole == 'Plaza Owner'
+          ? (currentUserId ?? '')
+          : (currentUserEntityId ?? entityId);
 
       await plazaViewModel.fetchUserPlazas(idToUse);
 
@@ -402,7 +393,6 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
               .map((plaza) => plaza.plazaName)
               .toList();
 
-          // Auto-select if only one plaza
           if (_plazas.length == 1) {
             selectedPlaza = _plazas.first;
           }
@@ -411,10 +401,29 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
     } catch (e) {
       debugPrint('Error fetching plazas: $e');
       if (mounted) {
+        String errorMessage = 'Failed to fetch plazas';
+        final error = plazaViewModel.error;
+        if (error != null) {
+          if (error is HttpException) {
+            errorMessage = error.message;
+            if (error.statusCode == 404) {
+              errorMessage = 'No plazas found for this entity.';
+            } else if (error.statusCode == 502) {
+              errorMessage = 'Server unavailable. Please try again later.';
+            }
+          } else if (error is PlazaException) {
+            errorMessage = error.message;
+          } else if (error is ServiceException) {
+            errorMessage = error.message;
+          } else {
+            errorMessage = error.toString();
+          }
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(plazaViewModel.error ?? 'Failed to fetch plazas'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -432,7 +441,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
           currentUserRole = userViewModel.currentUser?.role;
           currentUserName = userViewModel.currentUser?.name;
           currentUserId = userViewModel.currentUser?.id;
-          currentUserEntityId = userViewModel.currentUser?.entityId; // Add this line to get entityId
+          currentUserEntityId = userViewModel.currentUser?.entityId;
         });
       }
     } catch (e) {
@@ -454,7 +463,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: SizedBox(
-              width: AppConfig.deviceWidth*0.9,
+              width: AppConfig.deviceWidth * 0.9,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -465,7 +474,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                     keyboardType: TextInputType.text,
                     isPassword: false,
                     enabled: true,
-                    errorText: authVM.usernameError.isNotEmpty ? authVM.usernameError : null,
+                    errorText:
+                    authVM.usernameError.isNotEmpty ? authVM.usernameError : null,
                   ),
                   const SizedBox(height: 16),
                   CustomFormFields.primaryFormField(
@@ -488,7 +498,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                           keyboardType: TextInputType.phone,
                           isPassword: false,
                           enabled: true,
-                          errorText: authVM.mobileError.isNotEmpty ? authVM.mobileError : null,
+                          errorText:
+                          authVM.mobileError.isNotEmpty ? authVM.mobileError : null,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -531,7 +542,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                           keyboardType: TextInputType.text,
                           isPassword: false,
                           enabled: true,
-                          errorText: authVM.cityError.isNotEmpty ? authVM.cityError : null,
+                          errorText:
+                          authVM.cityError.isNotEmpty ? authVM.cityError : null,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -543,7 +555,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                           keyboardType: TextInputType.text,
                           isPassword: false,
                           enabled: true,
-                          errorText: authVM.stateError.isNotEmpty ? authVM.stateError : null,
+                          errorText:
+                          authVM.stateError.isNotEmpty ? authVM.stateError : null,
                         ),
                       ),
                     ],
@@ -556,7 +569,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                     keyboardType: TextInputType.multiline,
                     isPassword: false,
                     enabled: true,
-                    errorText: authVM.addressError.isNotEmpty ? authVM.addressError : null,
+                    errorText:
+                    authVM.addressError.isNotEmpty ? authVM.addressError : null,
                   ),
                   const SizedBox(height: 16),
                   CustomDropDown.normalDropDown(
@@ -587,7 +601,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                         _fetchPlazas(value);
                       }
                     },
-                    errorText: authVM.entityError.isNotEmpty ? authVM.entityError : null,
+                    errorText:
+                    authVM.entityError.isNotEmpty ? authVM.entityError : null,
                   ),
                   if (selectedEntity != null) ...[
                     const SizedBox(height: 16),
@@ -610,7 +625,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                     keyboardType: TextInputType.visiblePassword,
                     isPassword: true,
                     enabled: true,
-                    errorText: authVM.passwordError.isNotEmpty ? authVM.passwordError : null,
+                    errorText:
+                    authVM.passwordError.isNotEmpty ? authVM.passwordError : null,
                   ),
                   const SizedBox(height: 16),
                   CustomFormFields.primaryFormField(
@@ -620,7 +636,9 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                     keyboardType: TextInputType.visiblePassword,
                     isPassword: true,
                     enabled: true,
-                    errorText: authVM.confirmPasswordError.isNotEmpty ? authVM.confirmPasswordError : null,
+                    errorText: authVM.confirmPasswordError.isNotEmpty
+                        ? authVM.confirmPasswordError
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   CustomButtons.primaryButton(

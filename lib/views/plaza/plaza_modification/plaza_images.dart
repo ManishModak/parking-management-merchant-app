@@ -1,10 +1,11 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
-
-import '../../../viewmodels/plaza_viewmodel/plaza_viewmodel.dart';
+import '../../../viewmodels/plaza/plaza_viewmodel.dart';
+import 'package:shimmer/shimmer.dart';
 
 class PlazaImagesModificationScreen extends StatefulWidget {
   const PlazaImagesModificationScreen({super.key});
@@ -18,6 +19,7 @@ class _PlazaImagesModificationScreenState
     extends State<PlazaImagesModificationScreen> {
   bool isRemoveMode = false;
   bool isAddMode = false;
+  String _cacheKeySalt = DateTime.now().millisecondsSinceEpoch.toString();
 
   void toggleRemoveMode() {
     setState(() {
@@ -36,7 +38,31 @@ class _PlazaImagesModificationScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text('Failed to pick images: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      setState(() {
+        isAddMode = false;
+      });
+    }
+  }
+
+  Future<void> _refreshImages(PlazaViewModel viewModel) async {
+    try {
+      setState(() {
+        _cacheKeySalt = DateTime.now().millisecondsSinceEpoch.toString();
+      });
+
+      if (viewModel.plazaId != null) {
+        await viewModel.fetchPlazaImages([viewModel.plazaId!]);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to refresh images: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -47,57 +73,47 @@ class _PlazaImagesModificationScreenState
   Widget _buildContent(PlazaFormState formState, PlazaViewModel viewModel) {
     return Column(
       children: [
-        Consumer<PlazaViewModel>(
-          builder: (context, viewModel, _) {
-            final plazaName =
-                viewModel.formState.basicDetails['plazaName'] ??
-                    'Unknown Plaza';
-            final plazaId = viewModel.plazaId ?? "Unknown ID";
-            return Card(
-              margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.location_city,
-                      color: Colors.grey.shade700,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            "$plazaName",
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          Text(
-                            "ID: $plazaId",
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+        Card(
+          margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.location_city,
+                  color: Colors.grey.shade700,
+                  size: 20,
                 ),
-              ),
-            );
-          },
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        formState.basicDetails['plazaName'] ?? 'Unknown Plaza',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        "ID: ${viewModel.plazaId ?? 'Unknown ID'}",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 16),
         Expanded(
@@ -111,7 +127,7 @@ class _PlazaImagesModificationScreenState
                   _buildEmptyState()
                 else
                   _buildImageGrid(formState.plazaImages, viewModel),
-                const SizedBox(height: 16),
+                const SizedBox(height: 80),
               ],
             ),
           ),
@@ -121,7 +137,7 @@ class _PlazaImagesModificationScreenState
   }
 
   Widget _buildImage(String imagePath) {
-    print('Building image: $imagePath');
+    debugPrint('Attempting to load image: $imagePath');
     final errorWidget = Container(
       decoration: BoxDecoration(
         color: Colors.grey.shade200,
@@ -136,43 +152,46 @@ class _PlazaImagesModificationScreenState
       ),
     );
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
+    return imagePath.startsWith('http')
+        ? CachedNetworkImage(
+      imageUrl: imagePath,
+      cacheKey: '$imagePath-$_cacheKeySalt',
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      placeholder: (context, url) => Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        direction: ShimmerDirection.ltr, // Left-to-right wave
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
       ),
-      child: imagePath.startsWith('http')
-          ? Image.network(
-        imagePath,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        loadingBuilder: (context, child, progress) {
-          return progress == null
-              ? child
-              : const Center(child: CircularProgressIndicator());
-        },
-        errorBuilder: (_, __, ___) {
-          print('Image failed: $imagePath');
-          return errorWidget;
-        },
-      )
-          : Image.file(
-        File(imagePath),
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        errorBuilder: (_, __, ___) {
-          print('Image failed: $imagePath');
-          return errorWidget;
-        },
-      ),
+      errorWidget: (context, url, error) {
+        debugPrint('Failed to load image: $imagePath - $error');
+        return errorWidget;
+      },
+      fadeInDuration: const Duration(milliseconds: 300),
+    )
+        : Image.file(
+      File(imagePath),
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('Failed to load local image: $imagePath - $error');
+        return errorWidget;
+      },
     );
   }
 
   Widget _buildEmptyState() {
     return Center(
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.photo_library_outlined,
@@ -196,61 +215,49 @@ class _PlazaImagesModificationScreenState
     final errorMessage = errors['plazaImages'];
     if (errorMessage == null) return const SizedBox.shrink();
 
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      margin: const EdgeInsets.only(bottom: 16.0),
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.shade200),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline, color: Colors.red.shade700),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              errorMessage,
-              style: TextStyle(color: Colors.red.shade700),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Container(
+        padding: const EdgeInsets.all(8.0),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.red.shade200),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red.shade700),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                errorMessage,
+                style: TextStyle(color: Colors.red.shade700),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildImageGrid(List<String> images, PlazaViewModel viewModel) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final crossAxisCount = 2;
-        final spacing = 8.0;
-        final availableWidth = constraints.maxWidth - (spacing * (crossAxisCount - 1));
-        final itemWidth = availableWidth / crossAxisCount;
-
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: spacing,
-            mainAxisSpacing: spacing,
-            childAspectRatio: 1,
-          ),
-          itemCount: images.length,
-          itemBuilder: (context, index) => SizedBox(
-            width: itemWidth,
-            height: itemWidth,
-            child: _buildGridItem(images[index], viewModel),
-          ),
-        );
-      },
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 1,
+      ),
+      itemCount: images.length,
+      itemBuilder: (context, index) => _buildGridItem(images[index], viewModel),
     );
   }
 
   Widget _buildGridItem(String imageUrl, PlazaViewModel viewModel) {
-    print('Attempting to load image: $imageUrl');
     return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(4),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -259,11 +266,28 @@ class _PlazaImagesModificationScreenState
             Positioned(
               right: 4,
               top: 4,
-              child: IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => viewModel.removeImage(imageUrl),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () async {
+                    bool success = await viewModel.removeImage(imageUrl);
+                    await _refreshImages(viewModel);
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(success ? 'Image removed successfully!' : 'Failed to remove image.'),
+                        backgroundColor: success ? Colors.green : Colors.red,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
               ),
-            )
+            ),
         ],
       ),
     );
@@ -276,14 +300,24 @@ class _PlazaImagesModificationScreenState
         children: [
           FloatingActionButton(
             heroTag: 'save',
-            onPressed: () {
-              setState(() {
-                viewModel.saveImages(context, wantPop: false);
-                isAddMode = false;
-              });
+            onPressed: () async {
+              try {
+                await viewModel.saveImages(context, wantPop: false);
+                await _refreshImages(viewModel);
+                setState(() => isAddMode = false);
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to save images: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             backgroundColor: Colors.green,
-            child: const Icon(Icons.check, color: Colors.white),
+            child: const Icon(Icons.check),
           ),
           const SizedBox(width: 16),
           FloatingActionButton(
@@ -297,15 +331,18 @@ class _PlazaImagesModificationScreenState
               });
             },
             backgroundColor: Colors.red,
-            child: const Icon(Icons.close, color: Colors.white),
+            child: const Icon(Icons.close),
           ),
         ],
       );
     } else if (isRemoveMode) {
       return FloatingActionButton(
-        onPressed: toggleRemoveMode,
+        onPressed: () {
+          toggleRemoveMode();
+          _refreshImages(viewModel);
+        },
         backgroundColor: Colors.green,
-        child: const Icon(Icons.check, color: Colors.white),
+        child: const Icon(Icons.check),
       );
     } else {
       return Row(
@@ -315,14 +352,14 @@ class _PlazaImagesModificationScreenState
             heroTag: 'add',
             onPressed: () => enterAddMode(viewModel),
             backgroundColor: Colors.green,
-            child: const Icon(Icons.add_photo_alternate, color: Colors.white),
+            child: const Icon(Icons.add_photo_alternate),
           ),
           const SizedBox(width: 16),
           FloatingActionButton(
             heroTag: 'remove',
             onPressed: toggleRemoveMode,
             backgroundColor: Colors.red,
-            child: const Icon(Icons.remove_circle_outline, color: Colors.white),
+            child: const Icon(Icons.remove_circle_outline),
           ),
         ],
       );
@@ -349,6 +386,7 @@ class _PlazaImagesModificationScreenState
             padding: const EdgeInsets.all(16.0),
             child: _buildFloatingActionButton(viewModel),
           ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         );
       },
     );

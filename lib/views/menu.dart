@@ -4,7 +4,18 @@ import 'package:merchant_app/config/app_strings.dart';
 import 'package:merchant_app/config/app_routes.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:merchant_app/utils/components/dropdown.dart';
-import '../models/menu_item.dart';
+
+class MenuCardItem {
+  final String title;
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  const MenuCardItem({
+    required this.title,
+    required this.icon,
+    this.onTap,
+  });
+}
 
 class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
@@ -22,7 +33,7 @@ class MenuScreen extends StatelessWidget {
           const SizedBox(height: 16),
           CustomDropDown.expansionDropDown(
             title: AppStrings.menuPlazas,
-            icon: Icons.business, // or Icons.location_city
+            icon: Icons.business,
             items: [
               MenuCardItem(
                 title: AppStrings.menuRegisterPlaza,
@@ -34,7 +45,13 @@ class MenuScreen extends StatelessWidget {
               MenuCardItem(
                 title: AppStrings.menuModifyViewPlaza,
                 icon: Icons.list,
-                onTap: () => Navigator.pushNamed(context, AppRoutes.plazaList),
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.plazaList,
+                    arguments: {'modifyPlazaInfo': true},
+                  );
+                },
               ),
             ],
           ),
@@ -57,8 +74,40 @@ class MenuScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           CustomDropDown.expansionDropDown(
+            title: AppStrings.menuTickets,
+            icon: Icons.confirmation_number,
+            items: [
+              MenuCardItem(
+                title: AppStrings.menuOpenTickets,
+                icon: Icons.pending_actions,
+                onTap: () => Navigator.pushNamed(context, AppRoutes.openTickets),
+              ),
+              MenuCardItem(
+                title: AppStrings.menuNewTicket,
+                icon: Icons.add_circle_outline,
+                onTap: () => Navigator.pushNamed(context, AppRoutes.newTicket),
+              ),
+              MenuCardItem(
+                title: AppStrings.menuRejectTicket,
+                icon: Icons.cancel_outlined,
+                onTap: () => Navigator.pushNamed(context, AppRoutes.rejectTicket),
+              ),
+              MenuCardItem(
+                title: AppStrings.menuTicketHistory,
+                icon: Icons.history,
+                onTap: () => Navigator.pushNamed(context, AppRoutes.ticketHistory),
+              ),
+              MenuCardItem(
+                title: AppStrings.menuMarkExit,
+                icon: Icons.exit_to_app,
+                onTap: () => Navigator.pushNamed(context, AppRoutes.markExit),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          CustomDropDown.expansionDropDown(
             title: AppStrings.menuDisputes,
-            icon: Icons.gavel, // or Icons.report_problem
+            icon: Icons.gavel,
             items: [
               MenuCardItem(
                 title: AppStrings.menuViewAllDisputes,
@@ -69,7 +118,7 @@ class MenuScreen extends StatelessWidget {
               ),
               MenuCardItem(
                 title: AppStrings.menuManualEntry,
-                icon: Icons.edit_document, // or Icons.input
+                icon: Icons.edit_document,
                 onTap: () {
                   // Manage operators navigation logic
                 },
@@ -83,7 +132,7 @@ class MenuScreen extends StatelessWidget {
             items: [
               MenuCardItem(
                 title: AppStrings.menuAddPlazaFare,
-                icon: Icons.price_change, // or Icons.currency_exchange
+                icon: Icons.price_change,
                 onTap: () {
                   Navigator.pushNamed(context, AppRoutes.plazaAddFare);
                 },
@@ -92,7 +141,11 @@ class MenuScreen extends StatelessWidget {
                 title: AppStrings.menuModifyViewPlazaFare,
                 icon: Icons.edit_note_outlined,
                 onTap: () {
-                  Navigator.pushNamed(context, AppRoutes.modifyViewPlazaFare);
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.plazaList,
+                    arguments: {'modifyPlazaInfo': false},
+                  );
                 },
               ),
             ],

@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:merchant_app/utils/screens/loading_screen.dart';
-import 'package:merchant_app/utils/screens/success_screen.dart';
-import 'package:merchant_app/views/home.dart';
-import 'package:merchant_app/views/notification.dart';
-import 'package:merchant_app/views/onboarding/set_username.dart';
-import 'package:merchant_app/views/plaza%20fare/add_fare.dart';
-import 'package:merchant_app/views/plaza%20fare/modify_view_plaza_fare.dart';
-import 'package:merchant_app/views/plaza/plaza_registration.dart';
-import 'package:merchant_app/views/user/user_info.dart';
-import 'package:merchant_app/views/user/user_list.dart';
-import 'package:merchant_app/views/user/user_registration.dart';
+import '../models/plaza.dart';
+import '../views/home.dart';
+import '../views/notification.dart';
+import '../views/onboarding/set_username.dart';
+import '../views/plaza/plaza fare/add_fare.dart';
+import '../views/plaza/plaza fare/plaza_fares_list.dart';
+import '../views/plaza/plaza_registration.dart';
+import '../views/user/user_info.dart';
+import '../views/user/user_list.dart';
+import '../views/user/user_registration.dart';
 import '../views/onboarding/forgot_password.dart';
 import '../views/dashboard.dart';
 import '../views/onboarding/login.dart';
@@ -18,69 +17,170 @@ import '../views/plaza/plaza_info.dart';
 import '../views/plaza/plaza_list.dart';
 import '../views/plaza/plaza_modification/bank_details.dart';
 import '../views/plaza/plaza_modification/basic_details.dart';
-import '../views/plaza/plaza_modification/lane_details.dart';
+import '../views/plaza/plaza_modification/lane_details/lane_details.dart';
 import '../views/plaza/plaza_modification/plaza_images.dart';
 import '../views/settings/profile.dart';
+import '../views/tickets/mark_exit/mark_exit.dart';
+import '../views/tickets/new_ticket/new_ticket.dart';
+import '../views/tickets/open_ticket/open_ticket.dart';
+import '../views/tickets/reject_ticket/reject_ticket.dart';
+import '../views/tickets/ticket_history/ticket_history.dart';
 import '../views/welcome.dart';
+import '../utils/screens/loading_screen.dart';
+import '../utils/screens/success_screen.dart';
 
 class AppRoutes {
   static const String welcome = '/welcome';
   static const String login = '/login';
   static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
-  static const String dashboard = '/account';
+  static const String dashboard = '/dashboard';
   static const String plazaList = '/plaza-list';
   static const String userList = '/user-list';
-  static const String otpVerification = "/otp-verification";
-  static const String success = "/success";
-  static const String loading = "/loading";
-  static const String plazaInfo = "/plaza-info";
-  static const String home = "/home";
+  static const String success = '/success';
+  static const String loading = '/loading';
+  static const String plazaInfo = '/plaza-info';
+  static const String home = '/home';
   static const String notification = '/notification';
   static const String userProfile = '/user-profile';
   static const String setUsername = '/set-username';
   static const String userInfo = '/user-info';
   static const String userRegistration = '/user-registration';
   static const String plazaRegistration = '/plaza-registration';
-  static const String basicDetailsModification = '/plaza-basicDetailsModification';
-  static const String bankDetailsModification = '/plaza-bankDetailsModification';
-  static const String laneDetailsModification = '/plaza-laneDetailsModification';
-  static const String plazaImagesModification = '/plaza-plazaImagesModification';
-  static const String plazaAddFare = '/add-plazaFare';
-  static const String modifyViewPlazaFare = '/modifyView-plazaFare';
+  static const String basicDetailsModification = '/plaza-basic-details';
+  static const String bankDetailsModification = '/plaza-bank-details';
+  static const String laneDetailsModification = '/plaza-lane-details';
+  static const String plazaImagesModification = '/plaza-images';
+  static const String plazaAddFare = '/plaza-add-fare';
+  static const String plazaFaresList = '/plaza-fares';
+  static const String newTicket = '/new-ticket';
+  static const String openTickets = '/open-tickets';
+  static const String rejectTicket = '/reject-ticket';
+  static const String ticketHistory = '/ticket-history';
+  static const String markExit = '/mark-exit';
 
-  static Map<String, WidgetBuilder> routes = {
-    welcome: (context) => const WelcomeScreen(),
-    login: (context) => const LoginScreen(),
-    register: (context) => const RegisterScreen(),
-    forgotPassword: (context) => const ForgotPasswordScreen(),
-    dashboard: (context) => const DashboardScreen(),
-    success: (context) => const SuccessScreen(userId: '',),
-    loading: (context) => const LoadingScreen(),
-    plazaList: (context) => const PlazaListScreen(),
-    plazaInfo: (context) => const PlazaInfoScreen(),
-    home: (context) => const HomeScreen(),
-    notification: (context) => const NotificationsScreen(),
-    userProfile: (context) => const UserProfileScreen(),
-    userInfo: (context) => const UserInfoScreen(operatorId: '',),
-    userList: (context) => const UserListScreen(),
-    userRegistration: (context) => const UserRegistrationScreen(),
-    plazaRegistration: (context) => const PlazaRegistrationScreen(),
-    basicDetailsModification: (context) => const BasicDetailsModificationScreen(),
-    bankDetailsModification: (context) => const BankDetailsModificationScreen(),
-    laneDetailsModification: (context) => const LaneDetailsModificationScreen(),
-    plazaImagesModification: (context) => const PlazaImagesModificationScreen(),
-    plazaAddFare: (context) => const AddFareScreen(),
-    modifyViewPlazaFare: (context) => const ModifyViewPlazaFareScreen(),
-    setUsername: (context) {
-      final args = ModalRoute.of(context)?.settings.arguments as Map<String, String>;
-      return SetUsernameScreen(
-        email: args['email']!,
-        password: args['password']!,
-        mobileNo: args['mobileNo']!,
-        confirmPassword: args['repeatPassword']!,
-      );
-    },
-  };
+  static Route<dynamic> generateRoute(RouteSettings settings) {
+    switch (settings.name) {
+      case welcome:
+        return MaterialPageRoute(builder: (_) => const WelcomeScreen());
+
+      case login:
+        return MaterialPageRoute(builder: (_) => const LoginScreen());
+
+      case register:
+        return MaterialPageRoute(builder: (_) => const RegisterScreen());
+
+      case forgotPassword:
+        return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
+
+      case dashboard:
+        return MaterialPageRoute(builder: (_) => const DashboardScreen());
+
+      case plazaList:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final modifyPlazaInfo = args?['modifyPlazaInfo'] ?? true;
+        return MaterialPageRoute(
+            builder: (_) => PlazaListScreen(modifyPlazaInfo: modifyPlazaInfo)
+        );
+
+      case userList:
+        return MaterialPageRoute(builder: (_) => const UserListScreen());
+
+      case success:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final userId = args?['userId'] as String? ?? '';
+        return MaterialPageRoute(
+            builder: (_) => SuccessScreen(userId: userId)
+        );
+
+      case loading:
+        return MaterialPageRoute(builder: (_) => const LoadingScreen());
+
+      case plazaInfo:
+        final plazaId = settings.arguments;
+        return MaterialPageRoute(builder: (_) => PlazaInfoScreen(plazaId: plazaId));
+
+      case home:
+        return MaterialPageRoute(builder: (_) => const HomeScreen());
+
+      case notification:
+        return MaterialPageRoute(builder: (_) => const NotificationsScreen());
+
+      case userProfile:
+        return MaterialPageRoute(builder: (_) => const UserProfileScreen());
+
+      case setUsername:
+        final args = settings.arguments as Map<String, String>;
+        return MaterialPageRoute(
+            builder: (_) => SetUsernameScreen(
+              email: args['email'] ?? '',
+              password: args['password'] ?? '',
+              mobileNo: args['mobileNo'] ?? '',
+              confirmPassword: args['repeatPassword'] ?? '',
+            )
+        );
+
+      case userInfo:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final operatorId = args?['operatorId'] as String? ?? '';
+        return MaterialPageRoute(
+            builder: (_) => UserInfoScreen(operatorId: operatorId)
+        );
+
+      case userRegistration:
+        return MaterialPageRoute(builder: (_) => const UserRegistrationScreen());
+
+      case plazaRegistration:
+        return MaterialPageRoute(builder: (_) => const PlazaRegistrationScreen());
+
+      case basicDetailsModification:
+        return MaterialPageRoute(builder: (_) => const BasicDetailsModificationScreen());
+
+      case bankDetailsModification:
+        return MaterialPageRoute(builder: (_) => const BankDetailsModificationScreen());
+
+      case laneDetailsModification:
+        return MaterialPageRoute(builder: (_) => const LaneDetailsModificationScreen());
+
+      case plazaImagesModification:
+        return MaterialPageRoute(builder: (_) => const PlazaImagesModificationScreen());
+
+      case plazaAddFare:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final selectedPlaza = args?['plaza'] as Plaza?;
+        return MaterialPageRoute(
+            builder: (_) => AddFareScreen(selectedPlaza: selectedPlaza)
+        );
+
+      case plazaFaresList:
+        final plaza = settings.arguments as Plaza;
+        return MaterialPageRoute(
+            builder: (_) => PlazaFaresListScreen(plaza: plaza)
+        );
+
+      case newTicket:
+        return MaterialPageRoute(builder: (_) => const NewTicketScreen());
+
+      case openTickets:
+        return MaterialPageRoute(builder: (_) => const OpenTicketsScreen());
+
+      case rejectTicket:
+        return MaterialPageRoute(builder: (_) => const RejectTicketScreen());
+
+      case ticketHistory:
+        return MaterialPageRoute(builder: (_) => const TicketHistoryScreen());
+
+      case markExit:
+        return MaterialPageRoute(builder: (_) => const MarkExitScreen());
+
+      default:
+        return MaterialPageRoute(
+            builder: (_) => Scaffold(
+              body: Center(
+                  child: Text('No route defined for ${settings.name}')
+              ),
+            )
+        );
+    }
+  }
 }
-

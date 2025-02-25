@@ -4,7 +4,7 @@ import '../../../config/app_config.dart';
 import '../../../models/plaza.dart';
 import '../../../utils/components/dropdown.dart';
 import '../../../utils/components/form_field.dart';
-import '../../../viewmodels/plaza_viewmodel/plaza_viewmodel.dart';
+import '../../../viewmodels/plaza/plaza_viewmodel.dart';
 
 class BasicDetailsStep extends StatefulWidget {
   const BasicDetailsStep({super.key});
@@ -301,7 +301,7 @@ class _BasicDetailsStepState extends State<BasicDetailsStep> {
                   child: CustomDropDown.normalDropDown(
                     label: "Price Category",
                     value: viewModel.formState.basicDetails['priceCategory'],
-                    items: Plaza.validPriceCategories, //ToDO Custom
+                    items: Plaza.validPriceCategories, //ToDo Custom
                     enabled: viewModel.currentStep == 0 &&
                         (viewModel.completeTillStep <= 0 ||
                             viewModel.isBasicDetailsEditable),

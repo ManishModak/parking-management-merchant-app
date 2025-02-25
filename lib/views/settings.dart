@@ -3,7 +3,7 @@ import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/config/app_routes.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 
-import '../services/secure_storage_service.dart';
+import '../services/storage/secure_storage_service.dart';
 
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({super.key});

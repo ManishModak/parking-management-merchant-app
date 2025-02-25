@@ -1,17 +1,21 @@
-import 'dart:convert';
 
+/// A model class representing fare details for a parking plaza.
 class PlazaFare {
   final int? fareId;
   final int plazaId;
-  final VehicleType vehicleType;
-  final FareType fareType;
-  final int? baseHours;
-  final double fareRate;
-  final double? discountRate;
-  final DateTime startEffectDate;
-  final DateTime? endEffectDate;
+  final String vehicleType;
+  final String fareType;
+  int? baseHours;
+  double fareRate;
+  double? discountRate;
+  DateTime startEffectDate;
+  DateTime? endEffectDate;
   final bool isDeleted;
 
+  /// Creates a new [PlazaFare] instance.
+  ///
+  /// [plazaId], [vehicleType], [fareType], [fareRate], and [startEffectDate] are required.
+  /// Other parameters are optional.
   PlazaFare({
     this.fareId,
     required this.plazaId,
@@ -25,12 +29,13 @@ class PlazaFare {
     this.isDeleted = false,
   });
 
+  /// Creates a [PlazaFare] instance from a JSON map.
   factory PlazaFare.fromJson(Map<String, dynamic> json) {
     return PlazaFare(
       fareId: json['fareId'],
       plazaId: json['plazaId'],
-      vehicleType: _vehicleTypeFromString(json['vehicleType']),
-      fareType: _fareTypeFromString(json['FareType']),
+      vehicleType: json['vehicleType'],
+      fareType: json['FareType'],
       baseHours: json['baseHours'],
       fareRate: double.parse(json['fareRate'].toString()),
       discountRate: json['discountRate'] != null
@@ -44,12 +49,13 @@ class PlazaFare {
     );
   }
 
+  /// Converts the [PlazaFare] instance to a JSON map.
   Map<String, dynamic> toJson() {
     return {
       if (fareId != null) 'fareId': fareId,
       'plazaId': plazaId,
-      'vehicleType': _vehicleTypeToJson(vehicleType),
-      'FareType': _fareTypeToJson(fareType),
+      'vehicleType': vehicleType,
+      'FareType': fareType,
       if (baseHours != null) 'baseHours': baseHours,
       'fareRate': fareRate,
       if (discountRate != null) 'discountRate': discountRate,
@@ -58,93 +64,96 @@ class PlazaFare {
         'endEffectDate': endEffectDate!.toIso8601String().split('T')[0],
     };
   }
-}
 
-enum VehicleType {
-  Bike,
-  ThreeWheeler,
-  FourWheeler,
-  Bus,
-  Truck,
-  HeavyMachineryVehicle,
-  InvalidCarriage,
-}
-
-enum FareType {
-  Hourly,
-  Fixed24Hour,
-  HourWiseCustom,
-  MonthlyPass,
-}
-
-/// Converts a VehicleType enum to the string that the backend expects.
-String _vehicleTypeToJson(VehicleType type) {
-  switch (type) {
-    case VehicleType.Bike:
-      return "Bike";
-    case VehicleType.ThreeWheeler:
-      return "3-wheeler";
-    case VehicleType.FourWheeler:
-      return "4-wheeler";
-    case VehicleType.Bus:
-      return "Bus";
-    case VehicleType.Truck:
-      return "Truck";
-    case VehicleType.HeavyMachineryVehicle:
-      return "Heavy Machinery Vehicle";
-    case VehicleType.InvalidCarriage:
-      return "Invalid Carriage";
+  /// Creates a copy of this [PlazaFare] with the given fields replaced with new values.
+  PlazaFare copyWith({
+    int? fareId,
+    int? plazaId,
+    String? vehicleType,
+    String? fareType,
+    int? baseHours,
+    double? fareRate,
+    double? discountRate,
+    DateTime? startEffectDate,
+    DateTime? endEffectDate,
+    bool? isDeleted,
+  }) {
+    return PlazaFare(
+      fareId: fareId ?? this.fareId,
+      plazaId: plazaId ?? this.plazaId,
+      vehicleType: vehicleType ?? this.vehicleType,
+      fareType: fareType ?? this.fareType,
+      baseHours: baseHours ?? this.baseHours,
+      fareRate: fareRate ?? this.fareRate,
+      discountRate: discountRate ?? this.discountRate,
+      startEffectDate: startEffectDate ?? this.startEffectDate,
+      endEffectDate: endEffectDate ?? this.endEffectDate,
+      isDeleted: isDeleted ?? this.isDeleted,
+    );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+          other is PlazaFare &&
+              runtimeType == other.runtimeType &&
+              fareId == other.fareId &&
+              plazaId == other.plazaId &&
+              vehicleType == other.vehicleType &&
+              fareType == other.fareType &&
+              baseHours == other.baseHours &&
+              fareRate == other.fareRate &&
+              discountRate == other.discountRate &&
+              startEffectDate == other.startEffectDate &&
+              endEffectDate == other.endEffectDate &&
+              isDeleted == other.isDeleted;
+
+  @override
+  int get hashCode =>
+      fareId.hashCode ^
+      plazaId.hashCode ^
+      vehicleType.hashCode ^
+      fareType.hashCode ^
+      baseHours.hashCode ^
+      fareRate.hashCode ^
+      discountRate.hashCode ^
+      startEffectDate.hashCode ^
+      endEffectDate.hashCode ^
+      isDeleted.hashCode;
 }
 
-/// Converts a string from the backend to the corresponding VehicleType enum.
-VehicleType _vehicleTypeFromString(String type) {
-  switch (type) {
-    case "Bike":
-      return VehicleType.Bike;
-    case "3-wheeler":
-      return VehicleType.ThreeWheeler;
-    case "4-wheeler":
-      return VehicleType.FourWheeler;
-    case "Bus":
-      return VehicleType.Bus;
-    case "Truck":
-      return VehicleType.Truck;
-    case "Heavy Machinery Vehicle":
-      return VehicleType.HeavyMachineryVehicle;
-    case "Invalid Carriage":
-      return VehicleType.InvalidCarriage;
-    default:
-      throw Exception("Unknown vehicle type: $type");
-  }
+/// Constants for vehicle types supported by the system.
+class VehicleTypes {
+  static const String bike = 'Bike';
+  static const String threeWheeler = '3-wheeler';
+  static const String fourWheeler = '4-wheeler';
+  static const String bus = 'Bus';
+  static const String truck = 'Truck';
+  static const String heavyMachineryVehicle = 'Heavy Machinery Vehicle';
+  //static const String invalidCarriage = 'Invalid Carriage';
+
+  static const List<String> values = [
+    bike,
+    threeWheeler,
+    fourWheeler,
+    bus,
+    truck,
+    heavyMachineryVehicle,
+    //invalidCarriage,
+  ];
 }
 
-/// Converts a FareType enum to the string expected by the backend.
-String _fareTypeToJson(FareType type) {
-  switch (type) {
-    case FareType.Hourly:
-      return "Hourly";
-    case FareType.Fixed24Hour:
-      return "Fixed-24-Hour"; // Updated to include hyphen.
-    case FareType.HourWiseCustom:
-      return "Hour-wise Custom"; // Updated to include hyphen and space.
-    case FareType.MonthlyPass:
-      return "Monthly Pass"; // Ensure this matches backend expectation.
-  }
-}
+/// Constants for fare types supported by the system.
+class FareTypes {
+  static const String hourly = 'Hourly';
+  static const String daily = 'Daily';
+  static const String hourWiseCustom = 'Hour-wise Custom';
+  static const String monthlyPass = 'Monthly Pass';
 
-/// Converts a string from the backend to the corresponding FareType enum.
-FareType _fareTypeFromString(String type) {
-  switch (type) {
-    case "Hourly":
-      return FareType.Hourly;
-    case "Fixed-24-Hour":
-      return FareType.Fixed24Hour;
-    case "Hour-wise Custom":
-      return FareType.HourWiseCustom;
-    case "Monthly Pass":
-      return FareType.MonthlyPass;
-    default:
-      throw Exception("Unknown fare type: $type");
-  }
+  static const List<String> values = [
+    hourly,
+    daily,
+    hourWiseCustom,
+    monthlyPass,
+  ];
 }

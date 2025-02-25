@@ -1,33 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/config/app_strings.dart';
-import 'package:merchant_app/services/secure_storage_service.dart';
+import 'package:merchant_app/services/storage/secure_storage_service.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:merchant_app/utils/components/button.dart';
 import 'package:merchant_app/utils/components/card.dart';
 import 'package:merchant_app/utils/components/dropdown.dart';
 import 'package:merchant_app/utils/components/form_field.dart';
-import 'package:merchant_app/viewmodels/plaza_viewmodel/plaza_viewmodel.dart';
 import 'package:merchant_app/viewmodels/user_viewmodel.dart';
 import 'package:merchant_app/views/user/set_reset_password.dart';
 import 'package:merchant_app/views/onboarding/otp_verification.dart';
 import 'package:provider/provider.dart';
 
+import '../../utils/exceptions.dart';
+import '../../viewmodels/plaza/plaza_viewmodel.dart';
+
 class UserInfoScreen extends StatefulWidget {
   final String operatorId;
 
   const UserInfoScreen({
-    Key? key,
+    super.key,
     required this.operatorId,
-  }) : super(key: key);
+  });
 
   @override
   State<UserInfoScreen> createState() => _UserInfoScreenState();
 }
 
 class _UserInfoScreenState extends State<UserInfoScreen> {
-  // Controllers for text fields.
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _mobileNumberController = TextEditingController();
@@ -45,10 +45,8 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   String? _originalMobileNumber;
   List<String> _plazas = [];
 
-  // This variable holds the operator’s subEntity value from user data.
   String? _userSubEntity;
 
-  // Error states.
   String? _nameError;
   String? _emailError;
   String? _mobileError;
@@ -58,7 +56,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   String? _cityError;
   String? _stateError;
 
-  // Role hierarchy for available roles.
   final Map<String, List<String>> roleHierarchy = {
     'System Admin': ['System Admin', 'Plaza Owner', 'IT Operator'],
     'Plaza Owner': [
@@ -75,7 +72,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   @override
   void initState() {
     super.initState();
-    // First load current user info then operator data.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _loadCurrentUserInfo();
       await _loadOperatorData();
@@ -93,7 +89,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
         });
       }
     } catch (e) {
-      // Show error if needed.
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error loading current user info: $e'),
@@ -103,8 +98,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     }
   }
 
-  /// Fetches plazas from the API and then, if possible,
-  /// assigns the operator’s subEntity value to the dropdown.
   Future<void> _fetchPlazas(String id) async {
     final plazaViewModel = Provider.of<PlazaViewModel>(context, listen: false);
 
@@ -119,24 +112,41 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
             .map((plaza) => plaza.plazaName)
             .toList();
 
-        // If the user’s subEntity exists in the fetched plazas, select it.
         if (_userSubEntity != null && _plazas.contains(_userSubEntity)) {
           selectedPlaza = _userSubEntity;
         } else if (_plazas.length == 1) {
-          // Otherwise, if there's only one plaza, select that.
           selectedPlaza = _plazas.first;
         } else {
-          // If multiple plazas and no match, keep it null.
           selectedPlaza = null;
         }
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(plazaViewModel.error ?? 'Failed to fetch plazas: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      String errorMessage = 'Failed to fetch plazas';
+      final error = plazaViewModel.error;
+      if (error != null) {
+        if (error is HttpException) {
+          errorMessage = error.message;
+          if (error.statusCode == 404) {
+            errorMessage = 'No plazas found for this entity.';
+          } else if (error.statusCode == 502) {
+            errorMessage = 'Server unavailable. Please try again later.';
+          }
+        } else if (error is PlazaException) {
+          errorMessage = error.message;
+        } else if (error is ServiceException) {
+          errorMessage = error.message;
+        } else {
+          errorMessage = error.toString();
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -154,12 +164,14 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
         await _fetchPlazas(currentOperator!.entityId!);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to load operator data: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load operator data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -176,8 +188,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     super.dispose();
   }
 
-  /// Loads the operator data into the form fields.
-  /// Also stores the operator’s subEntity value.
   Future<void> _loadUser() async {
     final operatorViewModel = context.read<UserViewModel>();
     final currentOperator = operatorViewModel.currentOperator;
@@ -193,14 +203,12 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
         selectedRole = currentOperator.role;
         entityId = currentOperator.entityId;
         _originalMobileNumber = currentOperator.mobileNumber;
-        // If the subEntity is a list, pick the first element if available.
         _userSubEntity = (currentOperator.subEntity.isNotEmpty)
             ? currentOperator.subEntity.first
             : null;
       });
     }
   }
-
 
   Future<void> verifyMobileNumber() async {
     if (!RegExp(r'^\d{10}$').hasMatch(_mobileNumberController.text)) {
@@ -238,14 +246,12 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   Future<void> _confirmUpdate() async {
     final validationErrors = <String, String>{};
 
-    // Name validation.
     if (_nameController.text.isEmpty) {
       validationErrors['name'] = AppStrings.errorFullNameRequired;
     } else if (_nameController.text.length > 100) {
       validationErrors['name'] = AppStrings.errorFullNameLength;
     }
 
-    // Email validation.
     if (_emailController.text.isEmpty) {
       validationErrors['email'] = AppStrings.errorEmailRequired;
     } else if (!RegExp(r'^[\w.%+-]+@[\w.-]+\.(com|in)$', caseSensitive: false)
@@ -255,38 +261,32 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       validationErrors['email'] = AppStrings.errorEmailLength;
     }
 
-    // Mobile validation.
     if (_mobileNumberController.text.isEmpty) {
       validationErrors['mobile'] = AppStrings.errorMobileRequired;
     } else if (!RegExp(r'^\d{10}$').hasMatch(_mobileNumberController.text)) {
       validationErrors['mobile'] = AppStrings.errorMobileInvalidFormat;
     }
 
-    // Role validation.
     if (selectedRole == null || selectedRole!.isEmpty) {
       validationErrors['role'] = AppStrings.errorRoleRequired;
     }
 
-    // Plaza (SubEntity) validation.
     if (selectedPlaza == null || selectedPlaza!.isEmpty) {
       validationErrors['plaza'] = AppStrings.errorSubEntityRequired;
     }
 
-    // Address validation.
     if (_addressController.text.isEmpty) {
       validationErrors['address'] = AppStrings.errorAddressRequired;
     } else if (_addressController.text.length > 256) {
       validationErrors['address'] = AppStrings.errorAddressLength;
     }
 
-    // City validation.
     if (_cityController.text.isEmpty) {
       validationErrors['city'] = AppStrings.errorCityRequired;
     } else if (_cityController.text.length > 50) {
       validationErrors['city'] = AppStrings.errorCityLength;
     }
 
-    // State validation.
     if (_stateController.text.isEmpty) {
       validationErrors['state'] = AppStrings.errorStateRequired;
     } else if (_stateController.text.length > 50) {
@@ -305,7 +305,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     });
 
     if (validationErrors.isNotEmpty) {
-      // Show validation error SnackBar.
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Column(
@@ -320,7 +319,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       return;
     }
 
-    // If mobile number was changed, verify it.
     if (_mobileNumberController.text != _originalMobileNumber &&
         !isMobileVerified) {
       await verifyMobileNumber();
@@ -358,7 +356,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     }
   }
 
-  /// Builds the mobile number field along with a verification warning.
   Widget _buildMobileNumberField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,8 +390,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     );
   }
 
-  /// Builds a dropdown field using the custom normal dropdown widget.
-  /// The dropdown is enabled only in edit mode.
   Widget _buildDropdown({
     required String label,
     required String? value,
@@ -411,6 +406,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       errorText: error,
     );
   }
+
   void _clearErrors() {
     setState(() {
       _nameError = null;
@@ -424,10 +420,8 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     });
   }
 
-
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       appBar: CustomAppBar.appBarWithNavigation(
         screenTitle: AppStrings.titleUserInfo,
@@ -554,7 +548,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
             onPressed: () => setState(() {
               _isEditMode = false;
               _clearErrors();
-              // Reload user data to reset any unsaved changes.
               _loadUser();
             }),
             backgroundColor: Colors.red,

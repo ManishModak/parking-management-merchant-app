@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:merchant_app/config/api_config.dart';
-import './secure_storage_service.dart';
+import '../storage/secure_storage_service.dart';
 
 class AuthService {
   final SecureStorageService _storage = SecureStorageService();
@@ -34,12 +34,12 @@ class AuthService {
           throw Exception('Invalid response format');
         }
 
-        print('[LOGIN] Storing auth details...');
+        print('[LOGIN] Storing security details...');
         await _storage.storeAuthDetails(
           responseData['token'],
           responseData['user']['id'].toString(),
         );
-        print('[LOGIN] Successfully stored auth details');
+        print('[LOGIN] Successfully stored security details');
         return true;
       }
 
@@ -110,12 +110,12 @@ class AuthService {
             throw Exception('Invalid response format');
           }
 
-          print('[REGISTER] Storing auth details...');
+          print('[REGISTER] Storing security details...');
           await _storage.storeAuthDetails(
             responseData['token'],
             responseData['user']['id'].toString(),
           );
-          print('[REGISTER] Successfully stored auth details');
+          print('[REGISTER] Successfully stored security details');
         }
         return responseData['user'];
       }

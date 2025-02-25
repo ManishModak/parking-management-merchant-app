@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:merchant_app/config/app_strings.dart';
 import '../models/user_model.dart';
-import '../services/auth_service.dart';
+import '../services/core/auth_service.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final AuthService _authService;
@@ -96,7 +96,7 @@ class AuthViewModel extends ChangeNotifier {
     }
 
     // Sub-Entity selection validation (NEW)
-    if (selectedSubEntity == null || selectedSubEntity!.isEmpty) {
+    if (selectedSubEntity == null || selectedSubEntity.isEmpty) {
       _errors['subEntity'] = AppStrings.errorSubEntityRequired; // Add to AppStrings
       isValid = false;
     }

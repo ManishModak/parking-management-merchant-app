@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:merchant_app/services/secure_storage_service.dart';
-import '../config/api_config.dart';
-import '../models/bank.dart';
-import '../utils/exceptions.dart';
+import 'package:merchant_app/services/storage/secure_storage_service.dart';
+import '../../config/api_config.dart';
+import '../../models/bank.dart';
+import '../../utils/exceptions.dart';
 
 class BankService {
   final http.Client _client;

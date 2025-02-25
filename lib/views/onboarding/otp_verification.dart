@@ -4,8 +4,7 @@ import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/config/app_strings.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:merchant_app/utils/components/button.dart';
-
-import '../../services/verfication_service.dart';
+import '../../services/security/otp_verification_service.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String mobileNumber;

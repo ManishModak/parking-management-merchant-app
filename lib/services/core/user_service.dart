@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:merchant_app/config/api_config.dart';
 import 'package:merchant_app/models/user_model.dart';
 import 'package:http/http.dart' as http;
-import 'secure_storage_service.dart';
+import '../storage/secure_storage_service.dart';
 
 class UserService {
   final SecureStorageService _storage = SecureStorageService();
@@ -221,7 +221,7 @@ class UserService {
   }
 
   Future<String?> getAuthToken() async {
-    print('Retrieving auth token from storage');
+    print('Retrieving security token from storage');
     final token = await _storage.getAuthToken();
     print('Auth token ${token != null ? 'found' : 'not found'}');
     return token;

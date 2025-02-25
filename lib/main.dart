@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:merchant_app/config/app_strings.dart';
-import 'package:merchant_app/services/user_service.dart';
-import 'package:merchant_app/viewmodels/notification_viewmodel.dart';
-import 'package:merchant_app/viewmodels/user_viewmodel.dart';
-import 'package:merchant_app/viewmodels/plaza_viewmodel/plaza_viewmodel.dart';
-import 'package:merchant_app/viewmodels/transaction_viewmodel.dart';
+import 'package:flutter/services.dart';
 import 'package:merchant_app/views/home.dart';
 import 'package:merchant_app/views/welcome.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/services.dart';
+import 'config/app_strings.dart';
 import 'config/app_config.dart';
 import 'config/app_routes.dart';
-import 'services/auth_service.dart';
+import 'services/core/auth_service.dart';
+import 'services/core/user_service.dart';
 import 'viewmodels/auth_viewmodel.dart';
+import 'viewmodels/notification_viewmodel.dart';
+import 'viewmodels/plaza/plaza_viewmodel.dart';
+import 'viewmodels/plaza_fare_viewmodel.dart';
+import 'viewmodels/user_viewmodel.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,11 +28,13 @@ void main() async {
         Provider<AuthService>.value(value: authService),
         Provider<UserService>.value(value: userService),
         Provider<RouteObserver<ModalRoute>>.value(value: routeObserver),
+
+        // Global ViewModels
         ChangeNotifierProvider(create: (_) => AuthViewModel(authService)),
-        ChangeNotifierProvider(create: (_) => PlazaViewModel()),
         ChangeNotifierProvider(create: (_) => UserViewModel(userService)),
         ChangeNotifierProvider(create: (_) => NotificationsViewModel()),
-        ChangeNotifierProvider(create: (_) => TransactionViewModel()),
+        ChangeNotifierProvider(create: (_) => PlazaViewModel()),
+        ChangeNotifierProvider(create: (_) => PlazaFareViewModel()),
       ],
       child: MyApp(routeObserver: routeObserver),
     ),
@@ -45,10 +47,10 @@ class MyApp extends StatefulWidget {
   const MyApp({super.key, required this.routeObserver});
 
   @override
-  _MyAppState createState() => _MyAppState();
+  MyAppState createState() => MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class MyAppState extends State<MyApp> {
   late Future<bool> _authCheckFuture;
 
   @override
@@ -67,10 +69,9 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      routes: AppRoutes.routes,
       initialRoute: '/',
-      // Update the onGenerateRoute section in the MyApp build method
       onGenerateRoute: (settings) {
+        // Handle initial route separately for security check
         if (settings.name == '/') {
           return MaterialPageRoute(
             builder: (context) => FutureBuilder<bool>(
@@ -81,19 +82,33 @@ class _MyAppState extends State<MyApp> {
                     body: Center(child: CircularProgressIndicator()),
                   );
                 }
-                // Set device dimensions once the future is complete
-                final mediaQueryData = MediaQuery.of(context);
-                AppConfig.deviceWidth = mediaQueryData.size.width; // Uses setter
-                AppConfig.deviceHeight = mediaQueryData.size.height; // Uses setter
 
-                return snapshot.data == true
-                    ? const HomeScreen()
-                    : const WelcomeScreen();
+                // Set device dimensions
+                final mediaQueryData = MediaQuery.of(context);
+                AppConfig.deviceWidth = mediaQueryData.size.width;
+                AppConfig.deviceHeight = mediaQueryData.size.height;
+
+                // Determine initial screen based on security state
+                if (snapshot.data == true) {
+                  return const HomeScreen();
+                } else {
+                  return const WelcomeScreen();
+                }
               },
             ),
           );
         }
-        return null;
+
+        // Use the new route generator for all other routes
+        return AppRoutes.generateRoute(settings);
+      },
+      builder: (context, child) {
+        // Ensure we have a MediaQuery for AppConfig
+        final mediaQuery = MediaQuery.of(context);
+        AppConfig.deviceWidth = mediaQuery.size.width;
+        AppConfig.deviceHeight = mediaQuery.size.height;
+
+        return child!;
       },
     );
   }

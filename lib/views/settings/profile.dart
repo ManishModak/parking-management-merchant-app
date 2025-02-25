@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 
-import '../../services/secure_storage_service.dart';
+import '../../services/storage/secure_storage_service.dart';
 import '../../viewmodels/user_viewmodel.dart';
 
 class UserProfileScreen extends StatefulWidget {

@@ -22,7 +22,7 @@ class CustomButtons {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(height / 2),
+            borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
         ),
@@ -55,7 +55,7 @@ class CustomButtons {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(height / 2),
+            borderRadius: BorderRadius.circular(12),
             side: const BorderSide(color: AppColors.primary, width: 2),
           ),
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
