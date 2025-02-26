@@ -35,7 +35,7 @@ class PlazaService {
         Uri.parse(fullUrl),
         headers: {'Content-Type': 'application/json'},
       )
-          .timeout(const Duration(seconds: 20));
+          .timeout(const Duration(seconds: 10));
 
       log('[PLAZA] Response Status Code: ${response.statusCode}',
           name: 'PlazaService');

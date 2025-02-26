@@ -33,7 +33,6 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
   String _searchQuery = '';
   int _currentPage = 1;
   static const int _itemsPerPage = 10;
-  bool useIndividualShimmer = false;
   bool _isLoading = false;
   final customCacheManager = CacheManager(
     Config(
@@ -48,10 +47,12 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
     super.initState();
     _viewModel = Provider.of<PlazaViewModel>(context, listen: false);
     _loadInitialData();
-
     _searchController.addListener(() {
-      setState(() => _currentPage = 1);
-      _handleSearch();
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+        _currentPage = 1;
+      });
+      _fetchImagesForCurrentPage();
     });
   }
 
@@ -61,7 +62,7 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
     if (userId != null) {
       await _viewModel.fetchUserPlazas(userId);
       await _fetchImagesForCurrentPage();
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 2)); // 2-second delay for shimmer testing
     }
     setState(() => _isLoading = false);
   }
@@ -92,14 +93,9 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
     if (userId != null) {
       await _viewModel.fetchUserPlazas(userId);
       await _fetchImagesForCurrentPage();
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 2));
     }
     setState(() => _isLoading = false);
-  }
-
-  void _handleSearch() {
-    _searchQuery = _searchController.text.toLowerCase();
-    _fetchImagesForCurrentPage();
   }
 
   Future<void> _fetchImagesForCurrentPage() async {
@@ -135,22 +131,23 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
   }
 
   Widget _buildSearchField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CustomFormFields.searchFormField(
-          controller: _searchController,
-          hintText: 'Search by plaza name or location...',
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-          child: Text(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          CustomFormFields.searchFormField(
+            controller: _searchController,
+            hintText: 'Search by plaza name or location...',
+          ),
+          const SizedBox(height: 8),
+          Text(
             'Last updated: ${DateTime.now().toString().substring(0, 16)}. Swipe down to refresh.',
             style: const TextStyle(fontSize: 12, color: Colors.grey),
             textAlign: TextAlign.center,
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -197,16 +194,17 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
   }
 
   Widget _buildShimmerList() {
-    return Scrollbar(
+    return ListView.builder(
       controller: _scrollController,
-      child: ListView.builder(
-        controller: _scrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        itemCount: _itemsPerPage,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      itemCount: _itemsPerPage,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Shimmer.fromColors(
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
             child: Card(
               elevation: 4,
               shape: RoundedRectangleBorder(
@@ -214,75 +212,38 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
               ),
               child: SizedBox(
                 height: 132,
-                child: Shimmer.fromColors(
-                  baseColor: Colors.grey.shade300,
-                  highlightColor: Colors.grey.shade100,
-                  direction: ShimmerDirection.ltr,
-                  period: const Duration(milliseconds: 1200),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 100,
+                        height: 100,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(width: double.infinity, height: 20, color: Colors.white),
+                            const SizedBox(height: 8),
+                            Container(width: 120, height: 16, color: Colors.white),
+                            const SizedBox(height: 8),
+                            Container(width: 180, height: 32, color: Colors.white),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: double.infinity,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                width: 120,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                width: 180,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                      Container(width: 24, height: 24, color: Colors.white),
+                    ],
                   ),
                 ),
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -294,101 +255,41 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
     final error = viewModel.error;
     if (error != null) {
       developer.log('Error occurred: $error');
-
       if (error is NoInternetException) {
         errorTitle = 'No Internet Connection';
         errorMessage = 'Please check your internet connection and try again.';
       } else if (error is RequestTimeoutException) {
         errorTitle = 'Request Timed Out';
-        errorMessage = 'The server is taking too long to respond. Please try again later.';
+        errorMessage = 'The server is taking too long to respond.';
       } else if (error is HttpException) {
-        final statusCode = error.statusCode;
-        final serverMessage = error.serverMessage ?? 'No additional details provided';
-
-        errorTitle = statusCode != null ? 'Error $statusCode' : 'Server Error';
-        errorMessage = error.toString().split(':').last.trim();
-
-        switch (statusCode) {
-          case 502:
-            errorTitle = 'Server Unavailable (502)';
-            errorMessage = 'We couldn’t connect to the plaza service.';
-            errorDetails = serverMessage.isNotEmpty
-                ? serverMessage
-                : 'This might be a temporary server issue.';
-            break;
-          case 404:
-            errorMessage = 'Plazas not found.';
-            errorDetails = 'No plazas available or invalid request.';
-            break;
-          default:
-            errorDetails = serverMessage;
-        }
-      } else if (error is PlazaException) {
-        errorTitle = 'Plaza Error';
-        errorMessage = error.toString().split(':').last.trim();
-        errorDetails = error.serverMessage ?? 'No additional details provided';
+        errorTitle = 'Error ${error.statusCode ?? 'Unknown'}';
+        errorMessage = error.serverMessage ?? 'An error occurred.';
+        errorDetails = error.toString();
       } else {
         errorMessage = error.toString();
-        errorDetails = 'An unexpected error occurred. Please try again later.';
+        errorDetails = 'An unexpected error occurred.';
       }
     }
 
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              errorTitle,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
-              ),
-              textAlign: TextAlign.center,
-            ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
+          const SizedBox(height: 16),
+          Text(errorTitle, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text(errorMessage, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
+          if (errorDetails != null) ...[
             const SizedBox(height: 8),
-            Text(
-              errorMessage,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (errorDetails != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                errorDetails,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade500,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _refreshData,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              ),
-              child: const Text(
-                'Retry',
-                style: TextStyle(fontSize: 16, color: Colors.white),
-              ),
-            ),
+            Text(errorDetails!, style: const TextStyle(fontSize: 14, color: Colors.grey)),
           ],
-        ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _refreshData,
+            child: const Text('Retry'),
+          ),
+        ],
       ),
     );
   }
@@ -398,9 +299,8 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
     return Consumer<PlazaViewModel>(
       builder: (context, viewModel, _) {
         final filteredPlazas = _getFilteredPlazas(viewModel.userPlazas);
-        final totalPages = (filteredPlazas.length / _itemsPerPage).ceil();
+        final totalPages = (filteredPlazas.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
         final paginatedPlazas = _getPaginatedPlazas(filteredPlazas);
-        final showPagination = filteredPlazas.isNotEmpty;
 
         return Scaffold(
           backgroundColor: AppColors.lightThemeBackground,
@@ -412,82 +312,72 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: CustomButtons.downloadIconButton(
-                  onPressed: () {
-                    developer.log('Download button pressed');
-                    /* Handle download */
-                  },
+                  onPressed: () => developer.log('Download button pressed'),
                   darkBackground: false,
                 ),
-              )
+              ),
             ],
           ),
-          body: viewModel.error != null
-              ? _buildErrorState(viewModel)
-              : Column(
+          body: Column(
             children: [
               _buildSearchField(),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: _refreshData,
-                  child: _isLoading && !useIndividualShimmer
-                      ? _buildShimmerList()
-                      : ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    controller: _scrollController,
-                    itemCount: paginatedPlazas.isEmpty ? 1 : paginatedPlazas.length,
-                    itemBuilder: (context, index) {
-                      if (paginatedPlazas.isEmpty) {
-                        return _buildEmptyState();
-                      } else {
-                        final plaza = paginatedPlazas[index];
-                        final imageUrl = viewModel.plazaImages[plaza.plazaId.toString()];
-                        return KeyedSubtree(
-                          key: ValueKey(plaza.plazaId),
-                          child: CustomCards.plazaCard(
-                            imageUrl: imageUrl,
-                            plazaName: plaza.plazaName,
-                            plazaId: plaza.plazaId,
-                            location: plaza.address,
-                            onTap: () {
-                              developer.log('Plaza card tapped: ${plaza.plazaId}');
-                              if (widget.modifyPlazaInfo) {
-                                Navigator.pushNamed(
-                                  context,
-                                  AppRoutes.plazaInfo,
-                                  arguments: plaza.plazaId,
+                  child: Stack(
+                    children: [
+                      ListView(
+                        controller: _scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          if (viewModel.error != null)
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.6,
+                              child: _buildErrorState(viewModel),
+                            )
+                          else if (filteredPlazas.isEmpty && !_isLoading)
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.6,
+                              child: _buildEmptyState(),
+                            )
+                          else if (!_isLoading)
+                              ...paginatedPlazas.map((plaza) {
+                                final imageUrl = viewModel.plazaImages[plaza.plazaId.toString()];
+                                return CustomCards.plazaCard(
+                                  imageUrl: imageUrl,
+                                  plazaName: plaza.plazaName,
+                                  plazaId: plaza.plazaId,
+                                  location: plaza.address,
+                                  onTap: () {
+                                    developer.log('Plaza card tapped: ${plaza.plazaId}');
+                                    Navigator.pushNamed(
+                                      context,
+                                      widget.modifyPlazaInfo ? AppRoutes.plazaInfo : AppRoutes.plazaFaresList,
+                                      arguments: widget.modifyPlazaInfo ? plaza.plazaId : plaza,
+                                    );
+                                  },
                                 );
-                              } else {
-                                Navigator.pushNamed(
-                                  context,
-                                  AppRoutes.plazaFaresList,
-                                  arguments: plaza,
-                                );
-                              }
-                            },
-                          ),
-                        );
-                      }
-                    },
+                              }).toList(),
+                        ],
+                      ),
+                      if (_isLoading) _buildShimmerList(),
+                    ],
                   ),
                 ),
               ),
             ],
           ),
-          bottomNavigationBar: showPagination
-              ? Container(
+          bottomNavigationBar: Container(
             color: AppColors.lightThemeBackground,
+            padding: const EdgeInsets.all(4.0),
             child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(4.0),
-                child: PaginationControls(
-                  currentPage: _currentPage,
-                  totalPages: totalPages,
-                  onPageChange: _updatePage,
-                ),
+              child: PaginationControls(
+                currentPage: _currentPage,
+                totalPages: totalPages,
+                onPageChange: _updatePage,
               ),
             ),
-          )
-              : null,
+          ),
         );
       },
     );

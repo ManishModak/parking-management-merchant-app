@@ -19,20 +19,30 @@ class ModifyViewRejectTicketScreen extends StatefulWidget {
 class _ModifyViewRejectTicketScreenState extends State<ModifyViewRejectTicketScreen> {
   bool isEditing = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Add listener to remarksController for real-time validation feedback
+    final viewModel = Provider.of<RejectTicketViewModel>(context, listen: false);
+    viewModel.remarksController.addListener(() {
+      if (isEditing) {
+        viewModel.validateForm(); // Trigger validation on change
+      }
+    });
+  }
+
   void _handleCancel() {
     final viewModel = Provider.of<RejectTicketViewModel>(context, listen: false);
     viewModel.resetRemarks();
-
     setState(() {
       isEditing = false;
     });
-
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Changes discarded')),
     );
   }
 
-  void _handleSave() async {
+  Future<void> _handleSave() async {
     if (!isEditing) return;
 
     final viewModel = Provider.of<RejectTicketViewModel>(context, listen: false);
@@ -49,15 +59,21 @@ class _ModifyViewRejectTicketScreenState extends State<ModifyViewRejectTicketScr
 
     final success = await viewModel.rejectTicket();
 
-    if (success) {
+    if (success && mounted) {
       setState(() {
         isEditing = false;
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ticket rejected successfully')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ticket rejected successfully')),
+      );
+      Navigator.pop(context); // Pop back to the previous screen after success
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(viewModel.apiError ?? 'Failed to reject ticket'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -204,50 +220,68 @@ class _ModifyViewRejectTicketScreenState extends State<ModifyViewRejectTicketScr
             darkBackground: true,
           ),
           backgroundColor: AppColors.lightThemeBackground,
-          body: Center(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _buildImageSection(viewModel),
-                  const SizedBox(height: 16),
-                  _buildReadOnlyField('Ticket ID', viewModel.ticketIdController),
-                  const SizedBox(height: 16),
-                  _buildReadOnlyField('Ticket Reference ID', viewModel.ticketRefIdController),
-                  const SizedBox(height: 16),
-                  _buildReadOnlyField('Plaza ID', viewModel.plazaIdController),
-                  const SizedBox(height: 16),
-                  _buildReadOnlyField('Entry Lane ID', viewModel.entryLaneIdController),
-                  const SizedBox(height: 16),
-                  _buildReadOnlyField('Entry Lane Direction', viewModel.entryLaneDirectionController),
-                  const SizedBox(height: 16),
-                  _buildReadOnlyField('Floor ID', viewModel.floorIdController),
-                  const SizedBox(height: 16),
-                  _buildReadOnlyField('Slot ID', viewModel.slotIdController),
-                  const SizedBox(height: 16),
-                  _buildReadOnlyField('Vehicle Number', viewModel.vehicleNumberController),
-                  const SizedBox(height: 16),
-                  _buildReadOnlyField('Vehicle Type', viewModel.vehicleTypeController),
-                  const SizedBox(height: 16),
-                  _buildReadOnlyField('Vehicle Entry Timestamp', viewModel.entryTimeController),
-                  const SizedBox(height: 16),
-                  _buildReadOnlyField('Ticket Creation Time', viewModel.ticketCreationTimeController),
-                  const SizedBox(height: 16),
-                  _buildReadOnlyField('Ticket Status', viewModel.ticketStatusController),
-                  const SizedBox(height: 16),
-                  CustomFormFields.remarksFormField(
-                    label: 'Remarks (Required - minimum 10 characters)',
-                    controller: viewModel.remarksController,
-                    enabled: isEditing,
-                    errorText: viewModel.remarksError,
-                    onChanged: (value) {
-                      viewModel.validateRemarks(value);
-                    },
+          body: Stack(
+            children: [
+              Center(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _buildImageSection(viewModel),
+                        const SizedBox(height: 16),
+                        _buildReadOnlyField('Ticket ID', viewModel.ticketIdController),
+                        const SizedBox(height: 16),
+                        _buildReadOnlyField('Ticket Reference ID', viewModel.ticketRefIdController),
+                        const SizedBox(height: 16),
+                        _buildReadOnlyField('Plaza ID', viewModel.plazaIdController),
+                        const SizedBox(height: 16),
+                        _buildReadOnlyField('Entry Lane ID', viewModel.entryLaneIdController),
+                        const SizedBox(height: 16),
+                        _buildReadOnlyField('Entry Lane Direction', viewModel.entryLaneDirectionController),
+                        const SizedBox(height: 16),
+                        _buildReadOnlyField('Floor ID', viewModel.floorIdController),
+                        const SizedBox(height: 16),
+                        _buildReadOnlyField('Slot ID', viewModel.slotIdController),
+                        const SizedBox(height: 16),
+                        _buildReadOnlyField('Vehicle Number', viewModel.vehicleNumberController),
+                        const SizedBox(height: 16),
+                        _buildReadOnlyField('Vehicle Type', viewModel.vehicleTypeController),
+                        const SizedBox(height: 16),
+                        _buildReadOnlyField('Vehicle Entry Timestamp', viewModel.entryTimeController),
+                        const SizedBox(height: 16),
+                        _buildReadOnlyField('Ticket Creation Time', viewModel.ticketCreationTimeController),
+                        const SizedBox(height: 16),
+                        _buildReadOnlyField('Ticket Status', viewModel.ticketStatusController),
+                        const SizedBox(height: 16),
+                        CustomFormFields.remarksFormField(
+                          label: 'Remarks (Required - minimum 10 characters)',
+                          controller: viewModel.remarksController,
+                          enabled: isEditing,
+                          errorText: viewModel.remarksError,
+                          onChanged: (value) {
+                            if (isEditing) {
+                              viewModel.validateForm(); // Trigger validation on change
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 80),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 80),
-                ],
+                ),
               ),
-            ),
+              if (viewModel.isLoading)
+                Container(
+                  color: Colors.black.withOpacity(0.5),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    ),
+                  ),
+                ),
+            ],
           ),
           floatingActionButton: Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -255,7 +289,7 @@ class _ModifyViewRejectTicketScreenState extends State<ModifyViewRejectTicketScr
               if (isEditing) ...[
                 FloatingActionButton(
                   heroTag: 'cancel',
-                  onPressed: _handleCancel,
+                  onPressed: viewModel.isLoading ? null : _handleCancel,
                   backgroundColor: Colors.red,
                   child: const Icon(Icons.close),
                 ),

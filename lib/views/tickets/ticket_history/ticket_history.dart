@@ -1,12 +1,15 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:merchant_app/views/tickets/ticket_history/view_ticket.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../../config/app_colors.dart';
 import '../../../../config/app_strings.dart';
 import '../../../../utils/components/appbar.dart';
 import '../../../../utils/components/form_field.dart';
 import '../../../../utils/components/pagination_controls.dart';
+import '../../../utils/exceptions.dart';
+import 'view_ticket.dart';
 import '../../../viewmodels/ticket/ticket_history_viewmodel.dart';
 
 class TicketHistoryScreen extends StatefulWidget {
@@ -16,166 +19,344 @@ class TicketHistoryScreen extends StatefulWidget {
   State<TicketHistoryScreen> createState() => _TicketHistoryScreenState();
 }
 
-class _TicketHistoryScreenState extends State<TicketHistoryScreen> {
+class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAware {
+  final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = "";
+  late TicketHistoryViewModel _viewModel;
+  late RouteObserver<ModalRoute> _routeObserver;
+  String _searchQuery = '';
   int _currentPage = 1;
   static const int _itemsPerPage = 10;
-  bool _isLoadingTickets = false;
-
-  // Updated dummy data including both open and rejected tickets
-  final List<Map<String, dynamic>> tickets = [
-    {
-      'ticketId': 'TICKET-1739170533986',
-      'plazaId': '01',
-      'plazaName': 'Central Plaza',
-      'entryLaneId': 'LANE-01',
-      'entryLaneDirection': 'ENTRY',
-      'floorId': 'F1',
-      'slotId': 'S101',
-      'vehicleNumber': 'MH14JK9827',
-      'vehicleType': 'Car',
-      'entryTime': '2025-02-10T06:55:53.984Z',
-      'ticketCreationTime': '2025-02-10T06:55:53.984Z',
-      'ticketStatus': 'Open',
-      'capturedImageUrl': 'https://example.com/image1.jpg',
-      'remarks': ''
-    },
-    {
-      'ticketId': 'TICKET-1739170533987',
-      'plazaId': '02',
-      'plazaName': 'Highway Plaza',
-      'entryLaneId': 'LANE-02',
-      'entryLaneDirection': 'ENTRY',
-      'floorId': 'F2',
-      'slotId': 'S202',
-      'vehicleNumber': 'KA03LM1234',
-      'vehicleType': 'Bike',
-      'entryTime': '2025-02-11T08:20:13.123Z',
-      'ticketCreationTime': '2025-02-11T08:20:13.123Z',
-      'ticketStatus': 'Rejected',
-      'capturedImageUrl': 'https://example.com/image2.jpg',
-      'remarks': 'Invalid vehicle details'
-    }
-  ];
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    _viewModel = TicketHistoryViewModel();
+    _loadInitialData();
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
         _currentPage = 1;
       });
     });
-    _loadTicketsData();
+  }
+
+  Future<void> _loadInitialData() async {
+    setState(() => _isLoading = true);
+    await _viewModel.fetchTicketHistory();
+    setState(() => _isLoading = false);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _routeObserver = Provider.of<RouteObserver<ModalRoute>>(context);
+    _routeObserver.subscribe(this, ModalRoute.of(context)!);
   }
 
   @override
   void dispose() {
+    _routeObserver.unsubscribe(this);
+    _scrollController.dispose();
     _searchController.dispose();
+    _viewModel.dispose();
     super.dispose();
   }
 
-  Future<void> _loadTicketsData() async {
-    setState(() {
-      _isLoadingTickets = true;
-    });
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() {
-      _isLoadingTickets = false;
-    });
+  @override
+  void didPopNext() => _refreshData();
+
+  Future<void> _refreshData() async {
+    setState(() => _isLoading = true);
+    await _viewModel.fetchTicketHistory();
+    setState(() => _isLoading = false);
   }
 
-  List<Map<String, dynamic>> get filteredTickets {
+  List<Map<String, dynamic>> _getFilteredTickets(List<Map<String, dynamic>> tickets) {
     if (_searchQuery.isEmpty) return tickets;
     return tickets.where((ticket) {
-      return ticket['ticketId']
-          .toString()
-          .toLowerCase()
-          .contains(_searchQuery) ||
-          ticket['plazaId'].toString().toLowerCase().contains(_searchQuery) ||
-          ticket['vehicleNumber']
-              .toString()
-              .toLowerCase()
-              .contains(_searchQuery) ||
-          ticket['vehicleType']
-              .toString()
-              .toLowerCase()
-              .contains(_searchQuery) ||
-          ticket['plazaName'].toString().toLowerCase().contains(_searchQuery) ||
-          ticket['ticketStatus']
-              .toString()
-              .toLowerCase()
-              .contains(_searchQuery);
+      return (ticket['ticketId']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
+          (ticket['plazaId']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
+          (ticket['vehicleNumber']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
+          (ticket['vehicleType']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
+          (ticket['plazaName']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
+          (ticket['ticketStatus']?.toString().toLowerCase().contains(_searchQuery) ?? false);
     }).toList();
   }
 
-  List<Map<String, dynamic>> get paginatedTickets {
-    final ticketsList = filteredTickets;
-    int startIndex = (_currentPage - 1) * _itemsPerPage;
-    int endIndex = startIndex + _itemsPerPage;
-    if (startIndex >= ticketsList.length) return [];
-    if (endIndex > ticketsList.length) endIndex = ticketsList.length;
-    return ticketsList.sublist(startIndex, endIndex);
+  List<Map<String, dynamic>> _getPaginatedTickets(List<Map<String, dynamic>> filteredTickets) {
+    final startIndex = (_currentPage - 1) * _itemsPerPage;
+    final endIndex = startIndex + _itemsPerPage;
+    return endIndex > filteredTickets.length
+        ? filteredTickets.sublist(startIndex)
+        : filteredTickets.sublist(startIndex, endIndex);
   }
-
-  int get totalPages => (filteredTickets.length / _itemsPerPage).ceil();
 
   void _updatePage(int newPage) {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setState(() {
-        _currentPage = newPage;
-      });
-    }
+    final filteredTickets = _getFilteredTickets(_viewModel.tickets);
+    final totalPages = (filteredTickets.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
+    if (newPage < 1 || newPage > totalPages) return;
+    setState(() => _currentPage = newPage);
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'open':
-        return Colors.green;
-      case 'rejected':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  void _navigateToViewTicket(BuildContext context, Map<String, dynamic> ticket) {
-    final ticketHistoryVM =
-    Provider.of<TicketHistoryViewModel>(context, listen: false);
-    ticketHistoryVM.initializeTicketData(ticket);
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChangeNotifierProvider.value(
-          value: ticketHistoryVM,
-          child: const ViewTicketScreen(),
-        ),
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          CustomFormFields.searchFormField(
+            controller: _searchController,
+            hintText: 'Search by Ticket ID, Status, Plaza, Vehicle Number...',
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Last updated: ${DateTime.now().toString().substring(0, 16)}. Swipe down to refresh.',
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildTicketCard(BuildContext context, Map<String, dynamic> ticket) {
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.confirmation_number_outlined, size: 64, color: Colors.grey.shade400),
+          const SizedBox(height: 16),
+          Text(
+            'No tickets found',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _searchQuery.isEmpty ? 'There are no tickets in history' : 'No tickets match your search criteria',
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            textAlign: TextAlign.center,
+          ),
+          if (_searchQuery.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            TextButton(onPressed: () => _searchController.clear(), child: const Text('Clear Search')),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerList() {
+    return ListView.builder(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      itemCount: _itemsPerPage,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Shimmer.fromColors(
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
+            child: Card(
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Stack(
+                            children: [
+                              Container(width: 150, height: 16, color: Colors.white),
+                              Positioned(right: 0, child: Container(width: 60, height: 24, color: Colors.white)),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(width: 80, height: 12, color: Colors.white),
+                                    const SizedBox(height: 4),
+                                    Container(width: 100, height: 14, color: Colors.white),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(width: 80, height: 12, color: Colors.white),
+                                    const SizedBox(height: 4),
+                                    Container(width: 100, height: 14, color: Colors.white),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(width: 80, height: 12, color: Colors.white),
+                                    const SizedBox(height: 4),
+                                    Container(width: 120, height: 14, color: Colors.white),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(width: 80, height: 12, color: Colors.white),
+                                    const SizedBox(height: 4),
+                                    Container(width: 140, height: 13, color: Colors.white),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(width: 30, height: 24, color: Colors.white),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildErrorState() {
+    String errorTitle = 'Unable to Load Ticket History';
+    String errorMessage = 'Something went wrong. Please try again.';
+    String? errorDetails;
+
+    final error = _viewModel.error;
+    if (error != null) {
+      developer.log('Error occurred: $error'); // Detailed logging for debugging
+      if (error is NoInternetException) {
+        errorTitle = 'No Internet Connection';
+        errorMessage = 'Please check your internet connection and try again.';
+      } else if (error is RequestTimeoutException) {
+        errorTitle = 'Request Timed Out';
+        errorMessage = 'The server is taking too long to respond. Please try again later.';
+      } else if (error is HttpException) {
+        errorTitle = 'Server Error';
+        errorMessage = 'We couldn’t reach the server. Please try again.';
+        switch (error.statusCode) {
+          case 400:
+            errorTitle = 'Invalid Request';
+            errorMessage = 'The request was incorrect. Please try again or contact support.';
+            break;
+          case 401:
+            errorTitle = 'Unauthorized';
+            errorMessage = 'Please log in again to continue.';
+            break;
+          case 403:
+            errorTitle = 'Access Denied';
+            errorMessage = 'You don’t have permission to view this. Contact support if this is an error.';
+            break;
+          case 404:
+            errorTitle = 'Not Found';
+            errorMessage = 'No ticket history was found. Please try again.';
+            break;
+          case 500:
+            errorTitle = 'Server Issue';
+            errorMessage = 'There’s a problem on our end. Please try again later.';
+            break;
+          case 502:
+            errorTitle = 'Service Unavailable';
+            errorMessage = 'The service is temporarily down. Please try again.';
+            break;
+          case 503:
+            errorTitle = 'Service Overloaded';
+            errorMessage = 'The server is busy. Please try again in a moment.';
+            break;
+          default:
+            errorTitle = 'Server Error';
+            errorMessage = 'An unexpected server issue occurred. Please try again.';
+            break;
+        }
+      } else if (error is ServiceException) {
+        errorTitle = 'Unexpected Error';
+        errorMessage = 'An unexpected issue occurred. Please try again.';
+      }
+    }
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
+          const SizedBox(height: 16),
+          Text(
+            errorTitle,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(
+              errorMessage,
+              style: const TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _refreshData,
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTicketCard(Map<String, dynamic> ticket) {
     DateTime entryTime = DateTime.parse(ticket['entryTime']);
-    String formattedEntryTime =
-    DateFormat('dd MMM yyyy, hh:mm a').format(entryTime);
-    Color statusColor = _getStatusColor(ticket['ticketStatus']);
+    String formattedEntryTime = DateFormat('dd MMM yyyy, hh:mm a').format(entryTime);
+    Color statusColor = ticket['ticketStatus'].toLowerCase() == 'open' ? Colors.green : Colors.red;
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       elevation: 3,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
-        side: BorderSide(
-          color: statusColor.withOpacity(0.3),
-          width: 1,
-        ),
+        side: BorderSide(color: statusColor.withOpacity(0.3), width: 1),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
-        onTap: () => _navigateToViewTicket(context, ticket),
+        onTap: () {
+          developer.log('Ticket card tapped: ${ticket['ticketId']}');
+          final detailViewModel = TicketHistoryViewModel();
+          detailViewModel.initializeTicketData(ticket);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChangeNotifierProvider<TicketHistoryViewModel>.value(
+                value: detailViewModel,
+                child: const ViewTicketScreen(),
+              ),
+            ),
+          ).then((_) => _refreshData());
+        },
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -189,34 +370,27 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> {
                       children: [
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.only(right: 85),
-                          child: Text(
-                            ticket['ticketId'],
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
+                          padding: const EdgeInsets.only(right: 65),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Ticket Id:', style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+                              Text(ticket['ticketId'].toString(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            ],
                           ),
                         ),
                         Positioned(
                           right: 0,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
+                            width: 60,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: statusColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              ticket['ticketStatus'],
-                              style: TextStyle(
-                                color: statusColor,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
+                              ticket['ticketStatus'].toString(),
+                              style: TextStyle(color: statusColor, fontWeight: FontWeight.w600, fontSize: 13),
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -224,35 +398,55 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    _buildInfoRow(
-                      'Vehicle Number',
-                      ticket['vehicleNumber'],
-                      'Vehicle Type',
-                      ticket['vehicleType'],
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Vehicle Number', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              Text(ticket['vehicleNumber'].toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Vehicle Type', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              Text(ticket['vehicleType'].toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
-                    _buildInfoRow(
-                      'Plaza Name',
-                      ticket['plazaName'],
-                      'Entry Time',
-                      formattedEntryTime,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Plaza Name', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              Text(ticket['plazaName'].toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Entry Time', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              Text(formattedEntryTime, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     if (ticket['remarks']?.isNotEmpty ?? false) ...[
                       const SizedBox(height: 12),
-                      Text(
-                        'Remarks',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 12,
-                        ),
-                      ),
-                      Text(
-                        ticket['remarks'],
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
+                      Text('Remarks', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                      Text(ticket['remarks'], style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                     ],
                   ],
                 ),
@@ -260,165 +454,70 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> {
               Container(
                 width: 30,
                 alignment: Alignment.center,
-                child: Icon(
-                  Icons.chevron_right,
-                  color: AppColors.primary,
-                  size: 24,
-                ),
+                child: Icon(Icons.chevron_right, color: AppColors.primary, size: 24),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label1, String value1, String label2, String value2) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label1,
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 12,
-                ),
-              ),
-              Text(
-                value1,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label2,
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 12,
-                ),
-              ),
-              Text(
-                value2,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.confirmation_number_outlined,
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No tickets found',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _searchQuery.isEmpty
-                ? 'There are no tickets in history'
-                : 'No tickets match your search criteria',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          if (_searchQuery.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () {
-                _searchController.clear();
-              },
-              child: const Text('Clear Search'),
-            ),
-          ],
-        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => TicketHistoryViewModel(),
-      child: Builder(
-        builder: (context) => Scaffold(
-          backgroundColor: AppColors.lightThemeBackground,
-          appBar: CustomAppBar.appBarWithNavigation(
-            screenTitle: AppStrings.titleTicketHistory,
-            onPressed: () => Navigator.pop(context),
-            darkBackground: true,
-          ),
-          body: Consumer<TicketHistoryViewModel>(
-            builder: (context, viewModel, child) {
-              return _isLoadingTickets
-                  ? const Center(child: CircularProgressIndicator())
-                  : Column(
+    final filteredTickets = _getFilteredTickets(_viewModel.tickets);
+    final totalPages = (filteredTickets.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
+    final paginatedTickets = _getPaginatedTickets(filteredTickets);
+
+    return Scaffold(
+      backgroundColor: AppColors.lightThemeBackground,
+      appBar: CustomAppBar.appBarWithNavigation(
+        screenTitle: AppStrings.titleTicketHistory,
+        onPressed: () => Navigator.pop(context),
+        darkBackground: true,
+      ),
+      body: Column(
+        children: [
+          _buildSearchField(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _refreshData,
+              child: Stack(
                 children: [
-                  CustomFormFields.searchFormField(
-                    controller: _searchController,
-                    hintText:
-                    'Search by Ticket ID, Status, Plaza, Vehicle Number...',
+                  ListView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      if (_viewModel.error != null)
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.6,
+                          child: _buildErrorState(),
+                        )
+                      else if (filteredTickets.isEmpty && !_isLoading)
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.6,
+                          child: _buildEmptyState(),
+                        )
+                      else if (!_isLoading)
+                          ...paginatedTickets.map((ticket) => _buildTicketCard(ticket)),
+                    ],
                   ),
-                  Expanded(
-                    child: paginatedTickets.isEmpty
-                        ? _buildEmptyState()
-                        : ListView.builder(
-                      padding:
-                      const EdgeInsets.symmetric(horizontal: 8),
-                      itemCount: paginatedTickets.length,
-                      itemBuilder: (context, index) {
-                        final ticket = paginatedTickets[index];
-                        return _buildTicketCard(context, ticket);
-                      },
-                    ),
-                  ),
+                  if (_isLoading) _buildShimmerList(),
                 ],
-              );
-            },
-          ),
-          bottomNavigationBar: paginatedTickets.isNotEmpty
-              ? Container(
-            color: AppColors.lightThemeBackground,
-            child: SafeArea(
-              child: PaginationControls(
-                currentPage: _currentPage,
-                totalPages: totalPages,
-                onPageChange: _updatePage,
               ),
             ),
-          )
-              : null,
+          ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        color: AppColors.lightThemeBackground,
+        padding: const EdgeInsets.all(4.0),
+        child: SafeArea(
+          child: PaginationControls(
+            currentPage: _currentPage,
+            totalPages: totalPages,
+            onPageChange: _updatePage,
+          ),
         ),
       ),
     );

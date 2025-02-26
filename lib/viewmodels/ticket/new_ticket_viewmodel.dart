@@ -42,85 +42,8 @@ class NewTicketViewmodel extends ChangeNotifier {
   List<String> get laneDirections => Lane.validDirections;
 
   Future<void> showImageSourceDialog(BuildContext context) async {
-    return showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.0),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Select Image Source',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildOptionButton(
-                      context: context,
-                      icon: Icons.camera_alt,
-                      label: 'Camera',
-                      onTap: () {
-                        Navigator.pop(context);
-                        pickImageFromCamera();
-                      },
-                    ),
-                    _buildOptionButton(
-                      context: context,
-                      icon: Icons.photo_library,
-                      label: 'Gallery',
-                      onTap: () {
-                        Navigator.pop(context);
-                        pickMultipleImagesFromGallery();
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildOptionButton({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              size: 32,
-              color: Theme.of(context).primaryColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-        ],
-      ),
-    );
+    // Directly call camera instead of showing dialog
+    await pickImageFromCamera();
   }
 
   Future<void> pickImageFromCamera() async {
@@ -135,21 +58,7 @@ class NewTicketViewmodel extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      apiError = 'Error capturing image: $e';
-      notifyListeners();
-    }
-  }
-
-  Future<void> pickMultipleImagesFromGallery() async {
-    try {
-      final List<XFile> images = await _imagePicker.pickMultiImage();
-
-      if (images.isNotEmpty) {
-        selectedImagePaths.addAll(images.map((image) => image.path));
-        notifyListeners();
-      }
-    } catch (e) {
-      apiError = 'Error selecting images: $e';
+      imageCaptureError = 'Error capturing image: $e';
       notifyListeners();
     }
   }
@@ -229,7 +138,7 @@ class NewTicketViewmodel extends ChangeNotifier {
     }
 
     if (selectedImagePaths.isEmpty) {
-      imageCaptureError = 'Please capture or select at least one vehicle image';
+      imageCaptureError = 'Please capture at least one vehicle image';
       isValid = false;
       log("Validation error: $imageCaptureError");
     }

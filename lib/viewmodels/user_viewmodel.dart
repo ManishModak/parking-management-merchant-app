@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:merchant_app/models/user_model.dart';
 import 'package:merchant_app/services/storage/secure_storage_service.dart';
 import 'package:merchant_app/services/core/user_service.dart';
+import 'package:merchant_app/utils/exceptions.dart'; // Import exceptions
 
 class UserViewModel extends ChangeNotifier {
   final UserService _userService;
   final SecureStorageService _secureStorageService = SecureStorageService();
 
-  String? _error;
+  Exception? _error; // Changed to Exception?
   User? currentUser;
   List<User> _users = [];
   bool _isLoading = false;
@@ -16,50 +17,45 @@ class UserViewModel extends ChangeNotifier {
   User? get currentOperator => currentUser;
   List<User> get operators => _users;
   bool get isLoading => _isLoading;
-  String? get error => _error;
+  Exception? get error => _error; // Updated getter
 
   UserViewModel(this._userService);
-
-
 
   Future<void> fetchUserList(String userId) async {
     try {
       _setLoading(true);
       _users = await _userService.getUserList();
-      // Remove user with ID 47 from the list
       _users = _users.where((user) => user.id != '47').toList();
       _error = null;
     } catch (e) {
-      print('Failed to fetch operators: ${e.toString()}');
-      _setError('Failed to fetch operators: ${e.toString()}');
-      _users = []; // Reset users list on error
+      // Assume UserService throws specific exceptions; rethrow or wrap if needed
+      _error = e is Exception ? e : Exception('Failed to fetch operators: $e');
+      _users = [];
+      print('Failed to fetch operators: $_error');
     } finally {
       _setLoading(false);
     }
   }
 
   void clearUserImages() {
-    // userImages.clear();
     notifyListeners();
   }
 
-
-  Future<void> fetchUser({required String userId,required bool isCurrentAppUser}) async {
+  Future<void> fetchUser({required String userId, required bool isCurrentAppUser}) async {
     try {
       _setLoading(true);
       final cachedUserData = await _secureStorageService.getUserData();
       if (cachedUserData != null && isCurrentAppUser) {
         currentUser = User.fromJson(cachedUserData);
-        print("STORAGE CALL");
-        print(currentUser.toString());
+        print("STORAGE CALL: $currentUser");
       } else {
-        currentUser = await _userService.fetchUserInfo(userId,isCurrentAppUser);
-        print("API CALL");
-        print(currentUser.toString());
+        currentUser = await _userService.fetchUserInfo(userId, isCurrentAppUser);
+        print("API CALL: $currentUser");
       }
       _error = null;
     } catch (e) {
-      _setError('Failed to load user profile: ${e.toString()}');
+      _error = e is Exception ? e : Exception('Failed to load user profile: $e');
+      print('Error: $_error');
     } finally {
       _setLoading(false);
     }
@@ -74,7 +70,7 @@ class UserViewModel extends ChangeNotifier {
     String? state,
     String? role,
     String? subEntity,
-    required bool isCurrentAppUser
+    required bool isCurrentAppUser,
   }) async {
     try {
       _setLoading(true);
@@ -91,18 +87,19 @@ class UserViewModel extends ChangeNotifier {
         city: city,
         state: state,
         role: role,
-        subEntity: subEntity
+        subEntity: subEntity,
       );
 
       if (success) {
-        currentUser = await _userService.fetchUserInfo(currentUser!.id,isCurrentAppUser);
+        currentUser = await _userService.fetchUserInfo(currentUser!.id, isCurrentAppUser);
         _error = null;
         return true;
       } else {
         throw Exception('Update failed');
       }
     } catch (e) {
-      _setError('Failed to update user: ${e.toString()}');
+      _error = e is Exception ? e : Exception('Failed to update user: $e');
+      print('Error: $_error');
       return false;
     } finally {
       _setLoading(false);
@@ -112,8 +109,6 @@ class UserViewModel extends ChangeNotifier {
   Future<bool> resetPassword(String userId, String newPassword) async {
     try {
       _setLoading(true);
-      _error = null;
-
       if (userId.isEmpty) {
         throw Exception('User ID is required');
       }
@@ -121,12 +116,14 @@ class UserViewModel extends ChangeNotifier {
       final success = await _userService.resetPassword(userId, newPassword);
 
       if (success) {
+        _error = null;
         return true;
       } else {
         throw Exception('Password reset failed');
       }
     } catch (e) {
-      _setError('Failed to reset password: ${e.toString()}');
+      _error = e is Exception ? e : Exception('Failed to reset password: $e');
+      print('Error: $_error');
       return false;
     } finally {
       _setLoading(false);
@@ -138,7 +135,7 @@ class UserViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _setError(String? error) {
+  void _setError(Exception? error) {
     _error = error;
     notifyListeners();
   }

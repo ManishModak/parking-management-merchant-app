@@ -6,24 +6,25 @@ enum Status {
 }
 
 class Ticket {
-  String? ticketId;
-  String? ticketRefId;
-  String plazaId;
-  int? fareId;
-  String entryLaneId;
-  String entryLaneDirection;
-  String floorId;
-  String slotId;
-  String vehicleNumber;
-  String vehicleType;
-  String createdBy;
-  DateTime createdTime;
-  String? entryTime;
-  DateTime? exitTime;
-  Status? status;
-  String? capturedImage; // Changed from File? to String? to match JSON and URL usage
-  String? modifiedBy;
-  DateTime? modificationTime;
+  final String? ticketId;
+  final String? ticketRefId;
+  final String plazaId;
+  final int? fareId;
+  final String entryLaneId;
+  final String entryLaneDirection;
+  final String floorId;
+  final String slotId;
+  final String vehicleNumber;
+  final String vehicleType;
+  final String createdBy;
+  final DateTime createdTime;
+  final String? entryTime;
+  final DateTime? exitTime;
+  final Status? status;
+  final List<String>? capturedImages;
+  final String? modifiedBy;
+  final DateTime? modificationTime;
+  final String? remarks;
 
   Ticket({
     this.ticketId,
@@ -41,11 +42,54 @@ class Ticket {
     this.entryTime,
     this.exitTime,
     this.status,
-    this.capturedImage,
+    this.capturedImages,
     this.modifiedBy,
     this.modificationTime,
+    this.remarks,
   })  : createdBy = createdBy ?? 'System',
         createdTime = createdTime ?? DateTime.now();
+
+  factory Ticket.fromJson(Map<String, dynamic> json) {
+    return Ticket(
+      ticketId: json['ticket_id'] as String?,
+      ticketRefId: json['ticket_ref_id'] as String?,
+      plazaId: json['plaza_id'] as String,
+      fareId: json['fareId'] as int?,
+      entryLaneId: json['entry_lane_id'] as String,
+      entryLaneDirection: json['entry_lane_direction'] as String,
+      floorId: json['floor_id'] as String,
+      slotId: json['slot_id'] as String,
+      vehicleNumber: json['vehicle_number'] as String,
+      vehicleType: json['vehicle_type'] as String,
+      createdBy: json['created_by'] as String?,
+      createdTime: DateTime.tryParse(json['created_time'] as String? ?? '') ?? DateTime.now(),
+      entryTime: json['entry_time'] as String?,
+      exitTime: json['exit_time'] != null ? DateTime.tryParse(json['exit_time'] as String) : null,
+      status: _parseStatus(json['status'] as String? ?? 'pending'),
+      capturedImages: json['captured_images'] != null
+          ? List<String>.from(json['captured_images'])
+          : json['captured_image'] != null
+          ? [json['captured_image'] as String]
+          : null,
+      modifiedBy: json['modified_by'] as String?,
+      modificationTime: json['modification_time'] != null
+          ? DateTime.tryParse(json['modification_time'] as String)
+          : null,
+      remarks: json['remarks'] as String?,
+    );
+  }
+
+  static Status _parseStatus(String? statusStr) {
+    if (statusStr == null) return Status.pending;
+    try {
+      return Status.values.firstWhere(
+            (e) => e.toString().split('.').last.toLowerCase() == statusStr.toLowerCase(),
+        orElse: () => Status.pending,
+      );
+    } catch (e) {
+      return Status.pending;
+    }
+  }
 
   Ticket copyWith({
     String? ticketId,
@@ -63,9 +107,10 @@ class Ticket {
     String? entryTime,
     DateTime? exitTime,
     Status? status,
-    String? capturedImage,
+    List<String>? capturedImages,
     String? modifiedBy,
     DateTime? modificationTime,
+    String? remarks,
   }) {
     return Ticket(
       ticketId: ticketId ?? this.ticketId,
@@ -83,9 +128,10 @@ class Ticket {
       entryTime: entryTime ?? this.entryTime,
       exitTime: exitTime ?? this.exitTime,
       status: status ?? this.status,
-      capturedImage: capturedImage ?? this.capturedImage,
+      capturedImages: capturedImages ?? this.capturedImages,
       modifiedBy: modifiedBy ?? this.modifiedBy,
       modificationTime: modificationTime ?? this.modificationTime,
+      remarks: remarks ?? this.remarks,
     );
   }
 
@@ -105,6 +151,7 @@ class Ticket {
       'created_time': createdTime.toIso8601String(),
       'entry_time': entryTime,
       'status': status.toString().split('.').last,
+      'remarks': remarks,
     };
 
     if (fareId != null) {
@@ -113,8 +160,8 @@ class Ticket {
     if (exitTime != null) {
       json['exit_time'] = exitTime!.toIso8601String();
     }
-    if (capturedImage != null) {
-      json['captured_image'] = capturedImage;
+    if (capturedImages != null && capturedImages!.isNotEmpty) {
+      json['captured_images'] = capturedImages;
     }
     if (modifiedBy != null) {
       json['modified_by'] = modifiedBy;
@@ -138,7 +185,8 @@ class Ticket {
       'vehicle_type': vehicleType,
       'entry_time': entryTime,
       'status': Status.open.toString().split('.').last,
-      'captured_image': capturedImage,
+      'captured_images': capturedImages,
+      'remarks': remarks ?? '',
     };
   }
 
@@ -151,45 +199,9 @@ class Ticket {
       'modified_by': modifiedBy ?? 'System',
       'modification_time': DateTime.now().toIso8601String(),
       'status': Status.pending.toString().split('.').last,
-      'captured_image': capturedImage,
+      'captured_images': capturedImages,
+      'remarks': remarks ?? '',
     };
-  }
-
-  factory Ticket.fromJson(Map<String, dynamic> json) {
-    return Ticket(
-      ticketId: json['ticket_id'] as String?,
-      ticketRefId: json['ticket_ref_id'] as String?,
-      plazaId: json['plaza_id'] as String,
-      fareId: json['fareId'] as int?,
-      entryLaneId: json['entry_lane_id'] as String,
-      entryLaneDirection: json['entry_lane_direction'] as String,
-      floorId: json['floor_id'] as String,
-      slotId: json['slot_id'] as String,
-      vehicleNumber: json['vehicle_number'] as String,
-      vehicleType: json['vehicle_type'] as String,
-      createdBy: json['created_by'] as String?,
-      createdTime: DateTime.tryParse(json['created_time'] as String? ?? '') ?? DateTime.now(),
-      entryTime: json['entry_time'] as String?,
-      exitTime: json['exit_time'] != null ? DateTime.tryParse(json['exit_time'] as String) : null,
-      status: _parseStatus(json['status'] as String? ?? 'pending'),
-      capturedImage: json['captured_image'] as String?,
-      modifiedBy: json['modified_by'] as String?,
-      modificationTime: json['modification_time'] != null
-          ? DateTime.tryParse(json['modification_time'] as String)
-          : null,
-    );
-  }
-
-  static Status _parseStatus(String? statusStr) {
-    if (statusStr == null) return Status.pending;
-    try {
-      return Status.values.firstWhere(
-            (e) => e.toString().split('.').last.toLowerCase() == statusStr.toLowerCase(),
-        orElse: () => Status.pending,
-      );
-    } catch (e) {
-      return Status.pending;
-    }
   }
 
   @override
@@ -197,6 +209,7 @@ class Ticket {
     return 'Ticket{ticketId: $ticketId, ticketRefId: $ticketRefId, plazaId: $plazaId, fareId: $fareId, '
         'entryLaneId: $entryLaneId, entryLaneDirection: $entryLaneDirection, '
         'floorId: $floorId, slotId: $slotId, vehicleNumber: $vehicleNumber, '
-        'vehicleType: $vehicleType, status: $status, capturedImage: $capturedImage}';
+        'vehicleType: $vehicleType, status: $status, capturedImages: $capturedImages, '
+        'remarks: $remarks}';
   }
 }

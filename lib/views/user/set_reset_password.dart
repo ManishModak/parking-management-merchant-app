@@ -98,9 +98,7 @@ class _UserSetResetPasswordScreenState
           );
           Navigator.pop(context);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(operatorVM.error ?? 'Failed to reset password')),
-          );
+          //
         }
       }
     } catch (e) {

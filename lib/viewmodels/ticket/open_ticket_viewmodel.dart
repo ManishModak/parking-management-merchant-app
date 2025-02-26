@@ -1,33 +1,32 @@
-import 'dart:developer';
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
-import '../../models/plaza_fare.dart';
 import '../../models/ticket.dart';
 import '../../services/core/ticket_service.dart';
+import '../../utils/exceptions.dart';
 
 class OpenTicketViewModel extends ChangeNotifier {
   final TicketService _ticketService;
 
   bool isLoading = false;
-  String? error;
+  Exception? error;
   List<Map<String, dynamic>> tickets = [];
 
   // Controllers
-  final TextEditingController ticketIdController = TextEditingController(); // Added for ticket_id
+  final TextEditingController ticketIdController = TextEditingController();
   final TextEditingController ticketRefIdController = TextEditingController();
   final TextEditingController plazaIdController = TextEditingController();
   final TextEditingController entryLaneIdController = TextEditingController();
   final TextEditingController entryLaneDirectionController = TextEditingController();
   final TextEditingController floorIdController = TextEditingController();
   final TextEditingController slotIdController = TextEditingController();
-  final TextEditingController capturedImageController = TextEditingController();
   final TextEditingController vehicleNumberController = TextEditingController();
   final TextEditingController vehicleTypeController = TextEditingController();
   final TextEditingController vehicleEntryTimestampController = TextEditingController();
   final TextEditingController ticketCreationTimeController = TextEditingController();
   final TextEditingController ticketStatusController = TextEditingController();
-  final TextEditingController modificationTimeController = TextEditingController(); // Added for modification_time
+  final TextEditingController modificationTimeController = TextEditingController();
 
-  // Field-specific error states for editable fields
+  // Field-specific error states
   String? vehicleNumberError;
   String? floorIdError;
   String? slotIdError;
@@ -36,9 +35,9 @@ class OpenTicketViewModel extends ChangeNotifier {
   String? currentTicketId;
 
   String? selectedVehicleType;
-  List<String> get vehicleTypes => VehicleTypes.values;
+  List<String> get vehicleTypes => ['Car', 'Truck', 'Motorcycle', 'Van']; // Adjust as per your needs
 
-  String? capturedImageUrl;
+  List<String>? capturedImageUrls;
 
   OpenTicketViewModel({TicketService? ticketService})
       : _ticketService = ticketService ?? TicketService();
@@ -94,32 +93,70 @@ class OpenTicketViewModel extends ChangeNotifier {
         'plazaID': ticket.plazaId,
         'vehicleNumber': ticket.vehicleNumber,
         'vehicleType': ticket.vehicleType,
-        'plazaId': {ticket.plazaId},
+        'plazaName': ticket.plazaId, // Adjust if plazaName is available
         'entryTime': ticket.entryTime,
         'status': ticket.status.toString().split('.').last,
         'entryLaneId': ticket.entryLaneId,
         'entryLaneDirection': ticket.entryLaneDirection,
         'ticketCreationTime': ticket.createdTime.toIso8601String(),
-        'floorId': ticket.floorId.isEmpty ? 'N/A' : ticket.floorId, // Check for null or empty
-        'slotId': ticket.slotId.isEmpty ? 'N/A' : ticket.slotId,     // Check for null or empty
-        'capturedImage': ticket.capturedImage,
+        'floorId': ticket.floorId.isEmpty ? 'N/A' : ticket.floorId,
+        'slotId': ticket.slotId.isEmpty ? 'N/A' : ticket.slotId,
+        'capturedImages': ticket.capturedImages,
         'modificationTime': ticket.modificationTime?.toIso8601String(),
       }).toList();
 
       if (tickets.isEmpty) {
-        log('[OpenTicketViewModel] No open tickets found, setting empty list.', name: 'OpenTicketViewModel');
+        developer.log('[OpenTicketViewModel] No open tickets found.', name: 'OpenTicketViewModel');
       }
     } catch (e) {
-      error = 'Failed to load tickets: $e';
+      error = e as Exception;
+      developer.log('[OpenTicketViewModel] Error fetching tickets: $error', name: 'OpenTicketViewModel');
     } finally {
       isLoading = false;
       notifyListeners();
     }
   }
 
+  Future<void> fetchTicketDetails(String ticketId) async {
+    try {
+      isLoading = true;
+      error = null;
+      notifyListeners();
+
+      final ticket = await _ticketService.getTicketDetails(ticketId);
+      initializeTicketData(ticket);
+    } catch (e) {
+      error = e as Exception;
+      developer.log('[OpenTicketViewModel] Error fetching ticket details: $error', name: 'OpenTicketViewModel');
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void initializeTicketData(Ticket ticket) {
+    currentTicketId = ticket.ticketId;
+    ticketIdController.text = ticket.ticketId ?? '';
+    ticketRefIdController.text = ticket.ticketRefId ?? '';
+    plazaIdController.text = ticket.plazaId;
+    entryLaneIdController.text = ticket.entryLaneId;
+    entryLaneDirectionController.text = ticket.entryLaneDirection;
+    floorIdController.text = ticket.floorId;
+    slotIdController.text = ticket.slotId;
+    vehicleNumberController.text = ticket.vehicleNumber;
+    vehicleTypeController.text = ticket.vehicleType;
+    selectedVehicleType = ticket.vehicleType;
+    vehicleEntryTimestampController.text = ticket.entryTime ?? '';
+    ticketCreationTimeController.text = ticket.createdTime.toIso8601String();
+    ticketStatusController.text = ticket.status.toString().split('.').last;
+    capturedImageUrls = ticket.capturedImages;
+    modificationTimeController.text = ticket.modificationTime?.toIso8601String() ?? '';
+    notifyListeners();
+  }
+
   Future<bool> saveTicketChanges() async {
     if (!validateForm()) {
-      error = 'Please correct the validation errors';
+      error = ServiceException('Please correct the validation errors');
       notifyListeners();
       return false;
     }
@@ -141,18 +178,18 @@ class OpenTicketViewModel extends ChangeNotifier {
         vehicleNumber: vehicleNumberController.text,
         vehicleType: vehicleTypeController.text,
         status: Status.pending,
-        capturedImage: capturedImageUrl,
-        modifiedBy: 'System', // Assuming current user is 'System' for now
+        capturedImages: capturedImageUrls,
+        modifiedBy: 'System',
         modificationTime: DateTime.now(),
       );
 
       await _ticketService.modifyTicket(ticketRefIdController.text, updatedTicket);
       await fetchOpenTickets();
-
       return true;
     } catch (e) {
-      apiError = 'Failed to update ticket: $e';
-      error = apiError;
+      error = e as Exception;
+      apiError = error.toString();
+      developer.log('[OpenTicketViewModel] Error saving ticket changes: $error', name: 'OpenTicketViewModel');
       notifyListeners();
       return false;
     } finally {
@@ -170,27 +207,6 @@ class OpenTicketViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void initializeTicketData(Map<String, dynamic> ticketData) {
-    resetErrors();
-    currentTicketId = ticketData['ticketID']?.toString() ?? '';
-    ticketIdController.text = ticketData['ticketID']?.toString() ?? '';
-    ticketRefIdController.text = ticketData['ticketRefID']?.toString() ?? '';
-    plazaIdController.text = ticketData['plazaID']?.toString() ?? '';
-    entryLaneIdController.text = ticketData['entryLaneId']?.toString() ?? '';
-    entryLaneDirectionController.text = ticketData['entryLaneDirection']?.toString() ?? '';
-    floorIdController.text = ticketData['floorId']?.toString() ?? '';
-    slotIdController.text = ticketData['slotId']?.toString() ?? '';
-    vehicleNumberController.text = ticketData['vehicleNumber']?.toString() ?? '';
-    vehicleTypeController.text = ticketData['vehicleType']?.toString() ?? '';
-    selectedVehicleType = ticketData['vehicleType']?.toString();
-    vehicleEntryTimestampController.text = ticketData['entryTime']?.toString() ?? '';
-    ticketCreationTimeController.text = ticketData['ticketCreationTime']?.toString() ?? '';
-    ticketStatusController.text = ticketData['status']?.toString() ?? '';
-    capturedImageUrl = ticketData['capturedImage']?.toString();
-    modificationTimeController.text = ticketData['modificationTime']?.toString() ?? '';
-    notifyListeners();
-  }
-
   @override
   void dispose() {
     ticketIdController.dispose();
@@ -200,7 +216,6 @@ class OpenTicketViewModel extends ChangeNotifier {
     entryLaneDirectionController.dispose();
     floorIdController.dispose();
     slotIdController.dispose();
-    capturedImageController.dispose();
     vehicleNumberController.dispose();
     vehicleTypeController.dispose();
     vehicleEntryTimestampController.dispose();

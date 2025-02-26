@@ -1,6 +1,6 @@
 class ApiConfig {
   // Base URL
-  static const String apiGateway = 'http://192.168.1.18:5000/';
+  static const String apiGateway = 'http://192.168.1.15:5000/';
 
   // Authentication endpoints
   static const String loginEndpoint = 'users/login';

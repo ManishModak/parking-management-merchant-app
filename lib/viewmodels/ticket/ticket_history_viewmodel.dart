@@ -1,7 +1,11 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../services/core/ticket_service.dart';
 
 class TicketHistoryViewModel extends ChangeNotifier {
+  final TicketService _ticketService;
+
   // Controllers for form fields
   final TextEditingController ticketIdController = TextEditingController();
   final TextEditingController plazaIdController = TextEditingController();
@@ -17,85 +21,113 @@ class TicketHistoryViewModel extends ChangeNotifier {
   final TextEditingController ticketStatusController = TextEditingController();
   final TextEditingController remarksController = TextEditingController();
 
-  Map<String, dynamic>? _selectedTicket;
-  bool _isLoading = false;
+  bool isLoading = false;
+  Exception? error;
+  List<Map<String, dynamic>> tickets = [];
 
-  Map<String, dynamic>? get selectedTicket => _selectedTicket;
-  bool get isLoading => _isLoading;
+  TicketHistoryViewModel({TicketService? ticketService})
+      : _ticketService = ticketService ?? TicketService();
 
-  // Initialize ticket data and update controllers
-  void initializeTicketData(Map<String, dynamic> ticket) {
-    _selectedTicket = ticket;
-    _updateControllers();
-    notifyListeners();
-  }
+  Future<void> fetchTicketHistory() async {
+    try {
+      isLoading = true;
+      error = null;
+      notifyListeners();
 
-  // Update all controllers with ticket data
-  void _updateControllers() {
-    if (_selectedTicket != null) {
-      ticketIdController.text = _selectedTicket?['ticketId'] ?? '';
-      plazaIdController.text = _selectedTicket?['plazaId'] ?? '';
-      plazaNameController.text = _selectedTicket?['plazaName'] ?? '';
-      entryLaneIdController.text = _selectedTicket?['entryLaneId'] ?? '';
-      entryLaneDirectionController.text = _selectedTicket?['entryLaneDirection'] ?? '';
-      floorIdController.text = _selectedTicket?['floorId'] ?? '';
-      slotIdController.text = _selectedTicket?['slotId'] ?? '';
-      vehicleNumberController.text = _selectedTicket?['vehicleNumber'] ?? '';
-      vehicleTypeController.text = _selectedTicket?['vehicleType'] ?? '';
+      // Note: Assuming getOpenTickets is a placeholder; replace with actual history endpoint if available
+      final fetchedTickets = await _ticketService.getOpenTickets();
+      tickets = fetchedTickets.map((ticket) => {
+        'ticketId': ticket.ticketId,
+        'ticketRefId': ticket.ticketRefId,
+        'plazaId': ticket.plazaId,
+        'vehicleNumber': ticket.vehicleNumber,
+        'vehicleType': ticket.vehicleType,
+        'plazaName': 'Plaza ${ticket.plazaId}', // Replace with actual plaza name if available
+        'entryTime': ticket.entryTime,
+        'ticketStatus': ticket.status.toString().split('.').last,
+        'entryLaneId': ticket.entryLaneId,
+        'entryLaneDirection': ticket.entryLaneDirection,
+        'ticketCreationTime': ticket.createdTime.toIso8601String(),
+        'floorId': ticket.floorId.isEmpty ? 'N/A' : ticket.floorId,
+        'slotId': ticket.slotId.isEmpty ? 'N/A' : ticket.slotId,
+        //'capturedImage': ticket.capturedImage,
+        'modificationTime': ticket.modificationTime?.toIso8601String(),
+        'remarks': ticket.remarks ?? '',
+      }).toList();
 
-      // Format timestamps
-      if (_selectedTicket?['entryTime'] != null) {
-        final entryTime = DateTime.parse(_selectedTicket!['entryTime']);
-        entryTimeController.text = DateFormat('dd MMM yyyy, hh:mm a').format(entryTime);
+      if (tickets.isEmpty) {
+        developer.log('[TicketHistoryViewModel] No tickets found in history.', name: 'TicketHistoryViewModel');
       }
-
-      if (_selectedTicket?['ticketCreationTime'] != null) {
-        final creationTime = DateTime.parse(_selectedTicket!['ticketCreationTime']);
-        ticketCreationTimeController.text = DateFormat('dd MMM yyyy, hh:mm a').format(creationTime);
-      }
-
-      ticketStatusController.text = _selectedTicket?['ticketStatus'] ?? '';
-      remarksController.text = _selectedTicket?['remarks'] ?? '';
+    } catch (e) {
+      error = e as Exception;
+      developer.log('[TicketHistoryViewModel] Error fetching ticket history: $error', name: 'TicketHistoryViewModel');
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
   }
 
-  Future<void> loadTicketDetails() async {
-    _isLoading = true;
-    notifyListeners();
+  void initializeTicketData(Map<String, dynamic> ticket) {
+    ticketIdController.text = ticket['ticketId']?.toString() ?? '';
+    plazaIdController.text = ticket['plazaId']?.toString() ?? '';
+    plazaNameController.text = ticket['plazaName']?.toString() ?? '';
+    entryLaneIdController.text = ticket['entryLaneId']?.toString() ?? '';
+    entryLaneDirectionController.text = ticket['entryLaneDirection']?.toString() ?? '';
+    floorIdController.text = ticket['floorId']?.toString() ?? '';
+    slotIdController.text = ticket['slotId']?.toString() ?? '';
+    vehicleNumberController.text = ticket['vehicleNumber']?.toString() ?? '';
+    vehicleTypeController.text = ticket['vehicleType']?.toString() ?? '';
+    ticketStatusController.text = ticket['ticketStatus']?.toString() ?? '';
+    remarksController.text = ticket['remarks']?.toString() ?? '';
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 1));
+    if (ticket['entryTime'] != null) {
+      final entryTime = DateTime.parse(ticket['entryTime']);
+      entryTimeController.text = DateFormat('dd MMM yyyy, hh:mm a').format(entryTime);
+    }
+    if (ticket['ticketCreationTime'] != null) {
+      final creationTime = DateTime.parse(ticket['ticketCreationTime']);
+      ticketCreationTimeController.text = DateFormat('dd MMM yyyy, hh:mm a').format(creationTime);
+    }
 
-    _isLoading = false;
     notifyListeners();
   }
 
-  void clearSelectedTicket() {
-    _selectedTicket = null;
-    _clearControllers();
-    notifyListeners();
-  }
+  Future<void> loadTicketDetails(String ticketId) async {
+    try {
+      isLoading = true;
+      error = null;
+      notifyListeners();
 
-  // Clear all controllers
-  void _clearControllers() {
-    ticketIdController.clear();
-    plazaIdController.clear();
-    plazaNameController.clear();
-    entryLaneIdController.clear();
-    entryLaneDirectionController.clear();
-    floorIdController.clear();
-    slotIdController.clear();
-    vehicleNumberController.clear();
-    vehicleTypeController.clear();
-    entryTimeController.clear();
-    ticketCreationTimeController.clear();
-    ticketStatusController.clear();
-    remarksController.clear();
+      final ticket = await _ticketService.getTicketDetails(ticketId);
+      initializeTicketData({
+        'ticketId': ticket.ticketId,
+        'ticketRefId': ticket.ticketRefId,
+        'plazaId': ticket.plazaId,
+        'vehicleNumber': ticket.vehicleNumber,
+        'vehicleType': ticket.vehicleType,
+        'plazaName': 'Plaza ${ticket.plazaId}', // Replace with actual plaza name if available
+        'entryTime': ticket.entryTime,
+        'ticketStatus': ticket.status.toString().split('.').last,
+        'entryLaneId': ticket.entryLaneId,
+        'entryLaneDirection': ticket.entryLaneDirection,
+        'ticketCreationTime': ticket.createdTime.toIso8601String(),
+        'floorId': ticket.floorId.isEmpty ? 'N/A' : ticket.floorId,
+        'slotId': ticket.slotId.isEmpty ? 'N/A' : ticket.slotId,
+        //'capturedImage': ticket.capturedImage,
+        'modificationTime': ticket.modificationTime?.toIso8601String(),
+        'remarks': ticket.remarks ?? '',
+      });
+    } catch (e) {
+      error = e as Exception;
+      developer.log('[TicketHistoryViewModel] Error loading ticket details: $error', name: 'TicketHistoryViewModel');
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
   @override
   void dispose() {
-    // Dispose all controllers
     ticketIdController.dispose();
     plazaIdController.dispose();
     plazaNameController.dispose();

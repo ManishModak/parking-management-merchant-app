@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,7 @@ import '../../../../config/app_strings.dart';
 import '../../../../utils/components/appbar.dart';
 import '../../../../utils/components/form_field.dart';
 import '../../../../utils/components/pagination_controls.dart';
+import '../../../utils/exceptions.dart';
 import 'modify_view_reject_ticket.dart';
 import '../../../viewmodels/ticket/reject_ticket_viewmodel.dart';
 
@@ -17,47 +19,63 @@ class RejectTicketScreen extends StatefulWidget {
   State<RejectTicketScreen> createState() => _RejectTicketScreenState();
 }
 
-class _RejectTicketScreenState extends State<RejectTicketScreen> {
+class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware {
+  final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   late RejectTicketViewModel _viewModel;
-  String _searchQuery = "";
+  late RouteObserver<ModalRoute> _routeObserver;
+  String _searchQuery = '';
   int _currentPage = 1;
   static const int _itemsPerPage = 10;
-  final _refreshKey = GlobalKey<RefreshIndicatorState>();
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _viewModel = RejectTicketViewModel();
-
+    _loadInitialData();
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
         _currentPage = 1;
       });
     });
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future.delayed(const Duration(seconds: 3));
-      _viewModel.fetchOpenTickets();
-    });
+  Future<void> _loadInitialData() async {
+    setState(() => _isLoading = true);
+    await _viewModel.fetchOpenTickets();
+    await Future.delayed(const Duration(seconds: 2));
+    setState(() => _isLoading = false);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _routeObserver = Provider.of<RouteObserver<ModalRoute>>(context);
+    _routeObserver.subscribe(this, ModalRoute.of(context)!);
   }
 
   @override
   void dispose() {
+    _routeObserver.unsubscribe(this);
+    _scrollController.dispose();
     _searchController.dispose();
     _viewModel.dispose();
     super.dispose();
   }
 
-  Future<void> _refreshTickets() async {
+  @override
+  void didPopNext() => _refreshData();
+
+  Future<void> _refreshData() async {
+    setState(() => _isLoading = true);
     await _viewModel.fetchOpenTickets();
-    setState(() {
-      _currentPage = 1;
-    });
+    await Future.delayed(const Duration(seconds: 2));
+    setState(() => _isLoading = false);
   }
 
-  List<Map<String, dynamic>> _filterTickets(List<Map<String, dynamic>> tickets) {
+  List<Map<String, dynamic>> _getFilteredTickets(List<Map<String, dynamic>> tickets) {
     if (_searchQuery.isEmpty) return tickets;
     return tickets.where((ticket) {
       return (ticket['ticketID']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
@@ -68,14 +86,248 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> {
     }).toList();
   }
 
+  List<Map<String, dynamic>> _getPaginatedTickets(List<Map<String, dynamic>> filteredTickets) {
+    final startIndex = (_currentPage - 1) * _itemsPerPage;
+    final endIndex = startIndex + _itemsPerPage;
+    return endIndex > filteredTickets.length
+        ? filteredTickets.sublist(startIndex)
+        : filteredTickets.sublist(startIndex, endIndex);
+  }
+
   void _updatePage(int newPage) {
-    final filteredTickets = _filterTickets(_viewModel.tickets);
-    final totalPages = (filteredTickets.length / _itemsPerPage).ceil();
-    if (newPage >= 1 && newPage <= totalPages) {
-      setState(() {
-        _currentPage = newPage;
-      });
+    final filteredTickets = _getFilteredTickets(_viewModel.tickets);
+    final totalPages = (filteredTickets.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
+    if (newPage < 1 || newPage > totalPages) return;
+    setState(() => _currentPage = newPage);
+  }
+
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          CustomFormFields.searchFormField(
+            controller: _searchController,
+            hintText: 'Search by Ticket ID, Plaza, Vehicle Number...',
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Last updated: ${DateTime.now().toString().substring(0, 16)}. Swipe down to refresh.',
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.confirmation_number_outlined, size: 64, color: Colors.grey.shade400),
+          const SizedBox(height: 16),
+          Text(
+            'No rejectable tickets', // Updated for context-specific consistency
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _searchQuery.isEmpty ? 'There are no tickets to reject at the moment' : 'No tickets match your search criteria',
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            textAlign: TextAlign.center,
+          ),
+          if (_searchQuery.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            TextButton(onPressed: () => _searchController.clear(), child: const Text('Clear Search')),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerList() {
+    return ListView.builder(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      itemCount: _itemsPerPage,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Shimmer.fromColors(
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
+            child: Card(
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Stack(
+                            children: [
+                              Container(width: 150, height: 16, color: Colors.white),
+                              Positioned(right: 0, child: Container(width: 60, height: 24, color: Colors.white)),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(width: 80, height: 12, color: Colors.white),
+                                    const SizedBox(height: 4),
+                                    Container(width: 100, height: 14, color: Colors.white),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(width: 80, height: 12, color: Colors.white),
+                                    const SizedBox(height: 4),
+                                    Container(width: 100, height: 14, color: Colors.white),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(width: 80, height: 12, color: Colors.white),
+                                    const SizedBox(height: 4),
+                                    Container(width: 120, height: 14, color: Colors.white),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(width: 80, height: 12, color: Colors.white),
+                                    const SizedBox(height: 4),
+                                    Container(width: 140, height: 13, color: Colors.white),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(width: 30, height: 24, color: Colors.white),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildErrorState() {
+    String errorTitle = 'Unable to Load Tickets';
+    String errorMessage = 'Something went wrong. Please try again.';
+    String? errorDetails;
+
+    final error = _viewModel.error;
+    if (error != null) {
+      developer.log('Error occurred: $error'); // Detailed logging for debugging
+      if (error is NoInternetException) {
+        errorTitle = 'No Internet Connection';
+        errorMessage = 'Please check your internet connection and try again.';
+      } else if (error is RequestTimeoutException) {
+        errorTitle = 'Request Timed Out';
+        errorMessage = 'The server is taking too long to respond. Please try again later.';
+      } else if (error is HttpException) {
+        errorTitle = 'Server Error';
+        errorMessage = 'We couldn’t reach the server. Please try again.';
+        switch (error.statusCode) {
+          case 400:
+            errorTitle = 'Invalid Request';
+            errorMessage = 'The request was incorrect. Please try again or contact support.';
+            break;
+          case 401:
+            errorTitle = 'Unauthorized';
+            errorMessage = 'Please log in again to continue.';
+            break;
+          case 403:
+            errorTitle = 'Access Denied';
+            errorMessage = 'You don’t have permission to view this. Contact support if this is an error.';
+            break;
+          case 404:
+            errorTitle = 'Not Found';
+            errorMessage = 'No rejectable tickets were found. Please try again.';
+            break;
+          case 500:
+            errorTitle = 'Server Issue';
+            errorMessage = 'There’s a problem on our end. Please try again later.';
+            break;
+          case 502:
+            errorTitle = 'Service Unavailable';
+            errorMessage = 'The service is temporarily down. Please try again.';
+            break;
+          case 503:
+            errorTitle = 'Service Overloaded';
+            errorMessage = 'The server is busy. Please try again in a moment.';
+            break;
+          default:
+            errorTitle = 'Server Error';
+            errorMessage = 'An unexpected server issue occurred. Please try again.';
+            break;
+        }
+      } else if (error is ServiceException) {
+        errorTitle = 'Unexpected Error';
+        errorMessage = 'An unexpected issue occurred. Please try again.';
+      }
     }
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
+          const SizedBox(height: 16),
+          Text(
+            errorTitle,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(
+              errorMessage,
+              style: const TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _refreshData,
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildTicketCard(Map<String, dynamic> ticket) {
@@ -85,15 +337,13 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
         onTap: () {
+          developer.log('Ticket card tapped: ${ticket['ticketID']}');
           final detailViewModel = RejectTicketViewModel();
           detailViewModel.initializeTicketData(ticket);
-
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -102,7 +352,7 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> {
                 child: const ModifyViewRejectTicketScreen(),
               ),
             ),
-          ).then((_) => _refreshTickets());
+          ).then((_) => _refreshData());
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -113,481 +363,154 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildTicketHeader(ticket),
+                    Stack(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.only(right: 65),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Ticket Id:', style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+                              Text(ticket['ticketRefID'].toString(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                        Positioned(
+                          right: 0,
+                          child: Container(
+                            width: 60,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              ticket['status'].toString(),
+                              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 12),
-                    _buildVehicleInfo(ticket),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Vehicle Number', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              Text(ticket['vehicleNumber'].toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Vehicle Type', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              Text(ticket['vehicleType'].toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 12),
-                    _buildPlazaInfo(ticket, formattedEntryTime),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Plaza Name', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              Text(ticket['plazaName'].toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Entry Time', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              Text(formattedEntryTime, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
               Container(
                 width: 30,
                 alignment: Alignment.center,
-                child: Icon(
-                  Icons.chevron_right,
-                  color: AppColors.primary,
-                  size: 24,
-                ),
+                child: Icon(Icons.chevron_right, color: AppColors.primary, size: 24),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTicketHeader(Map<String, dynamic> ticket) {
-    return Stack(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.only(right: 65),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Ticket Id: ",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              Text(
-                ticket['ticketRefId'].toString(),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Positioned(
-          right: 0,
-          child: Container(
-            width: 60,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              ticket['status'].toString(),
-              style: const TextStyle(
-                color: Colors.green,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildVehicleInfo(Map<String, dynamic> ticket) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Vehicle Number',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 12,
-                ),
-              ),
-              Text(
-                ticket['vehicleNumber'].toString(),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Vehicle Type',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 12,
-                ),
-              ),
-              Text(
-                ticket['vehicleType'].toString(),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPlazaInfo(Map<String, dynamic> ticket, String formattedEntryTime) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Plaza Name',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 12,
-                ),
-              ),
-              Text(
-                ticket['plazaName'].toString(),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Entry Time',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 12,
-                ),
-              ),
-              Text(
-                formattedEntryTime,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.confirmation_number_outlined,
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No tickets found',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _searchQuery.isEmpty
-                ? 'There are no tickets to reject at the moment'
-                : 'No tickets match your search criteria',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          if (_searchQuery.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () => _searchController.clear(),
-              child: const Text('Clear Search'),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildShimmerList() {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      itemCount: _itemsPerPage,
-      itemBuilder: (context, index) {
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-          elevation: 3,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: Shimmer.fromColors(
-            baseColor: Colors.grey.shade300,
-            highlightColor: Colors.grey.shade100,
-            direction: ShimmerDirection.ltr,
-            period: const Duration(milliseconds: 1200),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Stack(
-                          children: [
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.only(right: 65),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    width: 100,
-                                    height: 16,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Container(
-                                    width: 150,
-                                    height: 16,
-                                    color: Colors.white,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Positioned(
-                              right: 0,
-                              child: Container(
-                                width: 60,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    width: 80,
-                                    height: 12,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Container(
-                                    width: 100,
-                                    height: 14,
-                                    color: Colors.white,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    width: 80,
-                                    height: 12,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Container(
-                                    width: 100,
-                                    height: 14,
-                                    color: Colors.white,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    width: 80,
-                                    height: 12,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Container(
-                                    width: 120,
-                                    height: 14,
-                                    color: Colors.white,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    width: 80,
-                                    height: 12,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Container(
-                                    width: 140,
-                                    height: 13,
-                                    color: Colors.white,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: 30,
-                    height: 24,
-                    color: Colors.white,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: _viewModel,
-      child: Consumer<RejectTicketViewModel>(
-        builder: (context, viewModel, child) {
-          if (viewModel.isLoading && viewModel.tickets.isEmpty) {
-            return Scaffold(
-              appBar: CustomAppBar.appBarWithNavigation(
-                screenTitle: AppStrings.titleRejectTicket,
-                onPressed: () => Navigator.pop(context),
-                darkBackground: true,
-              ),
-              body: _buildShimmerList(),
-            );
-          }
+    final filteredTickets = _getFilteredTickets(_viewModel.tickets);
+    final totalPages = (filteredTickets.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
+    final paginatedTickets = _getPaginatedTickets(filteredTickets);
 
-          if (viewModel.error != null && viewModel.tickets.isEmpty) {
-            return Scaffold(
-              backgroundColor: AppColors.lightThemeBackground,
-              appBar: CustomAppBar.appBarWithNavigation(
-                screenTitle: AppStrings.titleRejectTicket,
-                onPressed: () => Navigator.pop(context),
-                darkBackground: true,
-              ),
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '${viewModel.error}',
-                      style: const TextStyle(color: Colors.red),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _refreshTickets,
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          final filteredTickets = _filterTickets(viewModel.tickets);
-          final totalPages = (filteredTickets.length / _itemsPerPage).ceil();
-
-          int startIndex = (_currentPage - 1) * _itemsPerPage;
-          if (startIndex >= filteredTickets.length) {
-            startIndex = 0;
-            _currentPage = 1;
-          }
-
-          int endIndex = startIndex + _itemsPerPage;
-          if (endIndex > filteredTickets.length) {
-            endIndex = filteredTickets.length;
-          }
-
-          final paginatedTickets = filteredTickets.sublist(startIndex, endIndex);
-
-          return Scaffold(
-            backgroundColor: AppColors.lightThemeBackground,
-            appBar: CustomAppBar.appBarWithNavigation(
-              screenTitle: AppStrings.titleRejectTicket,
-              onPressed: () => Navigator.pop(context),
-              darkBackground: true,
-            ),
-            body: RefreshIndicator(
-              key: _refreshKey,
-              onRefresh: _refreshTickets,
-              child: Column(
+    return Scaffold(
+      backgroundColor: AppColors.lightThemeBackground,
+      appBar: CustomAppBar.appBarWithNavigation(
+        screenTitle: AppStrings.titleRejectTicket,
+        onPressed: () => Navigator.pop(context),
+        darkBackground: true,
+      ),
+      body: Column(
+        children: [
+          _buildSearchField(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _refreshData,
+              child: Stack(
                 children: [
-                  CustomFormFields.searchFormField(
-                    controller: _searchController,
-                    hintText: 'Search by Ticket ID, Plaza, Vehicle Number...',
+                  ListView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      if (_viewModel.error != null)
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.6,
+                          child: _buildErrorState(),
+                        )
+                      else if (filteredTickets.isEmpty && !_isLoading)
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.6,
+                          child: _buildEmptyState(),
+                        )
+                      else if (!_isLoading)
+                          ...paginatedTickets.map((ticket) => _buildTicketCard(ticket)),
+                    ],
                   ),
-                  Expanded(
-                    child: paginatedTickets.isEmpty
-                        ? _buildEmptyState()
-                        : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      itemCount: paginatedTickets.length,
-                      itemBuilder: (context, index) => _buildTicketCard(paginatedTickets[index]),
-                    ),
-                  ),
+                  if (_isLoading) _buildShimmerList(),
                 ],
               ),
             ),
-            bottomNavigationBar: paginatedTickets.isNotEmpty
-                ? Container(
-              color: AppColors.lightThemeBackground,
-              child: SafeArea(
-                child: PaginationControls(
-                  currentPage: _currentPage,
-                  totalPages: totalPages,
-                  onPageChange: _updatePage,
-                ),
-              ),
-            )
-                : null,
-          );
-        },
+          ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        color: AppColors.lightThemeBackground,
+        padding: const EdgeInsets.all(4.0),
+        child: SafeArea(
+          child: PaginationControls(
+            currentPage: _currentPage,
+            totalPages: totalPages,
+            onPageChange: _updatePage,
+          ),
+        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:merchant_app/config/app_config.dart';
 import 'package:provider/provider.dart';
 import '../../../utils/components/appbar.dart';
 import '../../../utils/components/button.dart';
@@ -31,37 +32,47 @@ class NewTicketView extends StatelessWidget {
       log('Error in NewTicketView: ${viewModel.apiError}');
     }
 
-    return Scaffold(
-      appBar: CustomAppBar.appBarWithNavigation(
-        screenTitle: 'New Ticket',
-        onPressed: () => Navigator.pop(context),
-        darkBackground: true,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildImageSection(viewModel, context),
-              const SizedBox(height: 24),
-              _buildVehicleDetailsCard(viewModel),
-              const SizedBox(height: 16),
-              _buildParkingDetailsCard(context, viewModel),
-              const SizedBox(height: 24),
-              _buildApiError(viewModel),
-              _buildSubmitButton(viewModel, context),
-            ],
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: CustomAppBar.appBarWithNavigation(
+            screenTitle: 'New Ticket',
+            onPressed: () => Navigator.pop(context),
+            darkBackground: true,
+          ),
+          body: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildImageSection(viewModel, context),
+                  const SizedBox(height: 24),
+                  _buildVehicleDetailsCard(viewModel),
+                  const SizedBox(height: 16),
+                  _buildParkingDetailsCard(context, viewModel),
+                  const SizedBox(height: 24),
+                  _buildSubmitButton(viewModel, context),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
+        if (viewModel.isLoading)
+          Container(
+            color: Colors.black.withOpacity(0.5),
+            child: const Center(
+              child: CircularProgressIndicator(),
+            ),
+          ),
+      ],
     );
   }
 
   Widget _buildImageSection(NewTicketViewmodel viewModel, BuildContext context) {
     if (viewModel.selectedImagePaths.isNotEmpty) {
       return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -144,11 +155,12 @@ class NewTicketView extends StatelessWidget {
     }
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         InkWell(
           onTap: () => viewModel.showImageSourceDialog(context),
           child: Container(
+            width: AppConfig.deviceWidth*0.9,
             height: 150,
             decoration: BoxDecoration(
               color: Colors.grey[200],
@@ -283,22 +295,10 @@ class NewTicketView extends StatelessWidget {
               items: viewModel.laneDirections,
               onChanged: viewModel.updateDirection,
               enabled: true,
-              errorText: viewModel.laneDirectionError, // Fixed to use correct error field
+              errorText: viewModel.laneDirectionError,
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildApiError(NewTicketViewmodel viewModel) {
-    if (viewModel.apiError == null) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0), // Fixed typo from 'custom' to 'bottom'
-      child: Text(
-        viewModel.apiError!,
-        style: const TextStyle(color: Colors.red, fontSize: 14),
       ),
     );
   }
@@ -312,7 +312,15 @@ class NewTicketView extends StatelessWidget {
         if (await viewModel.createTicket()) {
           _showSuccessDialog(context);
         } else {
-          _showFailureSnackbar(context, viewModel.apiError ?? 'Failed to create ticket');
+          String errorMessage = viewModel.apiError ?? 'Failed to create ticket';
+          if (errorMessage.contains('502')) {
+            errorMessage = 'Service Unavailable: Unable to reach plaza service. Please try again later.';
+          } else if (errorMessage.contains('No Internet')) {
+            errorMessage = 'No Internet Connection: Please check your connection and try again.';
+          } else if (errorMessage.contains('timeout')) {
+            errorMessage = 'Request Timed Out: Server took too long to respond. Please try again.';
+          }
+          _showFailureSnackbar(context, errorMessage);
         }
       },
       height: 50,
@@ -346,6 +354,7 @@ class NewTicketView extends StatelessWidget {
         content: Text(errorMessage),
         duration: const Duration(seconds: 3),
         backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
