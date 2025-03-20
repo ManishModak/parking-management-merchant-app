@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
-import 'package:merchant_app/config/app_strings.dart';
+import 'package:merchant_app/config/app_theme.dart';
 import 'package:merchant_app/services/storage/secure_storage_service.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:merchant_app/utils/components/button.dart';
-import 'package:merchant_app/utils/components/card.dart';
 import 'package:merchant_app/utils/components/dropdown.dart';
 import 'package:merchant_app/utils/components/form_field.dart';
 import 'package:merchant_app/viewmodels/user_viewmodel.dart';
 import 'package:merchant_app/views/user/set_reset_password.dart';
-import 'package:merchant_app/views/onboarding/otp_verification.dart';
+import 'package:merchant_app/utils/screens/otp_verification.dart';
 import 'package:provider/provider.dart';
-
+import '../../config/app_config.dart';
+import '../../generated/l10n.dart';
 import '../../utils/exceptions.dart';
 import '../../viewmodels/plaza/plaza_viewmodel.dart';
 
@@ -29,6 +29,7 @@ class UserInfoScreen extends StatefulWidget {
 
 class _UserInfoScreenState extends State<UserInfoScreen> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _userIdController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _mobileNumberController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
@@ -44,17 +45,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   bool isMobileVerified = false;
   String? _originalMobileNumber;
   List<String> _plazas = [];
-
   String? _userSubEntity;
-
-  String? _nameError;
-  String? _emailError;
-  String? _mobileError;
-  String? _roleError;
-  String? _plazaError;
-  String? _addressError;
-  String? _cityError;
-  String? _stateError;
 
   final Map<String, List<String>> roleHierarchy = {
     'System Admin': ['System Admin', 'Plaza Owner', 'IT Operator'],
@@ -79,6 +70,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   }
 
   Future<void> _loadCurrentUserInfo() async {
+    final strings = S.of(context);
     try {
       final storage = SecureStorageService();
       final userData = await storage.getUserData();
@@ -91,14 +83,15 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error loading current user info: $e'),
-          backgroundColor: Colors.red,
+          content: Text('${strings.errorLoadCurrentUserInfo}: $e', style: TextStyle(color: context.textPrimaryColor)),
+          backgroundColor: AppColors.error,
         ),
       );
     }
   }
 
   Future<void> _fetchPlazas(String id) async {
+    final strings = S.of(context);
     final plazaViewModel = Provider.of<PlazaViewModel>(context, listen: false);
 
     setState(() {
@@ -108,10 +101,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     try {
       await plazaViewModel.fetchUserPlazas(id);
       setState(() {
-        _plazas = plazaViewModel.userPlazas
-            .map((plaza) => plaza.plazaName)
-            .toList();
-
+        _plazas = plazaViewModel.userPlazas.map((plaza) => plaza.plazaName).toList();
         if (_userSubEntity != null && _plazas.contains(_userSubEntity)) {
           selectedPlaza = _userSubEntity;
         } else if (_plazas.length == 1) {
@@ -121,15 +111,15 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
         }
       });
     } catch (e) {
-      String errorMessage = 'Failed to fetch plazas';
+      String errorMessage = strings.errorLoadPlazas;
       final error = plazaViewModel.error;
       if (error != null) {
         if (error is HttpException) {
           errorMessage = error.message;
           if (error.statusCode == 404) {
-            errorMessage = 'No plazas found for this entity.';
+            errorMessage = strings.errorNoPlazasFound;
           } else if (error.statusCode == 502) {
-            errorMessage = 'Server unavailable. Please try again later.';
+            errorMessage = strings.errorServiceUnavailableMessage;
           }
         } else if (error is PlazaException) {
           errorMessage = error.message;
@@ -142,8 +132,8 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
+            content: Text(errorMessage, style: TextStyle(color: context.textPrimaryColor)),
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -151,6 +141,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   }
 
   Future<void> _loadOperatorData() async {
+    final strings = S.of(context);
     try {
       final operatorViewModel = context.read<UserViewModel>();
       await operatorViewModel.fetchUser(
@@ -158,7 +149,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
         isCurrentAppUser: false,
       );
       await _loadUser();
-
       final currentOperator = operatorViewModel.currentOperator;
       if (currentOperator?.entityId != null && mounted) {
         await _fetchPlazas(currentOperator!.entityId!);
@@ -167,8 +157,8 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to load operator data: $e'),
-            backgroundColor: Colors.red,
+            content: Text('${strings.errorLoadOperatorData}: $e', style: TextStyle(color: context.textPrimaryColor)),
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -185,6 +175,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     _addressController.dispose();
     _cityController.dispose();
     _stateController.dispose();
+    _userIdController.dispose();
     super.dispose();
   }
 
@@ -195,6 +186,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     if (currentOperator != null && mounted) {
       setState(() {
         _nameController.text = currentOperator.name;
+        _userIdController.text = currentOperator.id;
         _emailController.text = currentOperator.email;
         _mobileNumberController.text = currentOperator.mobileNumber;
         _addressController.text = currentOperator.address ?? '';
@@ -203,16 +195,19 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
         selectedRole = currentOperator.role;
         entityId = currentOperator.entityId;
         _originalMobileNumber = currentOperator.mobileNumber;
-        _userSubEntity = (currentOperator.subEntity.isNotEmpty)
-            ? currentOperator.subEntity.first
-            : null;
+        _userSubEntity = (currentOperator.subEntity.isNotEmpty) ? currentOperator.subEntity.first : null;
       });
     }
   }
 
   Future<void> verifyMobileNumber() async {
-    if (!RegExp(r'^\d{10}$').hasMatch(_mobileNumberController.text)) {
-      setState(() => _mobileError = AppStrings.errorMobileInvalidFormat);
+    final strings = S.of(context);
+    final operatorVM = Provider.of<UserViewModel>(context, listen: false);
+    final mobile = _mobileNumberController.text;
+
+    final mobileError = operatorVM.validateMobile(mobile, isMobileVerified, _originalMobileNumber);
+    if (mobileError != null) {
+      operatorVM.setError('mobile', mobileError);
       return;
     }
 
@@ -220,7 +215,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => OtpVerificationScreen(
-          mobileNumber: _mobileNumberController.text,
+          mobileNumber: mobile,
         ),
       ),
     );
@@ -229,104 +224,62 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
 
     if (result == true) {
       setState(() => isMobileVerified = true);
+      operatorVM.clearError('mobile');
     } else {
       setState(() {
         _mobileNumberController.text = _originalMobileNumber ?? '';
         isMobileVerified = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(AppStrings.errorMobileVerificationFailed),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: Text(strings.errorMobileVerificationFailed, style: TextStyle(color: context.textPrimaryColor)),
+          backgroundColor: AppColors.error,
         ),
       );
     }
   }
 
   Future<void> _confirmUpdate() async {
-    final validationErrors = <String, String>{};
+    final strings = S.of(context);
+    final operatorVM = context.read<UserViewModel>();
 
-    if (_nameController.text.isEmpty) {
-      validationErrors['name'] = AppStrings.errorFullNameRequired;
-    } else if (_nameController.text.length > 100) {
-      validationErrors['name'] = AppStrings.errorFullNameLength;
-    }
-
-    if (_emailController.text.isEmpty) {
-      validationErrors['email'] = AppStrings.errorEmailRequired;
-    } else if (!RegExp(r'^[\w.%+-]+@[\w.-]+\.(com|in)$', caseSensitive: false)
-        .hasMatch(_emailController.text)) {
-      validationErrors['email'] = AppStrings.errorEmailInvalid;
-    } else if (_emailController.text.length > 50) {
-      validationErrors['email'] = AppStrings.errorEmailLength;
-    }
-
-    if (_mobileNumberController.text.isEmpty) {
-      validationErrors['mobile'] = AppStrings.errorMobileRequired;
-    } else if (!RegExp(r'^\d{10}$').hasMatch(_mobileNumberController.text)) {
-      validationErrors['mobile'] = AppStrings.errorMobileInvalidFormat;
-    }
-
-    if (selectedRole == null || selectedRole!.isEmpty) {
-      validationErrors['role'] = AppStrings.errorRoleRequired;
-    }
-
-    if (selectedPlaza == null || selectedPlaza!.isEmpty) {
-      validationErrors['plaza'] = AppStrings.errorSubEntityRequired;
-    }
-
-    if (_addressController.text.isEmpty) {
-      validationErrors['address'] = AppStrings.errorAddressRequired;
-    } else if (_addressController.text.length > 256) {
-      validationErrors['address'] = AppStrings.errorAddressLength;
-    }
-
-    if (_cityController.text.isEmpty) {
-      validationErrors['city'] = AppStrings.errorCityRequired;
-    } else if (_cityController.text.length > 50) {
-      validationErrors['city'] = AppStrings.errorCityLength;
-    }
-
-    if (_stateController.text.isEmpty) {
-      validationErrors['state'] = AppStrings.errorStateRequired;
-    } else if (_stateController.text.length > 50) {
-      validationErrors['state'] = AppStrings.errorStateLength;
-    }
-
-    setState(() {
-      _nameError = validationErrors['name'];
-      _emailError = validationErrors['email'];
-      _mobileError = validationErrors['mobile'];
-      _roleError = validationErrors['role'];
-      _plazaError = validationErrors['plaza'];
-      _addressError = validationErrors['address'];
-      _cityError = validationErrors['city'];
-      _stateError = validationErrors['state'];
-    });
+    final validationErrors = operatorVM.validateUpdate(
+      username: _nameController.text,
+      email: _emailController.text,
+      mobile: _mobileNumberController.text,
+      address: _addressController.text,
+      city: _cityController.text,
+      state: _stateController.text,
+      role: selectedRole,
+      subEntity: selectedPlaza,
+      isMobileVerified: isMobileVerified || _mobileNumberController.text == _originalMobileNumber,
+      originalMobile: _originalMobileNumber,
+    );
 
     if (validationErrors.isNotEmpty) {
+      validationErrors.forEach((key, value) => operatorVM.setError(key, value));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
-            children: validationErrors.values.map((e) => Text('• $e')).toList(),
+            children: validationErrors.values
+                .map((e) => Text('• $e', style: Theme.of(context).textTheme.bodyMedium))
+                .toList(),
           ),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.error,
           duration: const Duration(seconds: 5),
         ),
       );
       return;
     }
 
-    if (_mobileNumberController.text != _originalMobileNumber &&
-        !isMobileVerified) {
+    if (_mobileNumberController.text != _originalMobileNumber && !isMobileVerified) {
       await verifyMobileNumber();
       if (!isMobileVerified) return;
     }
 
-    final operatorViewModel = context.read<UserViewModel>();
-    final success = await operatorViewModel.updateUser(
+    final success = await operatorVM.updateUser(
       username: _nameController.text,
       email: _emailController.text,
       mobileNumber: _mobileNumberController.text,
@@ -342,7 +295,10 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.successProfileUpdate)),
+        SnackBar(
+          content: Text(strings.successProfileUpdate, style: TextStyle(color: context.textPrimaryColor)),
+          backgroundColor: AppColors.success,
+        ),
       );
       setState(() {
         _isEditMode = false;
@@ -351,39 +307,41 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.errorUpdateFailed)),
+        SnackBar(
+          content: Text(strings.errorUpdateFailed, style: TextStyle(color: context.textPrimaryColor)),
+          backgroundColor: AppColors.error,
+        ),
       );
     }
   }
 
-  Widget _buildMobileNumberField() {
+  Widget _buildMobileNumberField(S strings) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CustomFormFields.primaryFormField(
-          label: AppStrings.labelMobileNumber,
+        CustomFormFields.normalSizedTextFormField(
+          context: context,
+          label: strings.labelMobileNumber,
           controller: _mobileNumberController,
           keyboardType: TextInputType.phone,
           isPassword: false,
           enabled: _isEditMode,
-          errorText: _mobileError,
+          errorText: Provider.of<UserViewModel>(context).getError('mobile'),
           onChanged: (value) {
             if (value != _originalMobileNumber) {
               setState(() {
                 isMobileVerified = false;
-                _mobileError = null;
+                Provider.of<UserViewModel>(context, listen: false).clearError('mobile');
               });
             }
           },
         ),
-        if (_isEditMode &&
-            _mobileNumberController.text != _originalMobileNumber &&
-            !isMobileVerified)
-          const Padding(
-            padding: EdgeInsets.only(top: 8.0),
+        if (_isEditMode && _mobileNumberController.text != _originalMobileNumber && !isMobileVerified)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
             child: Text(
-              AppStrings.warningMobileVerificationRequired,
-              style: TextStyle(color: Colors.red, fontSize: 12),
+              strings.warningMobileVerificationRequired,
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
       ],
@@ -404,121 +362,115 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       onChanged: onChanged,
       enabled: _isEditMode,
       errorText: error,
+      context: context,
     );
-  }
-
-  void _clearErrors() {
-    setState(() {
-      _nameError = null;
-      _emailError = null;
-      _mobileError = null;
-      _roleError = null;
-      _plazaError = null;
-      _addressError = null;
-      _cityError = null;
-      _stateError = null;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final strings = S.of(context);
+    final operatorVM = Provider.of<UserViewModel>(context);
+
     return Scaffold(
       appBar: CustomAppBar.appBarWithNavigation(
-        screenTitle: AppStrings.titleUserInfo,
+        screenTitle: strings.titleUserInfo,
         onPressed: () => Navigator.pop(context),
-        darkBackground: false,
+        darkBackground: Theme.of(context).brightness == Brightness.dark,
+        context: context,
       ),
-      backgroundColor: AppColors.lightThemeBackground,
-      floatingActionButton: _buildFloatingActionButtons(),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Consumer<UserViewModel>(
         builder: (context, operatorVM, _) {
           if (operatorVM.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+              ),
+            );
           }
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                if (operatorVM.currentOperator != null)
-                  CustomCards.userProfileCard(
-                    name: operatorVM.currentOperator!.name,
-                    userId: operatorVM.currentOperator!.id,
-                  ),
-                const SizedBox(height: 20),
-                CustomFormFields.primaryFormField(
-                  label: AppStrings.labelFullName,
+                const SizedBox(height: 8),
+                CustomFormFields.normalSizedTextFormField(
+                  context: context,
+                  label: strings.labelFullName,
                   controller: _nameController,
                   keyboardType: TextInputType.text,
                   isPassword: false,
                   enabled: _isEditMode,
-                  errorText: _nameError,
+                  errorText: operatorVM.getError('username'),
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
-                  label: AppStrings.labelEmail,
+                CustomFormFields.normalSizedTextFormField(
+                  context: context,
+                  label: strings.labelUserId,
+                  controller: _userIdController,
+                  keyboardType: TextInputType.text,
+                  isPassword: false,
+                  enabled: false,
+                ),
+                const SizedBox(height: 16),
+                CustomFormFields.normalSizedTextFormField(
+                  context: context,
+                  label: strings.labelEmail,
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   isPassword: false,
                   enabled: _isEditMode,
-                  errorText: _emailError,
+                  errorText: operatorVM.getError('email'),
                 ),
                 const SizedBox(height: 16),
-                _buildMobileNumberField(),
+                _buildMobileNumberField(strings),
                 const SizedBox(height: 16),
                 _buildDropdown(
-                  label: AppStrings.labelAssignRole,
+                  label: strings.labelAssignRole,
                   value: selectedRole,
                   items: getAvailableRoles(),
                   onChanged: (value) => setState(() => selectedRole = value),
-                  error: _roleError,
+                  error: operatorVM.getError('role'),
                 ),
                 const SizedBox(height: 16),
                 _buildDropdown(
-                  label: AppStrings.labelSubEntity,
+                  label: strings.labelSubEntity,
                   value: selectedPlaza,
                   items: _plazas,
                   onChanged: (value) => setState(() => selectedPlaza = value),
-                  error: _plazaError,
+                  error: operatorVM.getError('subEntity'),
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
-                  label: AppStrings.labelAddress,
+                CustomFormFields.normalSizedTextFormField(
+                  context: context,
+                  label: strings.labelAddress,
                   controller: _addressController,
                   keyboardType: TextInputType.streetAddress,
                   isPassword: false,
                   enabled: _isEditMode,
-                  errorText: _addressError,
+                  errorText: operatorVM.getError('address'),
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
-                  label: AppStrings.labelCity,
+                CustomFormFields.normalSizedTextFormField(
+                  context: context,
+                  label: strings.labelCity,
                   controller: _cityController,
                   keyboardType: TextInputType.text,
                   isPassword: false,
                   enabled: _isEditMode,
-                  errorText: _cityError,
+                  errorText: operatorVM.getError('city'),
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
-                  label: AppStrings.labelState,
+                CustomFormFields.normalSizedTextFormField(
+                  context: context,
+                  label: strings.labelState,
                   controller: _stateController,
                   keyboardType: TextInputType.text,
                   isPassword: false,
                   enabled: _isEditMode,
-                  errorText: _stateError,
+                  errorText: operatorVM.getError('state'),
                 ),
-                const SizedBox(height: 30),
-                CustomButtons.primaryButton(
-                  text: AppStrings.buttonSetResetPassword,
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => UserSetResetPasswordScreen(
-                        operatorId: widget.operatorId,
-                      ),
-                    ),
-                  ),
-                )
+                const SizedBox(height: 16),
+                _buildActionButtons(strings),
               ],
             ),
           );
@@ -527,38 +479,52 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     );
   }
 
-  Widget _buildFloatingActionButtons() {
-    if (!_isEditMode) {
-      return FloatingActionButton(
-        heroTag: 'editButton',
-        onPressed: () => setState(() {
-          _isEditMode = true;
-        }),
-        child: const Icon(Icons.edit),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+  Widget _buildActionButtons(S strings) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            heroTag: 'cancelButton',
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: _isEditMode
+            ? [
+          CustomButtons.secondaryButton(
+            text: strings.buttonCancel,
             onPressed: () => setState(() {
               _isEditMode = false;
-              _clearErrors();
               _loadUser();
             }),
-            backgroundColor: Colors.red,
-            child: const Icon(Icons.close),
+            height: 50,
+            width: AppConfig.deviceWidth * 0.4,
+            context: context,
           ),
-          const SizedBox(width: 16),
-          FloatingActionButton(
-            heroTag: 'saveButton',
+          CustomButtons.primaryButton(
+            text: strings.buttonSave,
             onPressed: _confirmUpdate,
-            backgroundColor: Colors.green,
-            child: const Icon(Icons.check),
+            height: 50,
+            width: AppConfig.deviceWidth * 0.4,
+            context: context,
+          ),
+        ]
+            : [
+          CustomButtons.secondaryButton(
+            text: strings.buttonSetResetPassword,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => UserSetResetPasswordScreen(
+                  operatorId: widget.operatorId,
+                ),
+              ),
+            ),
+            height: 50,
+            width: AppConfig.deviceWidth * 0.4,
+            context: context,
+          ),
+          CustomButtons.primaryButton(
+            text: strings.buttonEdit,
+            onPressed: () => setState(() => _isEditMode = true),
+            height: 50,
+            width: AppConfig.deviceWidth * 0.4,
+            context: context,
           ),
         ],
       ),

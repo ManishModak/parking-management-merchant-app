@@ -1,19 +1,25 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
-import '../../config/app_colors.dart';
+import 'package:merchant_app/config/app_colors.dart';
+import 'package:merchant_app/config/app_theme.dart';
 import '../../config/app_config.dart';
 import '../../models/plaza.dart';
 import '../../views/menu.dart';
+import '../../generated/l10n.dart';
 
 class CustomDropDown {
   static Widget normalDropDown({
     required String label,
     required String? value,
     required List<String> items,
-    required Function(String?) onChanged,
+    Function(String?)? onChanged,
     IconData? icon,
     bool enabled = true,
     String? errorText,
+    String? hintText,
+    required BuildContext context,
   }) {
+    final strings = S.of(context);
     return SizedBox(
       width: AppConfig.deviceWidth * 0.9,
       child: Column(
@@ -21,11 +27,33 @@ class CustomDropDown {
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            height: errorText != null ? 80 : 60,
+            height: errorText != null && errorText.isNotEmpty ? 80 : 60,
             child: DropdownButtonFormField<String>(
               value: value,
-              onChanged: enabled ? onChanged : null,
-              items: items.map<DropdownMenuItem<String>>((String item) {
+              hint: hintText != null
+                  ? Text(hintText, style: TextStyle(color: context.textSecondaryColor))
+                  : null,
+              onChanged: enabled && items.isNotEmpty
+                  ? (value) {
+                developer.log(
+                  'Dropdown "$label" value changed to: $value',
+                  name: 'CustomDropDown',
+                );
+                onChanged?.call(value);
+              }
+                  : null,
+              items: items.isEmpty
+                  ? [
+                DropdownMenuItem<String>(
+                  value: null,
+                  enabled: false,
+                  child: Text(
+                    strings.dropdownNoItems,
+                    style: TextStyle(color: context.textSecondaryColor),
+                  ),
+                )
+              ]
+                  : items.map<DropdownMenuItem<String>>((String item) {
                 return DropdownMenuItem<String>(
                   value: item,
                   child: Text(
@@ -33,8 +61,8 @@ class CustomDropDown {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: enabled
-                          ? AppColors.textPrimary
-                          : AppColors.textDisabled,
+                          ? context.textPrimaryColor
+                          : context.textSecondaryColor.withOpacity(0.5),
                       fontSize: 16,
                     ),
                   ),
@@ -42,21 +70,20 @@ class CustomDropDown {
               }).toList(),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: AppColors.formBackground,
-                errorText: errorText,
-                errorStyle: const TextStyle(
-                  height: 0.8,
-                ),
+                fillColor: context.formBackgroundColor,
+                errorText: errorText?.isEmpty ?? true ? null : errorText,
+                errorStyle: const TextStyle(height: 1.2),
+                errorMaxLines: 5,
                 labelText: label,
-                labelStyle: const TextStyle(color: AppColors.primary),
+                labelStyle: TextStyle(color: context.textPrimaryColor),
                 floatingLabelBehavior: FloatingLabelBehavior.always,
                 disabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.primary),
+                  borderSide: BorderSide.none,
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.primary),
+                  borderSide: BorderSide(color: context.inputBorderEnabledColor),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -67,18 +94,27 @@ class CustomDropDown {
                 ),
                 errorBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.red),
+                  borderSide: const BorderSide(color: AppColors.error),
                 ),
                 focusedErrorBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.red, width: 2),
+                  borderSide: const BorderSide(color: AppColors.error, width: 2),
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               ),
-              icon: const Icon(Icons.arrow_drop_down, color: AppColors.primary),
-              dropdownColor: AppColors.formBackground,
-              style: const TextStyle(fontSize: 16),
+              icon: Icon(
+                icon ?? Icons.arrow_drop_down,
+                color: enabled
+                    ? context.textPrimaryColor
+                    : context.textSecondaryColor.withOpacity(0.5),
+              ),
+              dropdownColor: context.surfaceColor,
+              style: TextStyle(
+                fontSize: 16,
+                color: enabled
+                    ? context.textPrimaryColor
+                    : context.textSecondaryColor.withOpacity(0.5),
+              ),
               isExpanded: true,
             ),
           ),
@@ -88,45 +124,78 @@ class CustomDropDown {
   }
 
   static Widget expansionDropDown({
+    required BuildContext context,
     required String title,
     required IconData icon,
     required List<MenuCardItem> items,
-    Color iconColor = Colors.black,
-    Color textColor = AppColors.textPrimary,
+    required Color backgroundColor,
   }) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      child: ExpansionTile(
-        leading: Icon(icon, color: iconColor),
-        title: Text(
-          title,
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          dividerColor: Colors.transparent,
+          splashColor: Colors.transparent, // Remove splash effect
+          highlightColor: Colors.transparent, // Remove highlight effect
+          expansionTileTheme: ExpansionTileThemeData(
+            backgroundColor: backgroundColor,
+            collapsedBackgroundColor: backgroundColor,
+            childrenPadding: EdgeInsets.zero,
+          ),
         ),
-        children: items
-            .map((item) => ListTile(
-                  leading: Icon(item.icon, color: iconColor),
-                  title: Text(
-                    item.title,
-                    style: TextStyle(color: textColor),
-                  ),
-                  onTap: item.onTap,
-                ))
-            .toList(),
+        child: ExpansionTile(
+          leading: Icon(icon, color: context.textPrimaryColor),
+          title: Text(
+            title,
+            style: TextStyle(
+              color: context.textPrimaryColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          children: items
+              .map((item) => Container(
+            color: backgroundColor,
+            child: ListTile(
+              splashColor: Colors.transparent,
+              leading: Icon(item.icon, color: context.textPrimaryColor),
+              title: Text(
+                item.title,
+                style: TextStyle(
+                  color: context.textPrimaryColor,
+                ),
+              ),
+              onTap: () {
+                developer.log(
+                  'Expansion dropdown item tapped: ${item.title}',
+                  name: 'CustomDropDown',
+                );
+                item.onTap?.call();
+              },
+            ),
+          ))
+              .toList(),
+        ),
       ),
     );
   }
 }
 
+// SearchableDropdown remains unchanged as it has a different design purpose
 class SearchableDropdown extends StatefulWidget {
   final String label;
-  final String? value; // Change to match how you're passing the plaza ID
+  final String? value;
   final List<dynamic> items;
   final Function(dynamic) onChanged;
   final bool enabled;
   final String? errorText;
   final IconData? icon;
-  final String Function(dynamic)? itemText; // Change to non-nullable
-  final String Function(dynamic)? itemValue; // Change to non-nullable
+  final String Function(dynamic) itemText;
+  final String Function(dynamic) itemValue;
 
   const SearchableDropdown({
     super.key,
@@ -137,22 +206,19 @@ class SearchableDropdown extends StatefulWidget {
     this.enabled = true,
     this.errorText,
     this.icon,
-    this.itemText = _defaultItemText, // Provide a default implementation
-    this.itemValue = _defaultItemValue, // Provide a default implementation
+    this.itemText = _defaultItemText,
+    this.itemValue = _defaultItemValue,
   });
 
-  // Default methods if not provided
   static String _defaultItemText(dynamic item) {
     if (item is Plaza) return item.plazaName;
     return item.toString();
   }
 
-  // In SearchableDropdown class
   static String _defaultItemValue(dynamic item) {
-    if (item is Plaza) return item.plazaId!; // Already a string
+    if (item is Plaza) return item.plazaId!;
     return item.toString();
   }
-
 
   @override
   State<SearchableDropdown> createState() => _SearchableDropdownState();
@@ -165,16 +231,24 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
   @override
   void initState() {
     super.initState();
-    _filteredItems = List.from(widget.items); // Initialize with current items
+    _filteredItems = List.from(widget.items);
     _updateSelectedItem();
+    developer.log(
+      'SearchableDropdown initialized with value: ${widget.value}',
+      name: 'CustomDropDown',
+    );
   }
 
   @override
   void didUpdateWidget(SearchableDropdown oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.items != widget.items || oldWidget.value != widget.value) {
-      _filteredItems = List.from(widget.items); // Update with new items
+      _filteredItems = List.from(widget.items);
       _updateSelectedItem();
+      developer.log(
+        'SearchableDropdown updated with new value: ${widget.value}',
+        name: 'CustomDropDown',
+      );
     }
   }
 
@@ -186,16 +260,24 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
 
     try {
       _selectedItem = widget.items.firstWhere(
-            (item) => widget.itemValue!(item).toString() == widget.value.toString(),
+            (item) => widget.itemValue(item).toString() == widget.value.toString(),
       );
     } catch (e) {
-      print("Item not found: ${widget.value}");
+      developer.log(
+        'Item not found in SearchableDropdown: ${widget.value}',
+        name: 'CustomDropDown',
+        error: e,
+      );
       _selectedItem = null;
     }
   }
 
   void _showSearchDialog() {
     String searchQuery = '';
+    developer.log(
+      'Searchable dropdown opened for label: ${widget.label}',
+      name: 'CustomDropDown',
+    );
 
     showModalBottomSheet(
       context: context,
@@ -223,16 +305,23 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                       prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: context.inputBorderColor),
                       ),
+                      filled: true,
+                      fillColor: context.cardColor,
                     ),
                     onChanged: (value) {
                       setState(() {
                         searchQuery = value.toLowerCase();
                         _filteredItems = widget.items.where((item) {
-                          return widget.itemText!(item)
+                          return widget.itemText(item)
                               .toLowerCase()
                               .contains(searchQuery);
                         }).toList();
+                        developer.log(
+                          'Search query updated: $searchQuery, filtered items: ${_filteredItems.length}',
+                          name: 'CustomDropDown',
+                        );
                       });
                     },
                   ),
@@ -241,13 +330,16 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: _filteredItems.length,
-                      separatorBuilder: (context, index) =>
-                          const Divider(height: 1),
+                      separatorBuilder: (context, index) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final item = _filteredItems[index];
                         return ListTile(
-                          title: Text(widget.itemText!(item)),
+                          title: Text(widget.itemText(item)),
                           onTap: () {
+                            developer.log(
+                              'Selected item: ${widget.itemText(item)}',
+                              name: 'CustomDropDown',
+                            );
                             widget.onChanged(item);
                             Navigator.pop(context);
                           },
@@ -278,23 +370,23 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
               child: InputDecorator(
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: AppColors.formBackground,
+                  fillColor: context.formBackgroundColor,
                   errorText: widget.errorText,
                   errorStyle: const TextStyle(height: 0.8),
                   labelText: widget.label,
                   labelStyle: TextStyle(
                     color: widget.enabled
-                        ? AppColors.primary
-                        : AppColors.textDisabled,
+                        ? context.textPrimaryColor
+                        : context.textSecondaryColor.withOpacity(0.5),
                   ),
                   floatingLabelBehavior: FloatingLabelBehavior.always,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.primary),
+                    borderSide: BorderSide(color: context.inputBorderColor),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.primary),
+                    borderSide: BorderSide(color: context.inputBorderColor),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -305,17 +397,16 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                   ),
                   errorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.red),
+                    borderSide: const BorderSide(color: AppColors.error),
                   ),
                   focusedErrorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.red, width: 2),
+                    borderSide: const BorderSide(color: AppColors.error, width: 2),
                   ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                   suffixIcon: Icon(
                     widget.icon ?? Icons.arrow_drop_down,
-                    color: AppColors.primary,
+                    color: context.textPrimaryColor,
                   ),
                 ),
                 child: Row(
@@ -323,13 +414,11 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                   children: [
                     Expanded(
                       child: Text(
-                        _selectedItem != null
-                            ? widget.itemText!(_selectedItem)
-                            : '',
+                        _selectedItem != null ? widget.itemText(_selectedItem) : '',
                         style: TextStyle(
                           color: widget.enabled
-                              ? AppColors.textPrimary
-                              : AppColors.textDisabled,
+                              ? context.textPrimaryColor
+                              : context.textSecondaryColor.withOpacity(0.5),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),

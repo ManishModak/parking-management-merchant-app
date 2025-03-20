@@ -2,18 +2,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/config/app_config.dart';
-import 'package:merchant_app/config/app_strings.dart';
+import 'package:merchant_app/config/app_theme.dart';
 import 'package:merchant_app/services/storage/secure_storage_service.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:merchant_app/utils/components/button.dart';
 import 'package:merchant_app/utils/components/dropdown.dart';
+import 'package:merchant_app/utils/components/form_field.dart';
 import 'package:provider/provider.dart';
-import '../../utils/components/form_field.dart';
-import '../../utils/exceptions.dart';
-import '../../viewmodels/auth_viewmodel.dart';
+import '../../generated/l10n.dart';
+import '../../utils/screens/otp_verification.dart';
 import '../../viewmodels/plaza/plaza_viewmodel.dart';
 import '../../viewmodels/user_viewmodel.dart';
-import '../onboarding/otp_verification.dart';
+import 'dart:developer' as developer;
 
 class UserRegistrationScreen extends StatefulWidget {
   const UserRegistrationScreen({super.key});
@@ -22,28 +22,7 @@ class UserRegistrationScreen extends StatefulWidget {
   State<UserRegistrationScreen> createState() => _UserRegistrationScreenState();
 }
 
-class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
-  // Text Controllers
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _mobileNumberController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _cityController = TextEditingController();
-  final TextEditingController _stateController = TextEditingController();
-  final TextEditingController _newPasswordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
-
-  // Focus Nodes
-  final FocusNode _nameFocus = FocusNode();
-  final FocusNode _emailFocus = FocusNode();
-  final FocusNode _mobileFocus = FocusNode();
-  final FocusNode _addressFocus = FocusNode();
-  final FocusNode _cityFocus = FocusNode();
-  final FocusNode _stateFocus = FocusNode();
-  final FocusNode _passwordFocus = FocusNode();
-  final FocusNode _confirmPasswordFocus = FocusNode();
-
-  // State variables
+class _UserRegistrationScreenState extends State<UserRegistrationScreen> with RouteAware {
   String? selectedRole;
   String? selectedEntity;
   String? selectedPlaza;
@@ -52,10 +31,21 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   String? currentUserRole;
   String? currentUserId;
   String? currentUserEntityId;
+  String? _verifiedMobileNumber;
   List<String> _plazas = [];
   List<String> _entities = [];
+  late RouteObserver<ModalRoute> _routeObserver;
 
-  // Role-based accessible roles mapping
+  // Local TextEditingControllers
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _mobileController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _stateController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+
   final Map<String, List<String>> roleHierarchy = {
     'System Admin': [
       'System Admin',
@@ -93,277 +83,98 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   @override
   void initState() {
     super.initState();
-    _setupFocusListeners();
-    _setupTextListeners();
+    developer.log('UserRegistrationScreen initialized', name: 'UserRegistration');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _fetchUserData();
       await fetchEntities();
     });
   }
 
-  void _setupFocusListeners() {
-    _nameFocus.addListener(() {
-      if (_nameFocus.hasFocus) {
-        Provider.of<AuthViewModel>(context, listen: false).clearError('userId');
-      }
-    });
-
-    _emailFocus.addListener(() {
-      if (_emailFocus.hasFocus) {
-        Provider.of<AuthViewModel>(context, listen: false).clearError('email');
-      }
-    });
-
-    _mobileFocus.addListener(() {
-      if (_mobileFocus.hasFocus) {
-        Provider.of<AuthViewModel>(context, listen: false).clearError('mobile');
-      }
-    });
-
-    _addressFocus.addListener(() {
-      if (_addressFocus.hasFocus) {
-        Provider.of<AuthViewModel>(context, listen: false)
-            .clearError('address');
-      }
-    });
-
-    _cityFocus.addListener(() {
-      if (_cityFocus.hasFocus) {
-        Provider.of<AuthViewModel>(context, listen: false)
-            .clearError('address');
-      }
-    });
-
-    _stateFocus.addListener(() {
-      if (_stateFocus.hasFocus) {
-        Provider.of<AuthViewModel>(context, listen: false)
-            .clearError('address');
-      }
-    });
-
-    _passwordFocus.addListener(() {
-      if (_passwordFocus.hasFocus) {
-        Provider.of<AuthViewModel>(context, listen: false)
-            .clearError('password');
-      }
-    });
-
-    _confirmPasswordFocus.addListener(() {
-      if (_confirmPasswordFocus.hasFocus) {
-        Provider.of<AuthViewModel>(context, listen: false)
-            .clearError('password');
-      }
-    });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _routeObserver = Provider.of<RouteObserver<ModalRoute>>(context);
+    _routeObserver.subscribe(this, ModalRoute.of(context)!);
   }
 
-  void _setupTextListeners() {
-    _nameController.addListener(() {
-      Provider.of<AuthViewModel>(context, listen: false).clearError('userId');
-    });
-
-    _emailController.addListener(() {
-      Provider.of<AuthViewModel>(context, listen: false).clearError('email');
-    });
-
-    _mobileNumberController.addListener(() {
-      Provider.of<AuthViewModel>(context, listen: false).clearError('mobile');
-    });
-
-    _addressController.addListener(() {
-      Provider.of<AuthViewModel>(context, listen: false).clearError('address');
-    });
-
-    _cityController.addListener(() {
-      Provider.of<AuthViewModel>(context, listen: false).clearError('address');
-    });
-
-    _stateController.addListener(() {
-      Provider.of<AuthViewModel>(context, listen: false).clearError('address');
-    });
-
-    _newPasswordController.addListener(() {
-      Provider.of<AuthViewModel>(context, listen: false).clearError('password');
-    });
-
-    _confirmPasswordController.addListener(() {
-      Provider.of<AuthViewModel>(context, listen: false).clearError('password');
-    });
-  }
 
   @override
   void dispose() {
-    // Dispose focus nodes
-    _nameFocus.dispose();
-    _emailFocus.dispose();
-    _mobileFocus.dispose();
-    _addressFocus.dispose();
-    _cityFocus.dispose();
-    _stateFocus.dispose();
-    _passwordFocus.dispose();
-    _confirmPasswordFocus.dispose();
-
-    // Dispose controllers
-    _nameController.dispose();
+    _routeObserver.unsubscribe(this);
+    _usernameController.dispose();
     _emailController.dispose();
-    _mobileNumberController.dispose();
-    _addressController.dispose();
+    _mobileController.dispose();
     _cityController.dispose();
     _stateController.dispose();
-    _newPasswordController.dispose();
+    _addressController.dispose();
+    _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  List<String> getAvailableRoles() {
-    if (currentUserRole == null) return [];
+  List<String> getAvailableRoles() => roleHierarchy[currentUserRole] ?? [];
 
-    final assignableRoles = roleHierarchy[currentUserRole] ?? [];
+  Future<void> verifyMobileNumber(UserViewModel userVM) async {
+    final strings = S.of(context);
+    final mobile = _mobileController.text;
 
-    if (assignableRoles.isEmpty) {
-      return [];
-    }
-
-    return assignableRoles;
-  }
-
-  void _clearAllErrors() {
-    final authVM = Provider.of<AuthViewModel>(context, listen: false);
-    authVM.clearAllErrors();
-  }
-
-  Future<void> verifyMobileNumber() async {
-    if (_mobileNumberController.text.length != 10 ||
-        !RegExp(r'^\d{10}$').hasMatch(_mobileNumberController.text)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid 10-digit mobile number'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    // Check only the mobile number format
+    if (mobile.isEmpty || !RegExp(r'^\d{10}$').hasMatch(mobile)) {
+      userVM.setError('mobile', strings.errorInvalidMobile);
+      developer.log('Invalid mobile number format: $mobile', name: 'UserRegistration');
       return;
     }
 
+    // Clear any previous error
+    userVM.clearError('mobile');
+
+    developer.log('Verifying mobile number: $mobile', name: 'UserRegistration');
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (context) => OtpVerificationScreen(
-          mobileNumber: _mobileNumberController.text,
-        ),
+        builder: (context) => OtpVerificationScreen(mobileNumber: mobile),
       ),
     );
+
+    if (!mounted) return;
 
     if (result == true) {
       setState(() {
         isMobileVerified = true;
+        _verifiedMobileNumber = mobile;
       });
+      developer.log('Mobile number verified: $_verifiedMobileNumber', name: 'UserRegistration');
+    } else {
+      // Optionally, set an error if verification failed
+      userVM.setError('mobile', strings.errorVerificationFailed);
     }
   }
 
   Future<void> fetchEntities() async {
-    if (currentUserRole == 'Plaza Owner') {
-      _entities = [currentUserName ?? ''].where((item) => item.isNotEmpty).toList();
-    } else {
-      final userViewModel = Provider.of<UserViewModel>(context, listen: false);
-      final entityName = userViewModel.currentUser?.entityName;
-      _entities = [entityName ?? ''].where((item) => item.isNotEmpty).toList();
-    }
-
-    if (_entities.isNotEmpty) {
-      selectedEntity = _entities.first;
-      String idToUse = currentUserRole == 'Plaza Owner'
-          ? (currentUserId ?? '')
-          : (currentUserEntityId ?? '');
-      await _fetchPlazas(idToUse);
-    }
-
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  Future<void> _handleRegister(BuildContext context) async {
-    _clearAllErrors();
-    final authVM = Provider.of<AuthViewModel>(context, listen: false);
+    final strings = S.of(context);
+    final userVM = Provider.of<UserViewModel>(context, listen: false);
 
     try {
-      String entityId = currentUserRole == 'Plaza Owner'
-          ? (currentUserId ?? '')
-          : (currentUserEntityId ?? '');
+      developer.log('Fetching entities for role: $currentUserRole', name: 'UserRegistration');
+      if (currentUserRole == 'Plaza Owner') {
+        _entities = [currentUserName ?? ''].where((item) => item.isNotEmpty).toList();
+      } else {
+        final entityName = userVM.currentUser?.entityName;
+        _entities = [entityName ?? ''].where((item) => item.isNotEmpty).toList();
+      }
 
-      final userData = await authVM.register(
-        username: _nameController.text,
-        email: _emailController.text,
-        mobileNo: _mobileNumberController.text,
-        city: _cityController.text,
-        state: _stateController.text,
-        address: _addressController.text,
-        password: _newPasswordController.text,
-        confirmPassword: _confirmPasswordController.text,
-        selectedRole: selectedRole,
-        entityName: selectedEntity,
-        selectedSubEntity: selectedPlaza,
-        entityId: entityId,
-        isMobileVerified: isMobileVerified,
-        isAppRegister: false,
-      );
-
-      if (userData != null) {
-        final currentEntityValue = selectedEntity;
-
-        _nameController.clear();
-        _emailController.clear();
-        _mobileNumberController.clear();
-        _cityController.clear();
-        _stateController.clear();
-        _addressController.clear();
-        _newPasswordController.clear();
-        _confirmPasswordController.clear();
-
-        setState(() {
-          selectedRole = null;
-          selectedPlaza = null;
-          isMobileVerified = false;
-          selectedEntity = currentEntityValue;
-        });
-
-        if (context.mounted) {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('Registration Successful'),
-                content: const Text('User has been registered successfully.'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Close dialog
-                      Navigator.pop(context); // Pop registration screen
-                    },
-                    child: const Text('OK'),
-                  ),
-                ],
-              );
-            },
-          );
-        }
-      } else if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authVM.generalError.isNotEmpty
-                ? authVM.generalError
-                : 'Please check all fields and try again.'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+      if (_entities.isNotEmpty) {
+        setState(() => selectedEntity = _entities.first);
+        String idToUse = currentUserRole == 'Plaza Owner' ? (currentUserId ?? '') : (currentUserEntityId ?? '');
+        await _fetchPlazas(idToUse);
       }
     } catch (e) {
-      if (context.mounted) {
+      developer.log('Error fetching entities: $e', name: 'UserRegistration', error: e);
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
+            content: Text('${strings.errorFetchEntities}: $e', style: TextStyle(color: context.textPrimaryColor)),
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -371,59 +182,31 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   }
 
   Future<void> _fetchPlazas(String entityId) async {
-    final plazaViewModel = Provider.of<PlazaViewModel>(context, listen: false);
+    final strings = S.of(context);
+    final plazaVM = Provider.of<PlazaViewModel>(context, listen: false);
 
-    if (mounted) {
-      setState(() {
-        _plazas = [];
-        selectedPlaza = null;
-      });
-    }
+    setState(() {
+      _plazas = [];
+      selectedPlaza = null;
+    });
 
     try {
-      String idToUse = currentUserRole == 'Plaza Owner'
-          ? (currentUserId ?? '')
-          : (currentUserEntityId ?? entityId);
-
-      await plazaViewModel.fetchUserPlazas(idToUse);
-
+      String idToUse = currentUserRole == 'Plaza Owner' ? (currentUserId ?? '') : (currentUserEntityId ?? entityId);
+      developer.log('Fetching plazas for entityId: $idToUse', name: 'UserRegistration');
+      await plazaVM.fetchUserPlazas(idToUse);
       if (mounted) {
         setState(() {
-          _plazas = plazaViewModel.userPlazas
-              .map((plaza) => plaza.plazaName)
-              .toList();
-
-          if (_plazas.length == 1) {
-            selectedPlaza = _plazas.first;
-          }
+          _plazas = plazaVM.userPlazas.map((plaza) => plaza.plazaName).toList();
+          if (_plazas.length == 1) selectedPlaza = _plazas.first;
         });
       }
     } catch (e) {
-      debugPrint('Error fetching plazas: $e');
+      developer.log('Error fetching plazas: $e', name: 'UserRegistration', error: e);
       if (mounted) {
-        String errorMessage = 'Failed to fetch plazas';
-        final error = plazaViewModel.error;
-        if (error != null) {
-          if (error is HttpException) {
-            errorMessage = error.message;
-            if (error.statusCode == 404) {
-              errorMessage = 'No plazas found for this entity.';
-            } else if (error.statusCode == 502) {
-              errorMessage = 'Server unavailable. Please try again later.';
-            }
-          } else if (error is PlazaException) {
-            errorMessage = error.message;
-          } else if (error is ServiceException) {
-            errorMessage = error.message;
-          } else {
-            errorMessage = error.toString();
-          }
-        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
+            content: Text('${strings.errorFetchPlazas}: $e', style: TextStyle(color: context.textPrimaryColor)),
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -431,225 +214,303 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   }
 
   Future<void> _fetchUserData() async {
+    final userVM = Provider.of<UserViewModel>(context, listen: false);
     try {
-      final userViewModel = Provider.of<UserViewModel>(context, listen: false);
       final userId = await SecureStorageService().getUserId();
-      await userViewModel.fetchUser(userId: userId!, isCurrentAppUser: true);
-
+      developer.log('Fetching user data for userId: $userId', name: 'UserRegistration');
+      await userVM.fetchUser(userId: userId!, isCurrentAppUser: true);
       if (mounted) {
         setState(() {
-          currentUserRole = userViewModel.currentUser?.role;
-          currentUserName = userViewModel.currentUser?.name;
-          currentUserId = userViewModel.currentUser?.id;
-          currentUserEntityId = userViewModel.currentUser?.entityId;
+          currentUserRole = userVM.currentUser?.role;
+          currentUserName = userVM.currentUser?.name;
+          currentUserId = userVM.currentUser?.id;
+          currentUserEntityId = userVM.currentUser?.entityId;
         });
       }
     } catch (e) {
-      debugPrint('Error fetching user data: $e');
+      developer.log('Error fetching user data: $e', name: 'UserRegistration', error: e);
+    }
+  }
+
+  void _refreshForm() {
+    setState(() {
+      selectedRole = null;
+      selectedPlaza = null;
+      isMobileVerified = false;
+      _verifiedMobileNumber = null;
+      _usernameController.clear();
+      _emailController.clear();
+      _mobileController.clear();
+      _cityController.clear();
+      _stateController.clear();
+      _addressController.clear();
+      _passwordController.clear();
+      _confirmPasswordController.clear();
+    });
+    final userVM = Provider.of<UserViewModel>(context, listen: false);
+    userVM.resetErrors();
+    developer.log('Form refreshed on revisit', name: 'UserRegistration');
+  }
+
+  Future<void> _handleRegister(BuildContext context) async {
+    final strings = S.of(context);
+    final userVM = Provider.of<UserViewModel>(context, listen: false);
+
+    // Validate using UserViewModel
+    final validationErrors = userVM.validateRegistration(
+      username: _usernameController.text,
+      email: _emailController.text,
+      mobile: _mobileController.text,
+      city: _cityController.text,
+      state: _stateController.text,
+      address: _addressController.text,
+      password: _passwordController.text,
+      confirmPassword: _confirmPasswordController.text,
+      role: selectedRole,
+      entity: selectedEntity,
+      subEntity: selectedPlaza,
+      isMobileVerified: isMobileVerified,
+      verifiedMobileNumber: _verifiedMobileNumber,
+    );
+
+    if (validationErrors.isNotEmpty) {
+      validationErrors.forEach((key, value) => userVM.setError(key, value));
+      developer.log('Registration failed: Validation errors', name: 'UserRegistration');
+      return;
+    }
+
+    String entityId = currentUserRole == 'Plaza Owner' ? (currentUserId ?? '') : (currentUserEntityId ?? '');
+    developer.log('Registering user with role: $selectedRole, entity: $selectedEntity, subEntity: $selectedPlaza', name: 'UserRegistration');
+    final success = await userVM.registerUser(
+      username: _usernameController.text,
+      email: _emailController.text,
+      mobileNumber: _mobileController.text,
+      password: _passwordController.text,
+      city: _cityController.text,
+      state: _stateController.text,
+      address: _addressController.text,
+      isAppUserRegister: false,
+      role: selectedRole,
+      entity: selectedEntity,
+      subEntity: selectedPlaza,
+      entityId: entityId,
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      final currentEntityValue = selectedEntity;
+      _refreshForm();
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
+          shape: Theme.of(context).dialogTheme.shape,
+          content: const Text('User Registered Successfully.', style: TextStyle(color: Colors.black)),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pop(context);
+              },
+              child: Text(strings.buttonOk, style: Theme.of(context).textButtonTheme.style?.textStyle?.resolve({})),
+            ),
+          ],
+        ),
+      );
+      setState(() => selectedEntity = currentEntityValue);
+      developer.log('User registered successfully', name: 'UserRegistration');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(strings.errorRegistrationFailed, style: TextStyle(color: context.textPrimaryColor)),
+          backgroundColor: AppColors.error,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final strings = S.of(context);
+    final userVM = Provider.of<UserViewModel>(context);
+
     return Scaffold(
       appBar: CustomAppBar.appBarWithNavigation(
-        screenTitle: 'User\nRegistration',
+        screenTitle: strings.titleUserRegistration,
         onPressed: () => Navigator.pop(context),
-        darkBackground: true,
+        darkBackground: Theme.of(context).brightness == Brightness.dark,
+        context: context,
       ),
-      backgroundColor: AppColors.lightThemeBackground,
-      body: Consumer<AuthViewModel>(
-        builder: (context, authVM, child) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: AppConfig.deviceWidth * 0.9,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CustomFormFields.primaryFormField(
-                    label: AppStrings.labelFullName,
-                    controller: _nameController,
-                    focusNode: _nameFocus,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            CustomFormFields.normalSizedTextFormField(
+              context: context,
+              label: strings.labelFullName,
+              controller: _usernameController,
+              keyboardType: TextInputType.text,
+              isPassword: false,
+              enabled: true,
+              errorText: userVM.getError('username'),
+              onChanged: (_) => userVM.clearError('username'),
+            ),
+            const SizedBox(height: 16),
+            CustomFormFields.normalSizedTextFormField(
+              context: context,
+              label: strings.labelEmail,
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              isPassword: false,
+              enabled: true,
+              errorText: userVM.getError('email'),
+              onChanged: (_) => userVM.clearError('email'),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelMobileNumber,
+                    controller: _mobileController,
+                    keyboardType: TextInputType.phone,
+                    isPassword: false,
+                    enabled: true,
+                    errorText: userVM.getError('mobile'),
+                    onChanged: (_) {
+                      userVM.clearError('mobile');
+                      if (isMobileVerified && _verifiedMobileNumber != _mobileController.text) {
+                        setState(() => isMobileVerified = false);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (!isMobileVerified)
+                  CustomButtons.secondaryButton(
+                    text: strings.buttonVerify,
+                    onPressed: () => verifyMobileNumber(userVM),
+                    height: 40,
+                    width: 100,
+                    context: context,
+                  )
+                else
+                  Icon(Icons.check_circle, color: Theme.of(context).iconTheme.color, size: 24),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelCity,
+                    controller: _cityController,
                     keyboardType: TextInputType.text,
                     isPassword: false,
                     enabled: true,
-                    errorText:
-                    authVM.usernameError.isNotEmpty ? authVM.usernameError : null,
+                    errorText: userVM.getError('city'),
+                    onChanged: (_) => userVM.clearError('city'),
                   ),
-                  const SizedBox(height: 16),
-                  CustomFormFields.primaryFormField(
-                    label: AppStrings.labelEmail,
-                    controller: _emailController,
-                    focusNode: _emailFocus,
-                    keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelState,
+                    controller: _stateController,
+                    keyboardType: TextInputType.text,
                     isPassword: false,
                     enabled: true,
-                    errorText: authVM.emailError.isNotEmpty ? authVM.emailError : null,
+                    errorText: userVM.getError('state'),
+                    onChanged: (_) => userVM.clearError('state'),
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CustomFormFields.primaryFormField(
-                          label: AppStrings.labelMobileNumber,
-                          controller: _mobileNumberController,
-                          focusNode: _mobileFocus,
-                          keyboardType: TextInputType.phone,
-                          isPassword: false,
-                          enabled: true,
-                          errorText:
-                          authVM.mobileError.isNotEmpty ? authVM.mobileError : null,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (!isMobileVerified)
-                        ElevatedButton(
-                          onPressed: verifyMobileNumber,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text(
-                            'Verify',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        )
-                      else
-                        const Icon(
-                          Icons.check_circle,
-                          color: Colors.green,
-                          size: 24,
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CustomFormFields.primaryFormField(
-                          label: AppStrings.labelCity,
-                          controller: _cityController,
-                          focusNode: _cityFocus,
-                          keyboardType: TextInputType.text,
-                          isPassword: false,
-                          enabled: true,
-                          errorText:
-                          authVM.cityError.isNotEmpty ? authVM.cityError : null,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: CustomFormFields.primaryFormField(
-                          label: AppStrings.labelState,
-                          controller: _stateController,
-                          focusNode: _stateFocus,
-                          keyboardType: TextInputType.text,
-                          isPassword: false,
-                          enabled: true,
-                          errorText:
-                          authVM.stateError.isNotEmpty ? authVM.stateError : null,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  CustomFormFields.primaryFormField(
-                    label: AppStrings.labelAddress,
-                    controller: _addressController,
-                    focusNode: _addressFocus,
-                    keyboardType: TextInputType.multiline,
-                    isPassword: false,
-                    enabled: true,
-                    errorText:
-                    authVM.addressError.isNotEmpty ? authVM.addressError : null,
-                  ),
-                  const SizedBox(height: 16),
-                  CustomDropDown.normalDropDown(
-                    label: AppStrings.labelAssignRole,
-                    value: selectedRole,
-                    items: getAvailableRoles(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedRole = value;
-                      });
-                      Provider.of<AuthViewModel>(context, listen: false)
-                          .clearError('role');
-                    },
-                    errorText: authVM.roleError.isNotEmpty ? authVM.roleError : null,
-                  ),
-                  const SizedBox(height: 16),
-                  CustomDropDown.normalDropDown(
-                    label: AppStrings.labelEntity,
-                    value: selectedEntity,
-                    items: _entities,
-                    onChanged: (value) {
-                      setState(() {
-                        selectedEntity = value;
-                      });
-                      Provider.of<AuthViewModel>(context, listen: false)
-                          .clearError('entity');
-                      if (value != null) {
-                        _fetchPlazas(value);
-                      }
-                    },
-                    errorText:
-                    authVM.entityError.isNotEmpty ? authVM.entityError : null,
-                  ),
-                  if (selectedEntity != null) ...[
-                    const SizedBox(height: 16),
-                    CustomDropDown.normalDropDown(
-                      label: AppStrings.labelSubEntity,
-                      value: selectedPlaza,
-                      items: _plazas,
-                      onChanged: (value) {
-                        setState(() {
-                          selectedPlaza = value;
-                        });
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  CustomFormFields.primaryFormField(
-                    label: AppStrings.labelPassword,
-                    controller: _newPasswordController,
-                    focusNode: _passwordFocus,
-                    keyboardType: TextInputType.visiblePassword,
-                    isPassword: true,
-                    enabled: true,
-                    errorText:
-                    authVM.passwordError.isNotEmpty ? authVM.passwordError : null,
-                  ),
-                  const SizedBox(height: 16),
-                  CustomFormFields.primaryFormField(
-                    label: AppStrings.labelConfirmPassword,
-                    controller: _confirmPasswordController,
-                    focusNode: _confirmPasswordFocus,
-                    keyboardType: TextInputType.visiblePassword,
-                    isPassword: true,
-                    enabled: true,
-                    errorText: authVM.confirmPasswordError.isNotEmpty
-                        ? authVM.confirmPasswordError
-                        : null,
-                  ),
-                  const SizedBox(height: 16),
-                  CustomButtons.primaryButton(
-                    text: AppStrings.buttonRegister,
-                    onPressed: () => _handleRegister(context),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          );
-        },
+            const SizedBox(height: 16),
+            CustomFormFields.normalSizedTextFormField(
+              context: context,
+              label: strings.labelAddress,
+              controller: _addressController,
+              keyboardType: TextInputType.multiline,
+              isPassword: false,
+              enabled: true,
+              errorText: userVM.getError('address'),
+              onChanged: (_) => userVM.clearError('address'),
+            ),
+            const SizedBox(height: 16),
+            CustomDropDown.normalDropDown(
+              context: context,
+              label: strings.labelAssignRole,
+              value: selectedRole,
+              items: getAvailableRoles(),
+              onChanged: (value) {
+                setState(() => selectedRole = value);
+                userVM.clearError('role');
+              },
+              errorText: userVM.getError('role'),
+            ),
+            const SizedBox(height: 16),
+            CustomDropDown.normalDropDown(
+              context: context,
+              label: strings.labelEntity,
+              value: selectedEntity,
+              items: _entities,
+              enabled: false,
+              onChanged: null,
+              errorText: userVM.getError('entity'),
+            ),
+            if (selectedEntity != null) ...[
+              const SizedBox(height: 16),
+              CustomDropDown.normalDropDown(
+                context: context,
+                label: strings.labelSubEntity,
+                value: selectedPlaza,
+                items: _plazas,
+                onChanged: (value) => setState(() => selectedPlaza = value),
+                errorText: userVM.getError('subEntity'),
+              ),
+            ],
+            const SizedBox(height: 16),
+            CustomFormFields.normalSizedTextFormField(
+              context: context,
+              label: strings.labelPassword,
+              controller: _passwordController,
+              keyboardType: TextInputType.visiblePassword,
+              isPassword: true,
+              enabled: true,
+              errorText: userVM.getError('password'),
+              onChanged: (_) => userVM.clearError('password'),
+            ),
+            const SizedBox(height: 16),
+            CustomFormFields.normalSizedTextFormField(
+              context: context,
+              label: strings.labelConfirmPassword,
+              controller: _confirmPasswordController,
+              keyboardType: TextInputType.visiblePassword,
+              isPassword: true,
+              enabled: true,
+              errorText: userVM.getError('confirmPassword'),
+              onChanged: (_) => userVM.clearError('confirmPassword'),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16.0),
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: CustomButtons.primaryButton(
+          height: 50,
+          text: strings.buttonRegister,
+          onPressed: userVM.isLoading ? null : () => _handleRegister(context),
+          isEnabled: !userVM.isLoading,
+          context: context,
+        ),
       ),
     );
   }

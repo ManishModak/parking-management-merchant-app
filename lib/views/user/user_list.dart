@@ -1,18 +1,20 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
-import 'package:merchant_app/config/app_strings.dart';
+import 'package:merchant_app/config/app_theme.dart';
 import 'package:merchant_app/services/storage/secure_storage_service.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:merchant_app/utils/components/button.dart';
-import 'package:merchant_app/utils/components/card.dart';
 import 'package:merchant_app/utils/components/form_field.dart';
+import 'package:merchant_app/utils/components/pagination_controls.dart';
 import 'package:merchant_app/viewmodels/user_viewmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import '../../config/app_config.dart';
+import '../../generated/l10n.dart';
+import '../../models/user_model.dart';
 import '../../services/utils/pdf_export_service.dart';
-import '../../utils/components/pagination_controls.dart';
-import '../../utils/exceptions.dart';
 import 'user_info.dart';
 
 class UserListScreen extends StatefulWidget {
@@ -31,29 +33,35 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
   String _searchQuery = '';
   int _currentPage = 1;
   static const int _itemsPerPage = 10;
+  final Set<String> _selectedRoles = {};
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _viewModel = Provider.of<UserViewModel>(context, listen: false);
+    developer.log('UserListScreen initialized', name: 'UserList');
     _loadInitialData();
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
         _currentPage = 1;
+        developer.log('Search query updated: $_searchQuery', name: 'UserList');
       });
     });
   }
 
   Future<void> _loadInitialData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     final userId = await _secureStorage.getUserId();
     if (userId != null) {
+      developer.log('Loading initial user list for userId: $userId', name: 'UserList');
       await _viewModel.fetchUserList(userId);
-      await Future.delayed(const Duration(seconds: 2));
     }
-    setState(() => _isLoading = false);
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -75,26 +83,33 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
   void didPopNext() => _refreshData();
 
   Future<void> _refreshData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     final userId = await _secureStorage.getUserId();
     if (userId != null) {
+      developer.log('Refreshing user list for userId: $userId', name: 'UserList');
       await _viewModel.fetchUserList(userId);
-      await Future.delayed(const Duration(seconds: 2));
     }
-    setState(() => _isLoading = false);
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
-  List<dynamic> _getFilteredUsers(List<dynamic> users) {
-    if (_searchQuery.isEmpty) return users;
+  List<User> _getFilteredUsers(List<User> users) {
     return users.where((user) {
-      return user.id.toString().contains(_searchQuery) ||
+      final matchesSearch = _searchQuery.isEmpty ||
+          user.id.toString().contains(_searchQuery) ||
           user.name.toLowerCase().contains(_searchQuery) ||
           user.role.toLowerCase().contains(_searchQuery) ||
           user.mobileNumber.toLowerCase().contains(_searchQuery);
+
+      final matchesRole = _selectedRoles.isEmpty || _selectedRoles.contains(user.role.toLowerCase());
+
+      return matchesSearch && matchesRole;
     }).toList();
   }
 
-  List<dynamic> _getPaginatedUsers(List<dynamic> filteredUsers) {
+  List<User> _getPaginatedUsers(List<User> filteredUsers) {
     final startIndex = (_currentPage - 1) * _itemsPerPage;
     final endIndex = startIndex + _itemsPerPage;
     return endIndex > filteredUsers.length
@@ -104,54 +119,273 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
 
   void _updatePage(int newPage) {
     final filteredUsers = _getFilteredUsers(_viewModel.operators);
-    final totalPages = (filteredUsers.length / _itemsPerPage).ceil();
+    final totalPages = (filteredUsers.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
     if (newPage < 1 || newPage > totalPages) return;
     setState(() => _currentPage = newPage);
+    developer.log('Page updated to: $_currentPage', name: 'UserList');
   }
 
-  Widget _buildSearchField() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          CustomFormFields.searchFormField(
-            controller: _searchController,
-            hintText: 'Search by ID, name, role, or mobile number...',
+  Widget _buildSearchField(S strings) {
+    return SizedBox(
+      width: AppConfig.deviceWidth * 0.95,
+      child: Card(
+        margin: EdgeInsets.zero,
+        elevation: Theme.of(context).cardTheme.elevation,
+        color: context.cardColor,
+        shape: Theme.of(context).cardTheme.shape,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              CustomFormFields.searchFormField(
+                controller: _searchController,
+                hintText: strings.hintSearchUsers,
+                context: context,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${strings.labelLastUpdated}: ${DateTime.now().toString().substring(0, 16)}. ${strings.labelSwipeToRefresh}',
+                style: Theme.of(context).textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Last updated: ${DateTime.now().toString().substring(0, 16)}. Swipe down to refresh.',
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.person_outline, size: 64, color: Colors.grey.shade400),
-          const SizedBox(height: 16),
-          Text(
-            'No users found',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Colors.grey.shade600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _searchQuery.isEmpty ? 'There are no users available' : 'No users match your search criteria',
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-            textAlign: TextAlign.center,
-          ),
-          if (_searchQuery.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            TextButton(onPressed: () => _searchController.clear(), child: const Text('Clear Search')),
+  Widget _buildFilterChipsRow(S strings) {
+    final selectedFilters = _selectedRoles.map((r) => '${strings.labelRole}: ${r.capitalize()}').toList();
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+        child: Row(
+          children: [
+            _buildMoreFiltersChip(strings),
+            if (selectedFilters.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              ...selectedFilters.map((filter) => Container(
+                margin: const EdgeInsets.only(right: 8),
+                child: Chip(
+                  label: Text(filter),
+                  onDeleted: () {
+                    setState(() {
+                      _selectedRoles.remove(filter.split(': ')[1].toLowerCase());
+                    });
+                  },
+                  deleteIcon: const Icon(Icons.close, size: 16),
+                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  labelStyle: TextStyle(color: AppColors.primary),
+                  deleteIconColor: AppColors.primary,
+                ),
+              )),
+            ],
           ],
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMoreFiltersChip(S strings) {
+    final hasActiveFilters = _selectedRoles.isNotEmpty;
+
+    return GestureDetector(
+      onTap: _showAllFiltersDialog,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: hasActiveFilters ? AppColors.primary.withOpacity(0.1) : Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.filter_list,
+              color: hasActiveFilters ? AppColors.primary : Colors.grey,
+              size: 16,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              strings.filtersLabel,
+              style: TextStyle(
+                color: hasActiveFilters ? AppColors.primary : Colors.black87,
+                fontWeight: hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAllFiltersDialog() {
+    final strings = S.of(context);
+    final roles = _viewModel.operators
+        .map((u) => u.role.toLowerCase())
+        .where((role) => role.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.compareTo(b));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              height: MediaQuery.of(context).size.height * 0.6,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    child: Container(
+                      width: 50,
+                      height: 5,
+                      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: Text(
+                      strings.advancedFiltersLabel,
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        _buildFilterSection(
+                          title: strings.labelRole,
+                          options: roles.map((role) => {'key': role, 'label': role.capitalize()}).toList(),
+                          selectedItems: _selectedRoles,
+                          onChanged: (value, isSelected) {
+                            setDialogState(() {
+                              if (isSelected) {
+                                _selectedRoles.add(value);
+                              } else {
+                                _selectedRoles.remove(value);
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                            child: CustomButtons.secondaryButton(
+                                height: 40,
+                                text: strings.clearAllLabel,
+                                onPressed: () {
+                                  setDialogState(() {
+                                    _selectedRoles.clear();
+                                  });
+                                },
+                                context: context)),
+                        const SizedBox(width: 16),
+                        Expanded(
+                            child: CustomButtons.primaryButton(
+                                height: 40,
+                                text: strings.applyLabel,
+                                context: context,
+                                onPressed: () {
+                                  setState(() {
+                                    _currentPage = 1;
+                                  });
+                                  Navigator.pop(context);
+                                })),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterSection({
+    required String title,
+    required List<Map<String, String>> options,
+    required Set<String> selectedItems,
+    required Function(String, bool) onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          child: Text(
+            title,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: options.map((option) {
+              final isSelected = selectedItems.contains(option['key']);
+              return FilterChip(
+                label: Text(option['label'] ?? ''),
+                selected: isSelected,
+                onSelected: (bool value) {
+                  onChanged(option['key']!, value);
+                },
+                selectedColor: AppColors.primary.withOpacity(0.2),
+                checkmarkColor: AppColors.primary,
+                backgroundColor: Colors.grey[200],
+                labelStyle: TextStyle(
+                  color: isSelected ? AppColors.primary : Colors.black87,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Divider(),
+      ],
+    );
+  }
+
+  Widget _buildUserCard(User user) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+      elevation: 2,
+      color: context.secondaryCardColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: ListTile(
+        title: Text(user.name),
+        subtitle: Text('${user.email}\n${user.mobileNumber}'),
+        trailing: Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color),
+        onTap: () {
+          developer.log('User card tapped: ${user.id}', name: 'UserList');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => UserInfoScreen(operatorId: user.id),
+            ),
+          );
+        },
       ),
     );
   }
@@ -160,36 +394,32 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
     return ListView.builder(
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
       itemCount: _itemsPerPage,
       itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Shimmer.fromColors(
-            baseColor: Colors.grey.shade300,
-            highlightColor: Colors.grey.shade100,
-            child: Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(width: 150, height: 18, color: Colors.white),
-                          const SizedBox(height: 4),
-                          Container(width: 100, height: 14, color: Colors.white),
-                          const SizedBox(height: 4),
-                          Container(width: 120, height: 14, color: Colors.white),
-                        ],
-                      ),
+        return Shimmer.fromColors(
+          baseColor: AppColors.shimmerBaseLight,
+          highlightColor: AppColors.shimmerHighlightLight,
+          child: Card(
+            elevation: Theme.of(context).cardTheme.elevation,
+            shape: Theme.of(context).cardTheme.shape,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(width: 150, height: 18, color: context.backgroundColor),
+                        const SizedBox(height: 4),
+                        Container(width: 100, height: 14, color: context.backgroundColor),
+                        const SizedBox(height: 4),
+                        Container(width: 120, height: 14, color: context.backgroundColor),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -198,27 +428,30 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
     );
   }
 
-  Widget _buildErrorState(UserViewModel viewModel) {
-    String errorTitle = 'Unable to Load Users';
-    String errorMessage = 'Something went wrong. Please try again.';
+  Widget _buildErrorState(UserViewModel viewModel, S strings) {
+    String errorTitle = strings.errorTitleDefault;
+    String errorMessage = strings.errorMessageDefault;
     String? errorDetails;
 
-    final error = viewModel.error;
-    if (error != null) {
-      developer.log('Error occurred: $error');
-      if (error is NoInternetException) {
-        errorTitle = 'No Internet Connection';
-        errorMessage = 'Please check your internet connection and try again.';
-      } else if (error is RequestTimeoutException) {
-        errorTitle = 'Request Timed Out';
-        errorMessage = 'The server is taking too long to respond.';
-      } else if (error is HttpException) {
-        errorTitle = 'Error ${error.statusCode ?? 'Unknown'}';
-        errorMessage = error.serverMessage ?? 'An error occurred.';
-        errorDetails = error.toString();
+    final error = viewModel.getError('general');
+    if (error.isNotEmpty) {
+      developer.log('Error occurred: $error', name: 'UserList');
+      if (error.contains('No internet')) {
+        errorTitle = strings.errorTitleNoInternet;
+        errorMessage = strings.errorMessageNoInternet;
+      } else if (error.contains('timed out')) {
+        errorTitle = strings.errorTitleTimeout;
+        errorMessage = strings.errorMessageTimeout;
+      } else if (error.contains('ServerConnectionException') || error.contains('Connection refused')) {
+        errorTitle = strings.errorTitleServer;
+        errorMessage = strings.errorMessageServer;
+      } else if (error.contains('HttpException')) {
+        errorTitle = strings.errorTitleServer;
+        errorMessage = error.split(':').last.trim();
+        errorDetails = strings.errorDetailsUnexpected;
       } else {
-        errorMessage = error.toString();
-        errorDetails = 'An unexpected error occurred.';
+        errorMessage = error.split(':').last.trim();
+        errorDetails = strings.errorDetailsUnexpected;
       }
     }
 
@@ -230,13 +463,16 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
           const SizedBox(height: 16),
           Text(errorTitle, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text(errorMessage, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(errorMessage, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
+          ),
           if (errorDetails != null) ...[
             const SizedBox(height: 8),
             Text(errorDetails, style: const TextStyle(fontSize: 14, color: Colors.grey)),
           ],
           const SizedBox(height: 24),
-          ElevatedButton(onPressed: _refreshData, child: const Text('Retry')),
+          CustomButtons.primaryButton(height: 40, width: 150, text: strings.buttonRetry, onPressed: _refreshData, context: context)
         ],
       ),
     );
@@ -244,6 +480,7 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
+    final strings = S.of(context);
     return Consumer<UserViewModel>(
       builder: (context, viewModel, _) {
         final filteredUsers = _getFilteredUsers(viewModel.operators);
@@ -251,73 +488,83 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
         final paginatedUsers = _getPaginatedUsers(filteredUsers);
 
         return Scaffold(
-          backgroundColor: AppColors.lightThemeBackground,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: CustomAppBar.appBarWithNavigationAndActions(
-            screenTitle: AppStrings.titleUsers,
+            screenTitle: strings.titleUsers,
             onPressed: () => Navigator.pop(context),
-            darkBackground: false,
+            darkBackground: Theme.of(context).brightness == Brightness.dark,
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: CustomButtons.downloadIconButton(
                   onPressed: () async {
-                    developer.log('Download button pressed');
+                    developer.log('Download button pressed', name: 'UserList');
                     try {
                       await PdfExportService.exportUserList(viewModel.operators);
-                    } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to export PDF: $e'), backgroundColor: Colors.red),
+                        SnackBar(
+                          content: Text(strings.messagePdfSuccess, style: TextStyle(color: context.textPrimaryColor)),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    } catch (e) {
+                      developer.log('PDF export failed: $e', name: 'UserList', error: e);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${strings.messagePdfFailed}: $e', style: TextStyle(color: context.textPrimaryColor)),
+                          backgroundColor: AppColors.error,
+                        ),
                       );
                     }
                   },
-                  darkBackground: false,
+                  darkBackground: Theme.of(context).brightness == Brightness.dark,
+                  context: context,
                 ),
               ),
             ],
+            context: context,
           ),
           body: Column(
             children: [
-              _buildSearchField(),
+              const SizedBox(height: 4),
+              _buildFilterChipsRow(strings),
+              _buildSearchField(strings),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: _refreshData,
-                  child: _isLoading
-                      ? _buildShimmerList()
-                      : viewModel.error != null
-                      ? SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.6,
-                    child: _buildErrorState(viewModel),
-                  )
-                      : filteredUsers.isEmpty
-                      ? SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.6,
-                    child: _buildEmptyState(),
-                  )
-                      : ListView(
-                    controller: _scrollController,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: paginatedUsers.map((user) {
-                      return CustomCards.operatorCard(
-                        operatorName: user.name,
-                        role: user.role,
-                        contactNumber: user.mobileNumber,
-                        onTap: () {
-                          developer.log('User card tapped: ${user.id}');
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => UserInfoScreen(operatorId: user.id)),
-                          );
-                        }, imageUrl: '',
-                      );
-                    }).toList(),
+                  child: Stack(
+                    children: [
+                      ListView(
+                        controller: _scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          SizedBox(height: 8,),
+                          if (viewModel.getError('general').isNotEmpty && !_isLoading)
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.6,
+                              child: _buildErrorState(viewModel, strings),
+                            )
+                          else if (filteredUsers.isEmpty && !_isLoading)
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.6,
+                              child: Center(child: Text(strings.messageNoUsersFound)),
+                            )
+                          else if (!_isLoading)
+                              ...paginatedUsers.map((user) => _buildUserCard(user)),
+                        ],
+                      ),
+                      if (_isLoading) Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: _buildShimmerList(),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ],
           ),
           bottomNavigationBar: Container(
-            color: AppColors.lightThemeBackground,
+            color: Theme.of(context).scaffoldBackgroundColor,
             padding: const EdgeInsets.all(4.0),
             child: SafeArea(
               child: PaginationControls(
@@ -330,5 +577,11 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
         );
       },
     );
+  }
+}
+
+extension StringExtension on String {
+  String capitalize() {
+    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
   }
 }

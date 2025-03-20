@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
+import 'dart:developer' as developer;
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../../models/plaza.dart';
 import '../../config/api_config.dart';
@@ -10,7 +11,7 @@ import '../network/connectivity_service.dart';
 class PlazaService {
   final http.Client _client;
   final ConnectivityService _connectivityService;
-  final String baseUrl = ApiConfig.apiGateway;
+  final String baseUrl = ApiConfig.baseUrl;
 
   /// Constructor with dependency injection for http.Client and ConnectivityService
   PlazaService({http.Client? client, ConnectivityService? connectivityService})
@@ -19,15 +20,27 @@ class PlazaService {
 
   /// Fetches plazas for a given user by userId.
   Future<List<Plaza>> fetchUserPlazas(String userId) async {
+    // Check device connectivity
     if (!(await _connectivityService.isConnected())) {
       throw NoInternetException(
           'No internet connection. Please check your network settings.');
     }
 
-    final fullUrl =
-        '${ApiConfig.getFullUrl(ApiConfig.getPlazaByOwnerIdEndpoint)}$userId';
-    log('[PLAZA] Fetching user plazas at URL: $fullUrl', name: 'PlazaService');
-    log('[PLAZA] User ID: $userId', name: 'PlazaService');
+    final fullUrl = '${ApiConfig.getFullUrl(PlazaApi.getByOwnerId)}$userId';
+    final serverUrl = Uri.parse(fullUrl);
+
+    // Check server reachability
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      developer.log('[PLAZA] Server unreachable: ${serverUrl.host}',
+          name: 'PlazaService');
+      throw ServerConnectionException(
+          'Cannot reach the plaza server. The server may be down or unreachable.',
+          host: serverUrl.host);
+    }
+
+    developer.log(
+        '[PLAZA] Fetching user plazas at URL: $fullUrl', name: 'PlazaService');
+    developer.log('[PLAZA] User ID: $userId', name: 'PlazaService');
 
     try {
       final response = await _client
@@ -37,20 +50,24 @@ class PlazaService {
       )
           .timeout(const Duration(seconds: 10));
 
-      log('[PLAZA] Response Status Code: ${response.statusCode}',
+      developer.log('[PLAZA] Response Status Code: ${response.statusCode}',
           name: 'PlazaService');
-      log('[PLAZA] Response Body: ${response.body}', name: 'PlazaService');
+      developer.log(
+          '[PLAZA] Response Body: ${response.body}', name: 'PlazaService');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
-        log('[PLAZA] Decoded response: $responseData', name: 'PlazaService');
+        developer.log(
+            '[PLAZA] Decoded response: $responseData', name: 'PlazaService');
 
         if (responseData['success'] == true) {
           final List<dynamic> plazaJson = responseData['plazas'];
-          log('[PLAZA] Found ${plazaJson.length} plazas', name: 'PlazaService');
+          developer.log(
+              '[PLAZA] Found ${plazaJson.length} plazas', name: 'PlazaService');
 
           final plazas = plazaJson.map((json) => Plaza.fromJson(json)).toList();
-          log('[PLAZA] Successfully converted plazas', name: 'PlazaService');
+          developer.log(
+              '[PLAZA] Successfully converted plazas', name: 'PlazaService');
           return plazas;
         }
         throw HttpException(
@@ -71,11 +88,15 @@ class PlazaService {
         statusCode: response.statusCode,
         serverMessage: serverMessage,
       );
+    } on SocketException catch (e) {
+      developer.log('[PLAZA] Socket exception: $e', name: 'PlazaService');
+      throw ServerConnectionException(
+          'Failed to connect to the plaza server. The server may be temporarily unavailable.');
     } on TimeoutException {
       throw RequestTimeoutException(
           'The server is taking too long to respond. Please try again later.');
     } catch (e, stackTrace) {
-      log('[PLAZA] Exception in fetchUserPlazas: $e',
+      developer.log('[PLAZA] Error in fetchUserPlazas: $e',
           name: 'PlazaService', error: e, stackTrace: stackTrace);
       if (e is HttpException) {
         throw PlazaException(
@@ -90,15 +111,27 @@ class PlazaService {
 
   /// Retrieves a single plaza by its ID.
   Future<Plaza> getPlazaById(String plazaId) async {
+    // Check device connectivity
     if (!(await _connectivityService.isConnected())) {
       throw NoInternetException(
           'No internet connection. Please check your network settings.');
     }
 
-    final fullUrl =
-        '${ApiConfig.getFullUrl(ApiConfig.getPlazaEndpoint)}$plazaId';
-    log('[PLAZA] Getting plaza by ID at URL: $fullUrl', name: 'PlazaService');
-    log('[PLAZA] Plaza ID: $plazaId', name: 'PlazaService');
+    final fullUrl = '${ApiConfig.getFullUrl(PlazaApi.get)}$plazaId';
+    final serverUrl = Uri.parse(fullUrl);
+
+    // Check server reachability
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      developer.log('[PLAZA] Server unreachable: ${serverUrl.host}',
+          name: 'PlazaService');
+      throw ServerConnectionException(
+          'Cannot reach the plaza server. The server may be down or unreachable.',
+          host: serverUrl.host);
+    }
+
+    developer.log(
+        '[PLAZA] Getting plaza by ID at URL: $fullUrl', name: 'PlazaService');
+    developer.log('[PLAZA] Plaza ID: $plazaId', name: 'PlazaService');
 
     try {
       final response = await _client
@@ -108,14 +141,15 @@ class PlazaService {
       )
           .timeout(const Duration(seconds: 10));
 
-      log('[PLAZA] Response Status Code: ${response.statusCode}',
+      developer.log('[PLAZA] Response Status Code: ${response.statusCode}',
           name: 'PlazaService');
-      log('[PLAZA] Response Body: ${response.body}', name: 'PlazaService');
+      developer.log(
+          '[PLAZA] Response Body: ${response.body}', name: 'PlazaService');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true && responseData['plaza'] != null) {
-          log('[PLAZA] Plaza found and converted successfully',
+          developer.log('[PLAZA] Plaza found and converted successfully',
               name: 'PlazaService');
           return Plaza.fromJson(responseData['plaza']);
         }
@@ -137,11 +171,15 @@ class PlazaService {
         statusCode: response.statusCode,
         serverMessage: serverMessage,
       );
+    } on SocketException catch (e) {
+      developer.log('[PLAZA] Socket exception: $e', name: 'PlazaService');
+      throw ServerConnectionException(
+          'Failed to connect to the plaza server. The server may be temporarily unavailable.');
     } on TimeoutException {
       throw RequestTimeoutException(
           'The server is taking too long to respond. Please try again later.');
     } catch (e, stackTrace) {
-      log('[PLAZA] Exception in getPlazaById: $e',
+      developer.log('[PLAZA] Error in getPlazaById: $e',
           name: 'PlazaService', error: e, stackTrace: stackTrace);
       throw PlazaException('Error fetching plaza: $e');
     }
@@ -149,15 +187,28 @@ class PlazaService {
 
   /// Creates a new plaza.
   Future<String> addPlaza(Plaza plaza) async {
+    // Check device connectivity
     if (!(await _connectivityService.isConnected())) {
       throw NoInternetException(
           'No internet connection. Please check your network settings.');
     }
 
-    final fullUrl = ApiConfig.getFullUrl(ApiConfig.createPlazaEndpoint);
+    final fullUrl = ApiConfig.getFullUrl(PlazaApi.create);
+    final serverUrl = Uri.parse(fullUrl);
+
+    // Check server reachability
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      developer.log('[PLAZA] Server unreachable: ${serverUrl.host}',
+          name: 'PlazaService');
+      throw ServerConnectionException(
+          'Cannot reach the plaza server. The server may be down or unreachable.',
+          host: serverUrl.host);
+    }
+
     final body = json.encode(plaza.toJson());
-    log('[PLAZA] Creating plaza at URL: $fullUrl', name: 'PlazaService');
-    log('[PLAZA] Request Body: $body', name: 'PlazaService');
+    developer.log(
+        '[PLAZA] Creating plaza at URL: $fullUrl', name: 'PlazaService');
+    developer.log('[PLAZA] Request Body: $body', name: 'PlazaService');
 
     try {
       final response = await _client
@@ -168,9 +219,10 @@ class PlazaService {
       )
           .timeout(const Duration(seconds: 10));
 
-      log('[PLAZA] Response Status Code: ${response.statusCode}',
+      developer.log('[PLAZA] Response Status Code: ${response.statusCode}',
           name: 'PlazaService');
-      log('[PLAZA] Response Body: ${response.body}', name: 'PlazaService');
+      developer.log(
+          '[PLAZA] Response Body: ${response.body}', name: 'PlazaService');
 
       if (response.statusCode != 201) {
         String? serverMessage;
@@ -189,16 +241,21 @@ class PlazaService {
 
       final responseBody = json.decode(response.body) as Map<String, dynamic>;
       if (responseBody['success'] == true && responseBody['plaza'] != null) {
-        log('[PLAZA] Plaza created successfully: ${responseBody['plaza']['plazaId']}',
+        developer.log(
+            '[PLAZA] Plaza created successfully: ${responseBody['plaza']['plazaId']}',
             name: 'PlazaService');
         return responseBody['plaza']['plazaId'].toString();
       }
       throw PlazaException('Plaza creation failed: ${responseBody['msg']}');
+    } on SocketException catch (e) {
+      developer.log('[PLAZA] Socket exception: $e', name: 'PlazaService');
+      throw ServerConnectionException(
+          'Failed to connect to the plaza server. The server may be temporarily unavailable.');
     } on TimeoutException {
       throw RequestTimeoutException(
           'The server is taking too long to respond. Please try again later.');
     } catch (e, stackTrace) {
-      log('[PLAZA] Exception in addPlaza: $e',
+      developer.log('[PLAZA] Error in addPlaza: $e',
           name: 'PlazaService', error: e, stackTrace: stackTrace);
       throw PlazaException('Error adding plaza: $e');
     }
@@ -206,17 +263,29 @@ class PlazaService {
 
   /// Updates an existing plaza.
   Future<bool> updatePlaza(Plaza plaza, String plazaId) async {
+    // Check device connectivity
     if (!(await _connectivityService.isConnected())) {
       throw NoInternetException(
           'No internet connection. Please check your network settings.');
     }
 
-    final fullUrl =
-        '${ApiConfig.getFullUrl(ApiConfig.updatePlazaEndpoint)}$plazaId';
+    final fullUrl = '${ApiConfig.getFullUrl(PlazaApi.update)}$plazaId';
+    final serverUrl = Uri.parse(fullUrl);
+
+    // Check server reachability
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      developer.log('[PLAZA] Server unreachable: ${serverUrl.host}',
+          name: 'PlazaService');
+      throw ServerConnectionException(
+          'Cannot reach the plaza server. The server may be down or unreachable.',
+          host: serverUrl.host);
+    }
+
     final body = json.encode(plaza.toJson());
-    log('[PLAZA] Updating plaza at URL: $fullUrl', name: 'PlazaService');
-    log('[PLAZA] Plaza ID: $plazaId', name: 'PlazaService');
-    log('[PLAZA] Request Body: $body', name: 'PlazaService');
+    developer.log(
+        '[PLAZA] Updating plaza at URL: $fullUrl', name: 'PlazaService');
+    developer.log('[PLAZA] Plaza ID: $plazaId', name: 'PlazaService');
+    developer.log('[PLAZA] Request Body: $body', name: 'PlazaService');
 
     try {
       final response = await _client
@@ -227,9 +296,10 @@ class PlazaService {
       )
           .timeout(const Duration(seconds: 10));
 
-      log('[PLAZA] Response Status Code: ${response.statusCode}',
+      developer.log('[PLAZA] Response Status Code: ${response.statusCode}',
           name: 'PlazaService');
-      log('[PLAZA] Response Body: ${response.body}', name: 'PlazaService');
+      developer.log(
+          '[PLAZA] Response Body: ${response.body}', name: 'PlazaService');
 
       if (response.statusCode != 200) {
         String? serverMessage;
@@ -245,13 +315,17 @@ class PlazaService {
           serverMessage: serverMessage,
         );
       }
-      log('[PLAZA] Plaza updated successfully', name: 'PlazaService');
+      developer.log('[PLAZA] Plaza updated successfully', name: 'PlazaService');
       return true;
+    } on SocketException catch (e) {
+      developer.log('[PLAZA] Socket exception: $e', name: 'PlazaService');
+      throw ServerConnectionException(
+          'Failed to connect to the plaza server. The server may be temporarily unavailable.');
     } on TimeoutException {
       throw RequestTimeoutException(
           'The server is taking too long to respond. Please try again later.');
     } catch (e, stackTrace) {
-      log('[PLAZA] Exception in updatePlaza: $e',
+      developer.log('[PLAZA] Error in updatePlaza: $e',
           name: 'PlazaService', error: e, stackTrace: stackTrace);
       throw PlazaException('Error updating plaza: $e');
     }
@@ -259,15 +333,27 @@ class PlazaService {
 
   /// Deletes a plaza by its ID.
   Future<void> deletePlaza(String plazaId) async {
+    // Check device connectivity
     if (!(await _connectivityService.isConnected())) {
       throw NoInternetException(
           'No internet connection. Please check your network settings.');
     }
 
-    final fullUrl =
-        '${ApiConfig.getFullUrl(ApiConfig.deletePlazaEndpoint)}$plazaId';
-    log('[PLAZA] Deleting plaza at URL: $fullUrl', name: 'PlazaService');
-    log('[PLAZA] Plaza ID: $plazaId', name: 'PlazaService');
+    final fullUrl = '${ApiConfig.getFullUrl(PlazaApi.delete)}$plazaId';
+    final serverUrl = Uri.parse(fullUrl);
+
+    // Check server reachability
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      developer.log('[PLAZA] Server unreachable: ${serverUrl.host}',
+          name: 'PlazaService');
+      throw ServerConnectionException(
+          'Cannot reach the plaza server. The server may be down or unreachable.',
+          host: serverUrl.host);
+    }
+
+    developer.log(
+        '[PLAZA] Deleting plaza at URL: $fullUrl', name: 'PlazaService');
+    developer.log('[PLAZA] Plaza ID: $plazaId', name: 'PlazaService');
 
     try {
       final response = await _client
@@ -277,9 +363,10 @@ class PlazaService {
       )
           .timeout(const Duration(seconds: 10));
 
-      log('[PLAZA] Response Status Code: ${response.statusCode}',
+      developer.log('[PLAZA] Response Status Code: ${response.statusCode}',
           name: 'PlazaService');
-      log('[PLAZA] Response Body: ${response.body}', name: 'PlazaService');
+      developer.log(
+          '[PLAZA] Response Body: ${response.body}', name: 'PlazaService');
 
       if (response.statusCode != 200) {
         String? serverMessage;
@@ -295,12 +382,16 @@ class PlazaService {
           serverMessage: serverMessage,
         );
       }
-      log('[PLAZA] Plaza deleted successfully', name: 'PlazaService');
+      developer.log('[PLAZA] Plaza deleted successfully', name: 'PlazaService');
+    } on SocketException catch (e) {
+      developer.log('[PLAZA] Socket exception: $e', name: 'PlazaService');
+      throw ServerConnectionException(
+          'Failed to connect to the plaza server. The server may be temporarily unavailable.');
     } on TimeoutException {
       throw RequestTimeoutException(
           'The server is taking too long to respond. Please try again later.');
     } catch (e, stackTrace) {
-      log('[PLAZA] Exception in deletePlaza: $e',
+      developer.log('[PLAZA] Error in deletePlaza: $e',
           name: 'PlazaService', error: e, stackTrace: stackTrace);
       throw PlazaException('Error deleting plaza: $e');
     }
@@ -308,13 +399,25 @@ class PlazaService {
 
   /// Retrieves all plaza owners.
   Future<List<String>> getAllPlazaOwners() async {
+    // Check device connectivity
     if (!(await _connectivityService.isConnected())) {
       throw NoInternetException(
           'No internet connection. Please check your network settings.');
     }
 
-    final fullUrl = ApiConfig.getFullUrl(ApiConfig.getAllPlazaOwnersEndpoint);
-    log('[PLAZA] Fetching all plaza owners at URL: $fullUrl',
+    final fullUrl = ApiConfig.getFullUrl(PlazaApi.getAllOwners);
+    final serverUrl = Uri.parse(fullUrl);
+
+    // Check server reachability
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      developer.log('[PLAZA] Server unreachable: ${serverUrl.host}',
+          name: 'PlazaService');
+      throw ServerConnectionException(
+          'Cannot reach the plaza server. The server may be down or unreachable.',
+          host: serverUrl.host);
+    }
+
+    developer.log('[PLAZA] Fetching all plaza owners at URL: $fullUrl',
         name: 'PlazaService');
 
     try {
@@ -325,15 +428,17 @@ class PlazaService {
       )
           .timeout(const Duration(seconds: 10));
 
-      log('[PLAZA] Response Status Code: ${response.statusCode}',
+      developer.log('[PLAZA] Response Status Code: ${response.statusCode}',
           name: 'PlazaService');
-      log('[PLAZA] Response Body: ${response.body}', name: 'PlazaService');
+      developer.log(
+          '[PLAZA] Response Body: ${response.body}', name: 'PlazaService');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true && responseData['owners'] != null) {
           final owners = List<String>.from(responseData['owners']);
-          log('[PLAZA] Successfully retrieved ${owners.length} plaza owners',
+          developer.log(
+              '[PLAZA] Successfully retrieved ${owners.length} plaza owners',
               name: 'PlazaService');
           return owners;
         }
@@ -355,14 +460,17 @@ class PlazaService {
         statusCode: response.statusCode,
         serverMessage: serverMessage,
       );
+    } on SocketException catch (e) {
+      developer.log('[PLAZA] Socket exception: $e', name: 'PlazaService');
+      throw ServerConnectionException(
+          'Failed to connect to the plaza server. The server may be temporarily unavailable.');
     } on TimeoutException {
       throw RequestTimeoutException(
           'The server is taking too long to respond. Please try again later.');
     } catch (e, stackTrace) {
-      log('[PLAZA] Exception in getAllPlazaOwners: $e',
+      developer.log('[PLAZA] Error in getAllPlazaOwners: $e',
           name: 'PlazaService', error: e, stackTrace: stackTrace);
       throw PlazaException('Error fetching plaza owners: $e');
     }
   }
 }
-

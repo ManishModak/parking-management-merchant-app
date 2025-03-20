@@ -101,7 +101,7 @@ class _PlazaRegistrationView extends StatelessWidget {
           viewModel.clearErrors();
           Navigator.pop(context);
         },
-        darkBackground: true,
+        darkBackground: true, context: context,
       ),
       backgroundColor: AppColors.lightThemeBackground,
       body: Column(
@@ -169,7 +169,7 @@ class _PlazaRegistrationView extends StatelessWidget {
               ? (viewModel.isBankDetailsFirstTime
               ? "Save"
               : (viewModel.isBankEditable ? "Save" : "Edit"))
-              : viewModel.currentStep == 3 ? "Save" : "Next",
+              : viewModel.currentStep == 3 ? "Save" : "Next", context: context,
         ),
       ),
     );

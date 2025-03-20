@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../config/app_colors.dart';
-import '../../../config/app_strings.dart';
+import '../../../generated/l10n.dart';
 import '../../../models/plaza.dart';
 import '../../../utils/components/appbar.dart';
 import '../../../utils/components/form_field.dart';
@@ -69,7 +69,7 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen> {
       children: [
         CustomFormFields.searchFormField(
           controller: _searchController,
-          hintText: 'Search by Plaza ID, Vehicle, or Fare Type...',
+          hintText: 'Search by Plaza ID, Vehicle, or Fare Type...', context: context,
         ),
       ],
     );
@@ -278,6 +278,7 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = S.of(context);
     return Consumer<PlazaFareViewModel>(
       builder: (context, viewModel, child) {
         final filteredFares = _searchQuery.isEmpty
@@ -299,9 +300,9 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen> {
         return Scaffold(
           backgroundColor: AppColors.lightThemeBackground,
           appBar: CustomAppBar.appBarWithNavigation(
-            screenTitle: AppStrings.titleModifyViewFareDetails,
+            screenTitle: strings.titleModifyViewFareDetails,
             onPressed: () => Navigator.pop(context),
-            darkBackground: true,
+            darkBackground: true, context: context,
           ),
           body: Column(
             children: [
@@ -327,7 +328,7 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen> {
                           ),
                         );
                         if (updated == true) await _loadPlazaFaresData();
-                      },
+                      }, context: context,
                     );
                   },
                 ),

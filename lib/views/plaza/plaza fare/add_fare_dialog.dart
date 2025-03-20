@@ -50,7 +50,7 @@ class AddFareDialog extends StatelessWidget {
     return GestureDetector(
       onTap: () => _selectDate(context, controller, firstDate: firstDate),
       child: AbsorbPointer(
-        child: CustomFormFields.primaryFormField(
+        child: CustomFormFields.normalSizedTextFormField(context:context,
           label: label,
           controller: controller,
           errorText: errorText,
@@ -66,8 +66,9 @@ class AddFareDialog extends StatelessWidget {
     required String label,
     required TextEditingController controller,
     required String? errorText,
+    required BuildContext context,
   }) {
-    return CustomFormFields.primaryFormField(
+    return CustomFormFields.normalSizedTextFormField(context:context,
       label: label,
       controller: controller,
       errorText: errorText,
@@ -112,14 +113,14 @@ class AddFareDialog extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   // Plaza is already selected; show its name in a disabled field.
-                  CustomFormFields.primaryFormField(
+                  CustomFormFields.normalSizedTextFormField(context:context,
                     label: 'Plaza',
                     controller: viewModel.plazaController,
                     enabled: false, isPassword: false,
                   ),
                   const SizedBox(height: 16),
                   // Fare type dropdown
-                  CustomDropDown.normalDropDown(
+                  CustomDropDown.normalDropDown(context:context,
                     label: 'Select Fare Type',
                     value: viewModel.selectedFareType,
                     items: viewModel.fareTypes,
@@ -129,7 +130,7 @@ class AddFareDialog extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   // Vehicle type dropdown
-                  CustomDropDown.normalDropDown(
+                  CustomDropDown.normalDropDown(context:context,
                     label: 'Select Vehicle Type',
                     value: viewModel.selectedVehicleType,
                     items: viewModel.vehicleTypes,
@@ -140,7 +141,7 @@ class AddFareDialog extends StatelessWidget {
                   const SizedBox(height: 16),
                   // Conditionally display fare amount input fields
                   if (viewModel.isDailyFareVisible) ...[
-                    _buildFareInputField(
+                    _buildFareInputField(context:context,
                       label: 'Daily Fare',
                       controller: viewModel.dailyFareController,
                       errorText: viewModel.validationErrors['dailyFare'],
@@ -149,7 +150,7 @@ class AddFareDialog extends StatelessWidget {
                   ],
 
                   if (viewModel.isHourlyFareVisible) ...[
-                    _buildFareInputField(
+                    _buildFareInputField(context:context,
                       label: 'Hourly Fare',
                       controller: viewModel.hourlyFareController,
                       errorText: viewModel.validationErrors['hourlyFare'],
@@ -159,19 +160,19 @@ class AddFareDialog extends StatelessWidget {
 
 
                   if (viewModel.isHourWiseCustomVisible) ...[
-                    _buildFareInputField(
+                    _buildFareInputField(context:context,
                       label: 'Base Hours',
                       controller: viewModel.baseHoursController,
                       errorText: viewModel.validationErrors['baseHours'],
                     ),
                     const SizedBox(height: 16),
-                    _buildFareInputField(
+                    _buildFareInputField(context:context,
                       label: 'Base Hourly Fare',
                       controller: viewModel.baseHourlyFareController,
                       errorText: viewModel.validationErrors['baseHourlyFare'],
                     ),
                     const SizedBox(height: 16),
-                    _buildFareInputField(
+                    _buildFareInputField(context:context,
                       label: 'Discount for Extended Hours',
                       controller: viewModel.discountController,
                       errorText: viewModel.validationErrors['discount'],
@@ -181,7 +182,7 @@ class AddFareDialog extends StatelessWidget {
 
 
                   if (viewModel.isMonthlyFareVisible) ...[
-                    _buildFareInputField(
+                    _buildFareInputField(context:context,
                       label: 'Monthly Fare',
                       controller: viewModel.monthlyFareController,
                       errorText: viewModel.validationErrors['monthlyFare'],

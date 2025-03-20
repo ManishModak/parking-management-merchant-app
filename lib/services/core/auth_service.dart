@@ -1,157 +1,226 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:merchant_app/config/api_config.dart';
+import '../../utils/exceptions.dart';
 import '../storage/secure_storage_service.dart';
+import '../network/connectivity_service.dart';
+import 'dart:developer' as developer;
 
 class AuthService {
   final SecureStorageService _storage = SecureStorageService();
+  final http.Client _client;
+  final ConnectivityService _connectivityService;
+
+  AuthService({
+    http.Client? client,
+    ConnectivityService? connectivityService,
+  })  : _client = client ?? http.Client(),
+        _connectivityService = connectivityService ?? ConnectivityService();
 
   Future<bool> login(String emailOrMobile, String password) async {
-    final String url = ApiConfig.getFullUrl(ApiConfig.loginEndpoint);
-    print('[LOGIN] Attempting login at URL: $url');
-    print('[LOGIN] Attempting with email/mobile: $emailOrMobile');
-
     try {
-      print('[LOGIN] Sending request...');
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'emailOrMobile': emailOrMobile.toLowerCase(),
-          'password': password
-        }),
-      );
+      // First check device connectivity
+      if (!(await _connectivityService.isConnected())) {
+        developer.log('[AUTH] No internet connection detected before login attempt', name: 'AuthService');
+        throw NoInternetException('No internet connection available. Please check your network settings.');
+      }
 
-      print('[LOGIN] Response status code: ${response.statusCode}');
-      print('[LOGIN] Response body: ${response.body}');
+      // Then try to reach the server
+      final serverUrl = Uri.parse(ApiConfig.getFullUrl(AuthApi.login));
+      if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+        developer.log('[AUTH] Server unreachable: ${serverUrl.host}', name: 'AuthService');
+        throw ServerConnectionException('Cannot reach the authentication server. The server may be down or unreachable.', host: serverUrl.host);
+      }
 
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        print('[LOGIN] Successfully decoded response data');
+      final String url = ApiConfig.getFullUrl(AuthApi.login);
+      final body = jsonEncode({
+        'emailOrMobile': emailOrMobile.toLowerCase(),
+        'password': password,
+      });
+      developer.log('[AUTH] Login attempt at: $url', name: 'AuthService');
+      developer.log('[AUTH] Request body: $body', name: 'AuthService');
 
-        if (responseData['token'] == null || responseData['user']?['id'] == null) {
-          print('[LOGIN] ERROR: Missing token or user ID in response');
-          throw Exception('Invalid response format');
+      try {
+        final response = await _client.post(
+          Uri.parse(url),
+          headers: {'Content-Type': 'application/json'},
+          body: body,
+        ).timeout(const Duration(seconds: 10));
+
+        developer.log('[AUTH] Response: ${response.statusCode} - ${response.body}', name: 'AuthService');
+
+        if (response.statusCode == 200) {
+          final responseData = json.decode(response.body);
+          if (responseData['token'] != null && responseData['user']?['id'] != null) {
+            await _storage.storeAuthDetails(
+              responseData['token'],
+              responseData['user']['id'].toString(),
+            );
+            developer.log('[AUTH] Login successful, token stored', name: 'AuthService');
+            return true;
+          }
+          throw ServiceException('Invalid response: Missing token or user ID');
         }
 
-        print('[LOGIN] Storing security details...');
-        await _storage.storeAuthDetails(
-          responseData['token'],
-          responseData['user']['id'].toString(),
+        final responseData = json.decode(response.body);
+        String serverMessage = responseData['msg'] ?? responseData['message'] ?? 'Unknown error';
+        switch (response.statusCode) {
+          case 400:
+            serverMessage = 'Invalid request data';
+            break;
+          case 401:
+            serverMessage = 'Invalid credentials';
+            break;
+          case 403:
+            serverMessage = 'Access denied';
+            break;
+          case 404:
+            serverMessage = 'User not found';
+            break;
+          case 500:
+            serverMessage = 'Server error';
+            break;
+          case 502:
+            serverMessage = 'Failed to reach user service';
+            break;
+        }
+        throw HttpException(
+          'Login failed',
+          statusCode: response.statusCode,
+          serverMessage: serverMessage,
         );
-        print('[LOGIN] Successfully stored security details');
-        return true;
+      } on SocketException catch (e) {
+        developer.log('[AUTH] Socket exception: $e', name: 'AuthService');
+        throw ServerConnectionException('Failed to connect to the authentication server. The server may be temporarily unavailable.');
+      } on TimeoutException catch (e) {
+        developer.log('[AUTH] Timeout exception: $e', name: 'AuthService');
+        throw RequestTimeoutException('Request timed out. The server is taking too long to respond.');
+      } catch (e, stackTrace) {
+        developer.log('[AUTH] Error: $e', name: 'AuthService', stackTrace: stackTrace);
+        rethrow;
       }
-
-      final responseData = json.decode(response.body);
-      print('[LOGIN] ERROR: Failed with message: ${responseData['msg']}');
-      throw Exception(responseData['msg'] ?? 'Login failed');
     } catch (e) {
-      print('[LOGIN] ERROR: Exception occurred: $e');
-      if (e is FormatException) {
-        throw Exception('Invalid response format');
-      }
+      // Add extra logging here to capture any errors in the outer try-catch
+      developer.log('[AUTH] Outer catch block: $e', name: 'AuthService');
       rethrow;
     }
   }
 
-  Future<Map<String, dynamic>> register({
-    required String username,
-    required String email,
+  Future<Map<String, dynamic>> createPlazaOwner({
+    required String userName,
+    required String name,
     required String mobileNumber,
+    required String email,
     required String password,
+    required String address,
     required String city,
     required String state,
-    required String address,
-    required bool isAppUserRegister,
-    String? role,
-    String? entity,
-    String? subEntity,
-    String? entityId
+    required String pincode,
   }) async {
-    final String url = ApiConfig.getFullUrl(ApiConfig.registerEndpoint);
-    print('[REGISTER] Starting registration at URL: $url');
+    // Check device connectivity
+    if (!(await _connectivityService.isConnected())) {
+      throw NoInternetException('No internet connection available. Please check your network settings.');
+    }
 
-    final Map<String, dynamic> userData = {
-      'username': username,
-      'email': email,
+    // Then try to reach the server
+    final serverUrl = Uri.parse(ApiConfig.getFullUrl(AuthApi.createOwner));
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      developer.log('[AUTH] Server unreachable: ${serverUrl.host}', name: 'AuthService');
+      throw ServerConnectionException('Cannot reach the registration server. The server may be down or unreachable.', host: serverUrl.host);
+    }
+
+    final String url = ApiConfig.getFullUrl(AuthApi.createOwner);
+    final body = jsonEncode({
+      'role': 'Plaza Owner',
+      'userName': userName,
+      'name': name,
       'mobileNumber': mobileNumber,
+      'email': email,
       'password': password,
       'address': address,
-      'state': state,
       'city': city,
-      'role': role,
-      'entityName': entity,
-      if (!isAppUserRegister && subEntity != null) 'subEntity': [subEntity],
-      if (!isAppUserRegister && entityId != null) 'entityId': entityId,
-    };
-
-    print('[REGISTER] Request payload: ${json.encode(userData)}');
+      'state': state,
+      'pincode': pincode,
+    });
+    developer.log('[AUTH] Registering Plaza Owner at: $url', name: 'AuthService');
+    developer.log('[AUTH] Request body: $body', name: 'AuthService');
 
     try {
-      print('[REGISTER] Sending request...');
-      final response = await http.post(
+      final response = await _client.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(userData),
-      );
+        body: body,
+      ).timeout(const Duration(seconds: 10));
 
-      print('[REGISTER] Response status code: ${response.statusCode}');
-      print('[REGISTER] Response body: ${response.body}');
-
-      final responseData = json.decode(response.body);
+      developer.log('[AUTH] Response: ${response.statusCode} - ${response.body}', name: 'AuthService');
 
       if (response.statusCode == 201) {
-        print('[REGISTER] Successfully created user');
-
-        if (isAppUserRegister) {
-          if (responseData['token'] == null || responseData['user']?['id'] == null) {
-            print('[REGISTER] ERROR: Missing token or user ID in response');
-            throw Exception('Invalid response format');
-          }
-
-          print('[REGISTER] Storing security details...');
-          await _storage.storeAuthDetails(
-            responseData['token'],
-            responseData['user']['id'].toString(),
-          );
-          print('[REGISTER] Successfully stored security details');
+        final responseData = json.decode(response.body);
+        if (responseData['data'] != null) {
+          developer.log('[AUTH] Registration successful', name: 'AuthService');
+          return responseData['data'];
         }
-        return responseData['user'];
+        throw ServiceException('Invalid response: Missing user data');
       }
 
-      print('[REGISTER] ERROR: Failed with message: ${responseData['msg']}');
-      throw Exception(responseData['msg'] ?? 'Registration failed');
-    } catch (e) {
-      print('[REGISTER] ERROR: Exception occurred: $e');
-      if (e is FormatException) {
-        throw Exception('Invalid response format');
+      final responseData = json.decode(response.body);
+      String serverMessage = responseData['message'] ?? responseData['msg'] ?? 'Unknown error';
+      switch (response.statusCode) {
+        case 400:
+          serverMessage = 'Invalid registration data';
+          break;
+        case 409:
+          serverMessage = 'User already exists';
+          break;
+        case 500:
+          if (serverMessage.contains('userName must be unique')) {
+            serverMessage = 'Username must be unique';
+          } else {
+            serverMessage = 'Server error';
+          }
+          break;
+        case 502:
+          serverMessage = 'Failed to reach user service';
+          break;
       }
+      throw HttpException(
+        'Registration failed',
+        statusCode: response.statusCode,
+        serverMessage: serverMessage,
+      );
+    } on SocketException {
+      throw ServerConnectionException('Failed to connect to the registration server. The server may be temporarily unavailable.');
+    } on TimeoutException {
+      throw RequestTimeoutException('Request timed out. The server is taking too long to respond.');
+    } catch (e, stackTrace) {
+      developer.log('[AUTH] Error: $e', name: 'AuthService', stackTrace: stackTrace);
       rethrow;
     }
   }
 
   Future<void> logout() async {
-    print('[LOGOUT] Clearing stored data...');
+    developer.log('[AUTH] Logging out', name: 'AuthService');
     await _storage.clearAll();
-    print('[LOGOUT] Successfully cleared all stored data');
+    developer.log('[AUTH] All stored data cleared', name: 'AuthService');
   }
 
   Future<bool> isAuthenticated() async {
     final result = await _storage.isAuthenticated();
-    print('[AUTH] Authentication status: ${result ? 'authenticated' : 'not authenticated'}');
+    developer.log('[AUTH] Authentication check: $result', name: 'AuthService');
     return result;
   }
 
   Future<String?> getAuthToken() async {
     final token = await _storage.getAuthToken();
-    print('[AUTH] Token status: ${token != null ? 'retrieved' : 'not found'}');
+    developer.log('[AUTH] Auth token retrieved: ${token != null ? 'exists' : 'null'}', name: 'AuthService');
     return token;
   }
 
   Future<String?> getUserId() async {
     final userId = await _storage.getUserId();
-    print('[AUTH] User ID status: ${userId != null ? 'retrieved' : 'not found'}');
+    developer.log('[AUTH] User ID retrieved: ${userId != null ? 'exists' : 'null'}', name: 'AuthService');
     return userId;
   }
 }

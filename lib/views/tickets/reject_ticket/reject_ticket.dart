@@ -1,13 +1,14 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../../config/app_colors.dart';
-import '../../../../config/app_strings.dart';
 import '../../../../utils/components/appbar.dart';
 import '../../../../utils/components/form_field.dart';
 import '../../../../utils/components/pagination_controls.dart';
+import '../../../generated/l10n.dart';
 import '../../../utils/exceptions.dart';
 import 'modify_view_reject_ticket.dart';
 import '../../../viewmodels/ticket/reject_ticket_viewmodel.dart';
@@ -19,7 +20,8 @@ class RejectTicketScreen extends StatefulWidget {
   State<RejectTicketScreen> createState() => _RejectTicketScreenState();
 }
 
-class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware {
+class _RejectTicketScreenState extends State<RejectTicketScreen>
+    with RouteAware {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   late RejectTicketViewModel _viewModel;
@@ -28,6 +30,7 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
   int _currentPage = 1;
   static const int _itemsPerPage = 10;
   bool _isLoading = false;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -35,9 +38,12 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
     _viewModel = RejectTicketViewModel();
     _loadInitialData();
     _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text.toLowerCase();
-        _currentPage = 1;
+      if (_debounce?.isActive ?? false) _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 300), () {
+        setState(() {
+          _searchQuery = _searchController.text.toLowerCase();
+          _currentPage = 1;
+        });
       });
     });
   }
@@ -45,7 +51,6 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
   Future<void> _loadInitialData() async {
     setState(() => _isLoading = true);
     await _viewModel.fetchOpenTickets();
-    await Future.delayed(const Duration(seconds: 2));
     setState(() => _isLoading = false);
   }
 
@@ -58,6 +63,7 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _routeObserver.unsubscribe(this);
     _scrollController.dispose();
     _searchController.dispose();
@@ -71,22 +77,40 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
   Future<void> _refreshData() async {
     setState(() => _isLoading = true);
     await _viewModel.fetchOpenTickets();
-    await Future.delayed(const Duration(seconds: 2));
     setState(() => _isLoading = false);
   }
 
-  List<Map<String, dynamic>> _getFilteredTickets(List<Map<String, dynamic>> tickets) {
+  List<Map<String, dynamic>> _getFilteredTickets(
+      List<Map<String, dynamic>> tickets) {
     if (_searchQuery.isEmpty) return tickets;
     return tickets.where((ticket) {
-      return (ticket['ticketID']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          (ticket['plazaID']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          (ticket['vehicleNumber']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          (ticket['vehicleType']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          (ticket['plazaName']?.toString().toLowerCase().contains(_searchQuery) ?? false);
+      return (ticket['ticketID']
+          ?.toString()
+          .toLowerCase()
+          .contains(_searchQuery) ??
+          false) ||
+          (ticket['plazaID']?.toString().toLowerCase().contains(_searchQuery) ??
+              false) ||
+          (ticket['vehicleNumber']
+              ?.toString()
+              .toLowerCase()
+              .contains(_searchQuery) ??
+              false) ||
+          (ticket['vehicleType']
+              ?.toString()
+              .toLowerCase()
+              .contains(_searchQuery) ??
+              false) ||
+          (ticket['plazaName']
+              ?.toString()
+              .toLowerCase()
+              .contains(_searchQuery) ??
+              false);
     }).toList();
   }
 
-  List<Map<String, dynamic>> _getPaginatedTickets(List<Map<String, dynamic>> filteredTickets) {
+  List<Map<String, dynamic>> _getPaginatedTickets(
+      List<Map<String, dynamic>> filteredTickets) {
     final startIndex = (_currentPage - 1) * _itemsPerPage;
     final endIndex = startIndex + _itemsPerPage;
     return endIndex > filteredTickets.length
@@ -96,12 +120,15 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
 
   void _updatePage(int newPage) {
     final filteredTickets = _getFilteredTickets(_viewModel.tickets);
-    final totalPages = (filteredTickets.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
+    final totalPages = (filteredTickets.length / _itemsPerPage)
+        .ceil()
+        .clamp(1, double.infinity)
+        .toInt();
     if (newPage < 1 || newPage > totalPages) return;
     setState(() => _currentPage = newPage);
   }
 
-  Widget _buildSearchField() {
+  Widget _buildSearchField(S strings) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
       child: Column(
@@ -109,11 +136,11 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
         children: [
           CustomFormFields.searchFormField(
             controller: _searchController,
-            hintText: 'Search by Ticket ID, Plaza, Vehicle Number...',
+            hintText: strings.searchRejectTicketHint, context: context,
           ),
           const SizedBox(height: 8),
           Text(
-            'Last updated: ${DateTime.now().toString().substring(0, 16)}. Swipe down to refresh.',
+            '${strings.lastUpdated}: ${DateTime.now().toString().substring(0, 16)}. ${strings.swipeToRefresh}',
             style: const TextStyle(fontSize: 12, color: Colors.grey),
             textAlign: TextAlign.center,
           ),
@@ -122,26 +149,32 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(S strings) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.confirmation_number_outlined, size: 64, color: Colors.grey.shade400),
+          Icon(Icons.confirmation_number_outlined,
+              size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
-            'No rejectable tickets', // Updated for context-specific consistency
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Colors.grey.shade600),
+            strings.noRejectableTicketsLabel,
+            style:
+            TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
-            _searchQuery.isEmpty ? 'There are no tickets to reject at the moment' : 'No tickets match your search criteria',
+            _searchQuery.isEmpty
+                ? strings.noTicketsToRejectMessage
+                : strings.noTicketsMatchSearchMessage,
             style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
             textAlign: TextAlign.center,
           ),
           if (_searchQuery.isNotEmpty) ...[
             const SizedBox(height: 16),
-            TextButton(onPressed: () => _searchController.clear(), child: const Text('Clear Search')),
+            TextButton(
+                onPressed: () => _searchController.clear(),
+                child: Text(strings.clearSearchLabel)),
           ],
         ],
       ),
@@ -175,8 +208,12 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
                         children: [
                           Stack(
                             children: [
-                              Container(width: 150, height: 16, color: Colors.white),
-                              Positioned(right: 0, child: Container(width: 60, height: 24, color: Colors.white)),
+                              Container(
+                                  width: 150, height: 16, color: Colors.white),
+                              Positioned(
+                                  right: 0,
+                                  child: Container(
+                                      width: 60, height: 24, color: Colors.white)),
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -186,9 +223,11 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(width: 80, height: 12, color: Colors.white),
+                                    Container(
+                                        width: 80, height: 12, color: Colors.white),
                                     const SizedBox(height: 4),
-                                    Container(width: 100, height: 14, color: Colors.white),
+                                    Container(
+                                        width: 100, height: 14, color: Colors.white),
                                   ],
                                 ),
                               ),
@@ -196,9 +235,11 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(width: 80, height: 12, color: Colors.white),
+                                    Container(
+                                        width: 80, height: 12, color: Colors.white),
                                     const SizedBox(height: 4),
-                                    Container(width: 100, height: 14, color: Colors.white),
+                                    Container(
+                                        width: 100, height: 14, color: Colors.white),
                                   ],
                                 ),
                               ),
@@ -211,9 +252,11 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(width: 80, height: 12, color: Colors.white),
+                                    Container(
+                                        width: 80, height: 12, color: Colors.white),
                                     const SizedBox(height: 4),
-                                    Container(width: 120, height: 14, color: Colors.white),
+                                    Container(
+                                        width: 120, height: 14, color: Colors.white),
                                   ],
                                 ),
                               ),
@@ -221,9 +264,11 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(width: 80, height: 12, color: Colors.white),
+                                    Container(
+                                        width: 80, height: 12, color: Colors.white),
                                     const SizedBox(height: 4),
-                                    Container(width: 140, height: 13, color: Colors.white),
+                                    Container(
+                                        width: 140, height: 13, color: Colors.white),
                                   ],
                                 ),
                               ),
@@ -243,60 +288,55 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
     );
   }
 
-  Widget _buildErrorState() {
-    String errorTitle = 'Unable to Load Tickets';
-    String errorMessage = 'Something went wrong. Please try again.';
-    String? errorDetails;
+  Widget _buildErrorState(S strings) {
+    String errorTitle = strings.errorUnableToLoadTickets;
+    String errorMessage = strings.errorGeneric;
 
     final error = _viewModel.error;
     if (error != null) {
-      developer.log('Error occurred: $error'); // Detailed logging for debugging
+      developer.log('Error occurred: $error');
       if (error is NoInternetException) {
-        errorTitle = 'No Internet Connection';
-        errorMessage = 'Please check your internet connection and try again.';
+        errorTitle = strings.errorNoInternet;
+        errorMessage = strings.errorNoInternetMessage;
       } else if (error is RequestTimeoutException) {
-        errorTitle = 'Request Timed Out';
-        errorMessage = 'The server is taking too long to respond. Please try again later.';
+        errorTitle = strings.errorRequestTimeout;
+        errorMessage = strings.errorRequestTimeoutMessage;
       } else if (error is HttpException) {
-        errorTitle = 'Server Error';
-        errorMessage = 'We couldn’t reach the server. Please try again.';
+        errorTitle = strings.errorServerError;
+        errorMessage = strings.errorServerErrorMessage;
         switch (error.statusCode) {
           case 400:
-            errorTitle = 'Invalid Request';
-            errorMessage = 'The request was incorrect. Please try again or contact support.';
+            errorTitle = strings.errorInvalidRequest;
+            errorMessage = strings.errorInvalidRequestMessage;
             break;
           case 401:
-            errorTitle = 'Unauthorized';
-            errorMessage = 'Please log in again to continue.';
+            errorTitle = strings.errorUnauthorized;
+            errorMessage = strings.errorUnauthorizedMessage;
             break;
           case 403:
-            errorTitle = 'Access Denied';
-            errorMessage = 'You don’t have permission to view this. Contact support if this is an error.';
+            errorTitle = strings.errorAccessDenied;
+            errorMessage = strings.errorAccessDeniedMessage;
             break;
           case 404:
-            errorTitle = 'Not Found';
-            errorMessage = 'No rejectable tickets were found. Please try again.';
+            errorTitle = strings.errorNotFound;
+            errorMessage = strings.errorNotFoundMessageReject;
             break;
           case 500:
-            errorTitle = 'Server Issue';
-            errorMessage = 'There’s a problem on our end. Please try again later.';
+            errorTitle = strings.errorServerIssue;
+            errorMessage = strings.errorServerIssueMessage;
             break;
           case 502:
-            errorTitle = 'Service Unavailable';
-            errorMessage = 'The service is temporarily down. Please try again.';
+            errorTitle = strings.errorServiceUnavailable;
+            errorMessage = strings.errorServiceUnavailableMessage;
             break;
           case 503:
-            errorTitle = 'Service Overloaded';
-            errorMessage = 'The server is busy. Please try again in a moment.';
-            break;
-          default:
-            errorTitle = 'Server Error';
-            errorMessage = 'An unexpected server issue occurred. Please try again.';
+            errorTitle = strings.errorServiceOverloaded;
+            errorMessage = strings.errorServiceOverloadedMessage;
             break;
         }
       } else if (error is ServiceException) {
-        errorTitle = 'Unexpected Error';
-        errorMessage = 'An unexpected issue occurred. Please try again.';
+        errorTitle = strings.errorUnexpected;
+        errorMessage = strings.errorUnexpectedMessage;
       }
     }
 
@@ -323,16 +363,18 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: _refreshData,
-            child: const Text('Retry'),
+            child: Text(strings.buttonRetry),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTicketCard(Map<String, dynamic> ticket) {
-    DateTime entryTime = DateTime.parse(ticket['entryTime']);
-    String formattedEntryTime = DateFormat('dd MMM yyyy, hh:mm a').format(entryTime);
+  Widget _buildTicketCard(Map<String, dynamic> ticket, S strings) {
+    DateTime entryTime =
+    DateTime.parse(ticket['entryTime'] ?? DateTime.now().toString());
+    String formattedEntryTime =
+    DateFormat('dd MMM yyyy, hh:mm a').format(entryTime);
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -342,14 +384,13 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
         borderRadius: BorderRadius.circular(15),
         onTap: () {
           developer.log('Ticket card tapped: ${ticket['ticketID']}');
-          final detailViewModel = RejectTicketViewModel();
-          detailViewModel.initializeTicketData(ticket);
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ChangeNotifierProvider<RejectTicketViewModel>.value(
-                value: detailViewModel,
-                child: const ModifyViewRejectTicketScreen(),
+              builder: (context) => ChangeNotifierProvider<RejectTicketViewModel>(
+                create: (_) => RejectTicketViewModel(),
+                child:
+                ModifyViewRejectTicketScreen(ticketId: ticket['ticketID'].toString()),
               ),
             ),
           ).then((_) => _refreshData());
@@ -371,8 +412,14 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Ticket Id:', style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
-                              Text(ticket['ticketRefID'].toString(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              Text(strings.ticketIdLabel,
+                                  style:
+                                  TextStyle(fontSize: 16, color: Colors.black)),
+                              Text(
+                                  ticket['ticketRefID']?.toString() ??
+                                      strings.naLabel,
+                                  style: const TextStyle(
+                                      fontSize: 16, fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
@@ -380,14 +427,19 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
                           right: 0,
                           child: Container(
                             width: 60,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: Colors.green.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              ticket['status'].toString(),
-                              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13),
+                              ticket['status']?.toString() ??
+                                  strings.statusPending,
+                              style: const TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13),
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -401,8 +453,14 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Vehicle Number', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                              Text(ticket['vehicleNumber'].toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                              Text(strings.vehicleNumberLabel,
+                                  style:
+                                  TextStyle(color: Colors.black, fontSize: 12)),
+                              Text(
+                                  ticket['vehicleNumber']?.toString() ??
+                                      strings.naLabel,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600, fontSize: 14)),
                             ],
                           ),
                         ),
@@ -410,8 +468,14 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Vehicle Type', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                              Text(ticket['vehicleType'].toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                              Text(strings.vehicleTypeLabel,
+                                  style:
+                                  TextStyle(color: Colors.black, fontSize: 12)),
+                              Text(
+                                  ticket['vehicleType']?.toString() ??
+                                      strings.naLabel,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600, fontSize: 14)),
                             ],
                           ),
                         ),
@@ -424,8 +488,14 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Plaza Name', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                              Text(ticket['plazaName'].toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                              Text(strings.plazaNameLabel,
+                                  style:
+                                  TextStyle(color: Colors.black, fontSize: 12)),
+                              Text(
+                                  ticket['plazaName']?.toString() ??
+                                      strings.naLabel,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600, fontSize: 14)),
                             ],
                           ),
                         ),
@@ -433,8 +503,12 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Entry Time', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                              Text(formattedEntryTime, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                              Text(strings.entryTimeLabel,
+                                  style:
+                                  TextStyle(color: Colors.black, fontSize: 12)),
+                              Text(formattedEntryTime,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600, fontSize: 13)),
                             ],
                           ),
                         ),
@@ -457,20 +531,24 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
 
   @override
   Widget build(BuildContext context) {
+    final strings = S.of(context);
     final filteredTickets = _getFilteredTickets(_viewModel.tickets);
-    final totalPages = (filteredTickets.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
+    final totalPages = (filteredTickets.length / _itemsPerPage)
+        .ceil()
+        .clamp(1, double.infinity)
+        .toInt();
     final paginatedTickets = _getPaginatedTickets(filteredTickets);
 
     return Scaffold(
       backgroundColor: AppColors.lightThemeBackground,
       appBar: CustomAppBar.appBarWithNavigation(
-        screenTitle: AppStrings.titleRejectTicket,
+        screenTitle: strings.titleRejectTicket,
         onPressed: () => Navigator.pop(context),
-        darkBackground: true,
+        darkBackground: true, context: context,
       ),
       body: Column(
         children: [
-          _buildSearchField(),
+          _buildSearchField(strings),
           Expanded(
             child: RefreshIndicator(
               onRefresh: _refreshData,
@@ -483,15 +561,16 @@ class _RejectTicketScreenState extends State<RejectTicketScreen> with RouteAware
                       if (_viewModel.error != null)
                         SizedBox(
                           height: MediaQuery.of(context).size.height * 0.6,
-                          child: _buildErrorState(),
+                          child: _buildErrorState(strings),
                         )
                       else if (filteredTickets.isEmpty && !_isLoading)
                         SizedBox(
                           height: MediaQuery.of(context).size.height * 0.6,
-                          child: _buildEmptyState(),
+                          child: _buildEmptyState(strings),
                         )
                       else if (!_isLoading)
-                          ...paginatedTickets.map((ticket) => _buildTicketCard(ticket)),
+                          ...paginatedTickets
+                              .map((ticket) => _buildTicketCard(ticket, strings)),
                     ],
                   ),
                   if (_isLoading) _buildShimmerList(),

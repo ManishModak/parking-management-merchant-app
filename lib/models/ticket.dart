@@ -25,6 +25,11 @@ class Ticket {
   final String? modifiedBy;
   final DateTime? modificationTime;
   final String? remarks;
+  final String? fareType;
+  final double? fareAmount;
+  final double? totalCharges;
+  final int? parkingDuration;
+  final int? disputeRaised;
 
   Ticket({
     this.ticketId,
@@ -46,9 +51,15 @@ class Ticket {
     this.modifiedBy,
     this.modificationTime,
     this.remarks,
+    this.fareType,
+    this.fareAmount,
+    this.totalCharges,
+    this.parkingDuration,
+    this.disputeRaised = 1,
   })  : createdBy = createdBy ?? 'System',
         createdTime = createdTime ?? DateTime.now();
 
+// Update fromJson
   factory Ticket.fromJson(Map<String, dynamic> json) {
     return Ticket(
       ticketId: json['ticket_id'] as String?,
@@ -76,21 +87,19 @@ class Ticket {
           ? DateTime.tryParse(json['modification_time'] as String)
           : null,
       remarks: json['remarks'] as String?,
+      fareType: json['fare_type'] as String?,
+      fareAmount: json['fare_amount'] != null
+          ? double.tryParse(json['fare_amount'].toString())
+          : null,
+      totalCharges: json['total_transaction'] != null
+          ? double.tryParse(json['total_transaction'].toString())
+          : null,
+      parkingDuration: json['duration'] as int?,
+      disputeRaised: json['dispute_raised'] as int? ?? 1,
     );
   }
 
-  static Status _parseStatus(String? statusStr) {
-    if (statusStr == null) return Status.pending;
-    try {
-      return Status.values.firstWhere(
-            (e) => e.toString().split('.').last.toLowerCase() == statusStr.toLowerCase(),
-        orElse: () => Status.pending,
-      );
-    } catch (e) {
-      return Status.pending;
-    }
-  }
-
+// Update copyWith
   Ticket copyWith({
     String? ticketId,
     String? ticketRefId,
@@ -111,6 +120,11 @@ class Ticket {
     String? modifiedBy,
     DateTime? modificationTime,
     String? remarks,
+    String? fareType,
+    double? fareAmount,
+    double? totalCharges,
+    int? parkingDuration,
+    int? disputeRaised,
   }) {
     return Ticket(
       ticketId: ticketId ?? this.ticketId,
@@ -132,10 +146,15 @@ class Ticket {
       modifiedBy: modifiedBy ?? this.modifiedBy,
       modificationTime: modificationTime ?? this.modificationTime,
       remarks: remarks ?? this.remarks,
+      fareType: fareType ?? this.fareType,
+      fareAmount: fareAmount ?? this.fareAmount,
+      totalCharges: totalCharges ?? this.totalCharges,
+      parkingDuration: parkingDuration ?? this.parkingDuration,
+      disputeRaised: disputeRaised ?? this.disputeRaised,
     );
   }
 
-  // Base toJson method for full ticket data
+// Update toJson
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> json = {
       'ticket_id': ticketId,
@@ -152,6 +171,10 @@ class Ticket {
       'entry_time': entryTime,
       'status': status.toString().split('.').last,
       'remarks': remarks,
+      'fare_type': fareType,
+      'fare_amount': fareAmount,
+      'total_transaction': totalCharges,
+      'duration': parkingDuration,
     };
 
     if (fareId != null) {
@@ -173,7 +196,7 @@ class Ticket {
     return json;
   }
 
-  // Specific method for create ticket request
+// Update toCreateRequest
   Map<String, dynamic> toCreateRequest() {
     return {
       'plaza_id': plazaId,
@@ -190,7 +213,7 @@ class Ticket {
     };
   }
 
-  // Specific method for modify ticket request
+// Update toModifyRequest
   Map<String, dynamic> toModifyRequest() {
     return {
       'plaza_id': plazaId,
@@ -204,12 +227,26 @@ class Ticket {
     };
   }
 
+// Update toString
   @override
   String toString() {
     return 'Ticket{ticketId: $ticketId, ticketRefId: $ticketRefId, plazaId: $plazaId, fareId: $fareId, '
         'entryLaneId: $entryLaneId, entryLaneDirection: $entryLaneDirection, '
         'floorId: $floorId, slotId: $slotId, vehicleNumber: $vehicleNumber, '
         'vehicleType: $vehicleType, status: $status, capturedImages: $capturedImages, '
-        'remarks: $remarks}';
+        'fareType: $fareType, fareAmount: $fareAmount, totalCharges: $totalCharges, '
+        'parkingDuration: $parkingDuration, disputeRaised: $disputeRaised, remarks: $remarks}';
+  }
+
+  static Status _parseStatus(String? statusStr) {
+    if (statusStr == null) return Status.pending;
+    try {
+      return Status.values.firstWhere(
+            (e) => e.toString().split('.').last.toLowerCase() == statusStr.toLowerCase(),
+        orElse: () => Status.pending,
+      );
+    } catch (e) {
+      return Status.pending;
+    }
   }
 }

@@ -74,7 +74,7 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> {
       appBar: CustomAppBar.appBarWithNavigation(
         screenTitle: "Plaza Info",
         onPressed: () => Navigator.pop(context),
-        darkBackground: true,
+        darkBackground: true, context: context,
       ),
       body: Consumer<PlazaViewModel>(
         builder: (context, viewModel, _) {
@@ -355,21 +355,21 @@ class PlazaMenuList extends StatelessWidget {
           onTap: () => Navigator.pushNamed(
             context,
             AppRoutes.basicDetailsModification,
-          ),
+          ), context: context,
         ),
         CustomCards.menuCard(
           menu: "Lane Details",
           onTap: () => Navigator.pushNamed(
             context,
             AppRoutes.laneDetailsModification,
-          ),
+          ), context: context,
         ),
         CustomCards.menuCard(
           menu: "Bank Details",
           onTap: () => Navigator.pushNamed(
             context,
             AppRoutes.bankDetailsModification,
-          ),
+          ), context: context,
         ),
         CustomCards.menuCard(
           menu: "Plaza Images",
@@ -377,7 +377,7 @@ class PlazaMenuList extends StatelessWidget {
             context,
             AppRoutes.plazaImagesModification,
             arguments: plazaId,
-          ),
+          ), context: context,
         ),
       ],
     );

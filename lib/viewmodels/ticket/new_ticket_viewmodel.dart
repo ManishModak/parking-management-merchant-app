@@ -107,13 +107,13 @@ class NewTicketViewmodel extends ChangeNotifier {
       log("Validation error: $laneDirectionError");
     }
 
-    if (floorIdController.text.isEmpty || floorIdController.text.length > 20) {
+    if (floorIdController.text.length > 20) {
       floorIdError = 'Floor ID must be between 1 and 20 characters';
       isValid = false;
       log("Validation error: $floorIdError");
     }
 
-    if (slotIdController.text.isEmpty || slotIdController.text.length > 20) {
+    if (slotIdController.text.length > 20) {
       slotIdError = 'Slot ID must be between 1 and 20 characters';
       isValid = false;
       log("Validation error: $slotIdError");

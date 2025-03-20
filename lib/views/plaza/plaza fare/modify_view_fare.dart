@@ -64,7 +64,7 @@ class _EditFareScreenState extends State<EditFareScreen> {
     return Column(
       children: [
         if (_viewModel.selectedFareType == FareTypes.daily) ... [
-          CustomFormFields.primaryFormField(
+          CustomFormFields.normalSizedTextFormField(context:context,
             label: "Daily Fare",
             controller: _viewModel.dailyFareController,
             keyboardType: TextInputType.number,
@@ -74,7 +74,7 @@ class _EditFareScreenState extends State<EditFareScreen> {
         ],
 
         if (_viewModel.selectedFareType == FareTypes.hourly) ... [
-          CustomFormFields.primaryFormField(
+          CustomFormFields.normalSizedTextFormField(context:context,
             label: "Hourly Fare",
             controller: _viewModel.hourlyFareController,
             keyboardType: TextInputType.number,
@@ -85,7 +85,7 @@ class _EditFareScreenState extends State<EditFareScreen> {
 
 
         if (_viewModel.selectedFareType == FareTypes.monthlyPass) ... [
-          CustomFormFields.primaryFormField(
+          CustomFormFields.normalSizedTextFormField(context:context,
             label: "Monthly Fare",
             controller: _viewModel.monthlyFareController,
             keyboardType: TextInputType.number,
@@ -95,14 +95,14 @@ class _EditFareScreenState extends State<EditFareScreen> {
         ],
 
         if (_viewModel.selectedFareType == FareTypes.hourWiseCustom) ...[
-          CustomFormFields.primaryFormField(
+          CustomFormFields.normalSizedTextFormField(context:context,
             label: "Base Hours",
             controller: _viewModel.baseHoursController,
             keyboardType: TextInputType.number,
             enabled: isEditing, isPassword: false,
           ),
           const SizedBox(height: 16),
-          CustomFormFields.primaryFormField(
+          CustomFormFields.normalSizedTextFormField(context:context,
             label: "Base Hourly Fare",
             controller: _viewModel.baseHourlyFareController,
             keyboardType: TextInputType.number,
@@ -128,13 +128,13 @@ class _EditFareScreenState extends State<EditFareScreen> {
           appBar: CustomAppBar.appBarWithNavigation(
             screenTitle: "Edit Fare Details",
             onPressed: () => Navigator.pop(context),
-            darkBackground: true,
+            darkBackground: true, context: context,
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                CustomDropDown.normalDropDown(
+                CustomDropDown.normalDropDown(context:context,
                   label: "Vehicle Type",
                   items: VehicleTypes.values,
                   value: viewModel.selectedVehicleType,
@@ -143,7 +143,7 @@ class _EditFareScreenState extends State<EditFareScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                CustomDropDown.normalDropDown(
+                CustomDropDown.normalDropDown(context:context,
                   label: "Fare Type",
                   items: FareTypes.values,
                   value: viewModel.selectedFareType,
@@ -155,7 +155,7 @@ class _EditFareScreenState extends State<EditFareScreen> {
                 _buildFareFields(),
 
                 if (viewModel.selectedFareType == FareTypes.hourWiseCustom)...[
-                  CustomFormFields.primaryFormField(
+                  CustomFormFields.normalSizedTextFormField(context:context,
                     label: "Discount Rate",
                     controller: viewModel.discountController,
                     keyboardType: TextInputType.number,
@@ -167,7 +167,7 @@ class _EditFareScreenState extends State<EditFareScreen> {
                 GestureDetector(
                   onTap: isEditing ? () => viewModel.selectStartDate(context) : null,
                   child: AbsorbPointer(
-                    child: CustomFormFields.primaryFormField(
+                    child: CustomFormFields.normalSizedTextFormField(context:context,
                       label: "Start Effect Date",
                       controller: viewModel.startDateController,
                       enabled: false, isPassword: false,
@@ -179,7 +179,7 @@ class _EditFareScreenState extends State<EditFareScreen> {
                 GestureDetector(
                   onTap: isEditing ? () => viewModel.selectEndDate(context) : null,
                   child: AbsorbPointer(
-                    child: CustomFormFields.primaryFormField(
+                    child: CustomFormFields.normalSizedTextFormField(context:context,
                       label: "End Effect Date",
                       controller: viewModel.endDateController,
                       enabled: isEditing, isPassword: false,

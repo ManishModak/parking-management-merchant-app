@@ -8,7 +8,7 @@ class PlazaFormValidation {
       'plazaName': ('Plaza name', 50),
       'plazaOwner': ('Plaza owner', 50),
       'operatorName': ('Operator name', 50),
-      'operatorId': ('Operator ID', 20),
+      // 'operatorId': ('Operator ID', 20),
       'email': ('Email', null),
       'address': ('Address', 256),
       'city': ('City', 50),

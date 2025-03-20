@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -9,7 +10,7 @@ import '../../../../utils/components/form_field.dart';
 import '../../../../utils/components/pagination_controls.dart';
 import '../../../utils/exceptions.dart';
 import '../../../viewmodels/ticket/mark_exit_viewmodel.dart';
-import 'MarkExitDetailsScreen.dart';
+import 'mark_exit_details.dart';
 
 class MarkExitScreen extends StatefulWidget {
   const MarkExitScreen({super.key});
@@ -27,6 +28,7 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
   int _currentPage = 1;
   static const int _itemsPerPage = 10;
   bool _isLoading = false;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -34,9 +36,12 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
     _viewModel = MarkExitViewModel();
     _loadInitialData();
     _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text.toLowerCase();
-        _currentPage = 1;
+      if (_debounce?.isActive ?? false) _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 300), () {
+        setState(() {
+          _searchQuery = _searchController.text.toLowerCase();
+          _currentPage = 1;
+        });
       });
     });
   }
@@ -44,7 +49,6 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
   Future<void> _loadInitialData() async {
     setState(() => _isLoading = true);
     await _viewModel.fetchOpenTickets();
-    await Future.delayed(const Duration(seconds: 2));
     setState(() => _isLoading = false);
   }
 
@@ -57,6 +61,7 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _routeObserver.unsubscribe(this);
     _scrollController.dispose();
     _searchController.dispose();
@@ -70,7 +75,6 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
   Future<void> _refreshData() async {
     setState(() => _isLoading = true);
     await _viewModel.fetchOpenTickets();
-    await Future.delayed(const Duration(seconds: 2));
     setState(() => _isLoading = false);
   }
 
@@ -108,7 +112,7 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
         children: [
           CustomFormFields.searchFormField(
             controller: _searchController,
-            hintText: 'Search by Ticket ID, Plaza, Vehicle Number...',
+            hintText: 'Search by Ticket ID, Plaza, Vehicle Number...', context: context,
           ),
           const SizedBox(height: 8),
           Text(
@@ -245,7 +249,6 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
   Widget _buildErrorState() {
     String errorTitle = 'Unable to Load Tickets';
     String errorMessage = 'Something went wrong. Please try again.';
-    String? errorDetails;
 
     final error = _viewModel.error;
     if (error != null) {
@@ -294,8 +297,8 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
             break;
         }
       } else if (error is ServiceException) {
-        errorTitle = 'Unexpected Error';
-        errorMessage = 'An unexpected issue occurred. Please try again.';
+        errorTitle = 'Service Error';
+        errorMessage = 'Failed to fetch tickets. Please try again.';
       }
     }
 
@@ -344,9 +347,12 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => MarkExitDetailsScreen(ticket: ticket),
+              builder: (context) => ChangeNotifierProvider.value(
+                value: _viewModel,
+                child: MarkExitDetailsScreen(ticket: ticket),
+              ),
             ),
-          ).then((_) => _refreshData()); // Refresh after returning from details screen
+          ).then((_) => _refreshData());
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -365,7 +371,7 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Ticket Id:', style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+                              Text('Ticket ID', style: TextStyle(fontSize: 16, color: Colors.black)),
                               Text(ticket['ticketRefID'].toString(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             ],
                           ),
@@ -380,7 +386,7 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              ticket['status'].toString(),
+                              ticket['ticketStatus'].toString(),
                               style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13),
                               textAlign: TextAlign.center,
                             ),
@@ -395,7 +401,7 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Vehicle Number', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              Text('Vehicle Number', style: TextStyle(color: Colors.black, fontSize: 12)),
                               Text(ticket['vehicleNumber'].toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                             ],
                           ),
@@ -404,7 +410,7 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Vehicle Type', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              Text('Vehicle Type', style: TextStyle(color: Colors.black, fontSize: 12)),
                               Text(ticket['vehicleType'].toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                             ],
                           ),
@@ -418,7 +424,7 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Plaza Name', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              Text('Plaza Name', style: TextStyle(color: Colors.black, fontSize: 12)),
                               Text(ticket['plazaName'].toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                             ],
                           ),
@@ -427,7 +433,7 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Entry Time', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              Text('Entry Time', style: TextStyle(color: Colors.black, fontSize: 12)),
                               Text(formattedEntryTime, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                             ],
                           ),
@@ -460,7 +466,7 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
       appBar: CustomAppBar.appBarWithNavigation(
         screenTitle: 'Mark Exit',
         onPressed: () => Navigator.pop(context),
-        darkBackground: true,
+        darkBackground: true, context: context,
       ),
       body: Column(
         children: [

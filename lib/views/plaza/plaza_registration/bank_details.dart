@@ -18,7 +18,7 @@ class BankDetailsStep extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Bank Name
-          CustomFormFields.primaryFormField(
+          CustomFormFields.normalSizedTextFormField(context:context,
             label: 'Bank Name',
             controller: viewModel.bankNameController,
             keyboardType: TextInputType.text,
@@ -30,7 +30,7 @@ class BankDetailsStep extends StatelessWidget {
           const SizedBox(height: 16),
 
           // Account Number
-          CustomFormFields.primaryFormField(
+          CustomFormFields.normalSizedTextFormField(context:context,
             label: 'Account Number',
             controller: viewModel.accountNumberController,
             keyboardType: TextInputType.number,
@@ -42,7 +42,7 @@ class BankDetailsStep extends StatelessWidget {
           const SizedBox(height: 16),
 
           // Account Holder Name
-          CustomFormFields.primaryFormField(
+          CustomFormFields.normalSizedTextFormField(context:context,
             label: 'Account Holder Name',
             controller: viewModel.accountHolderController,
             keyboardType: TextInputType.text,
@@ -54,7 +54,7 @@ class BankDetailsStep extends StatelessWidget {
           const SizedBox(height: 16),
 
           // IFSC Code
-          CustomFormFields.primaryFormField(
+          CustomFormFields.normalSizedTextFormField(context:context,
             label: 'IFSC Code',
             controller: viewModel.ifscCodeController,
             keyboardType: TextInputType.text,

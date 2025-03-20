@@ -15,7 +15,6 @@ class RejectTicketViewModel extends ChangeNotifier {
   String? remarksError;
   String? currentTicketId;
 
-  // Controllers
   final TextEditingController ticketIdController = TextEditingController();
   final TextEditingController ticketRefIdController = TextEditingController();
   final TextEditingController plazaIdController = TextEditingController();
@@ -30,7 +29,7 @@ class RejectTicketViewModel extends ChangeNotifier {
   final TextEditingController ticketStatusController = TextEditingController();
   final TextEditingController remarksController = TextEditingController();
 
-  String? capturedImageUrl;
+  List<String>? capturedImageUrls;
 
   RejectTicketViewModel({TicketService? ticketService})
       : _ticketService = ticketService ?? TicketService();
@@ -66,41 +65,83 @@ class RejectTicketViewModel extends ChangeNotifier {
       error = null;
       notifyListeners();
 
-      final fetchedTickets = await _ticketService.getOpenTickets(); // Assuming this fetches rejectable tickets
+      final fetchedTickets = await _ticketService.getOpenTickets();
       tickets = fetchedTickets.map((ticket) => {
         'ticketID': ticket.ticketId,
         'ticketRefID': ticket.ticketRefId,
         'plazaID': ticket.plazaId,
         'vehicleNumber': ticket.vehicleNumber,
         'vehicleType': ticket.vehicleType,
-        'plazaName': 'Plaza ${ticket.plazaId}', // Replace with actual plaza name if available
-        'entryTime': ticket.entryTime,
+        'plazaName': "Plaza: ${ticket.plazaId}", // Fixed plazaName mapping
+        'entryTime': ticket.entryTime ?? DateTime.now().toIso8601String(),
         'status': ticket.status.toString().split('.').last,
         'entryLaneId': ticket.entryLaneId,
         'entryLaneDirection': ticket.entryLaneDirection,
         'ticketCreationTime': ticket.createdTime.toIso8601String(),
         'floorId': ticket.floorId.isEmpty ? 'N/A' : ticket.floorId,
         'slotId': ticket.slotId.isEmpty ? 'N/A' : ticket.slotId,
-        //'capturedImage': ticket.capturedImage,
-        'modificationTime': ticket.modificationTime?.toIso8601String(),
+        'capturedImages': ticket.capturedImages ?? [],
       }).toList();
 
       if (tickets.isEmpty) {
-        developer.log('[RejectTicketViewModel] No rejectable tickets found.', name: 'RejectTicketViewModel');
+        developer.log('[RejectTicketViewModel] No rejectable tickets found.');
       }
     } catch (e) {
       error = e as Exception;
-      developer.log('[RejectTicketViewModel] Error fetching tickets: $error', name: 'RejectTicketViewModel');
+      developer.log('[RejectTicketViewModel] Error fetching tickets: $e');
     } finally {
       isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<bool> rejectTicket() async {
-    if (!validateForm()) {
-      return false;
+  Future<void> fetchTicketDetails(String ticketId) async {
+    try {
+      isLoading = true;
+      error = null;
+      notifyListeners();
+
+      final ticket = await _ticketService.getTicketDetails(ticketId);
+      initializeTicketDataFromTicket(ticket);
+      developer.log('[RejectTicketViewModel] Fetched ticket details for $ticketId: ${ticket.ticketId}');
+    } catch (e) {
+      error = e as Exception;
+      developer.log('[RejectTicketViewModel] Error fetching ticket details: $e');
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
+  }
+
+  void initializeTicketDataFromTicket(Ticket ticket) {
+    currentTicketId = ticket.ticketId;
+    ticketIdController.text = ticket.ticketId ?? '';
+    ticketRefIdController.text = ticket.ticketRefId ?? '';
+    plazaIdController.text = ticket.plazaId ?? '';
+    entryLaneIdController.text = ticket.entryLaneId;
+    entryLaneDirectionController.text = ticket.entryLaneDirection;
+    floorIdController.text = ticket.floorId.isEmpty ? 'N/A' : ticket.floorId;
+    slotIdController.text = ticket.slotId.isEmpty ? 'N/A' : ticket.slotId;
+    vehicleNumberController.text = ticket.vehicleNumber ?? '';
+    vehicleTypeController.text = ticket.vehicleType;
+    ticketStatusController.text = ticket.status.toString().split('.').last;
+    capturedImageUrls = ticket.capturedImages ?? [];
+
+    if (ticket.entryTime != null) {
+      entryTimeController.text = DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(ticket.entryTime!));
+    } else {
+      entryTimeController.text = 'N/A';
+    }
+
+    ticketCreationTimeController.text = DateFormat('dd MMM yyyy, hh:mm a').format(ticket.createdTime);
+    remarksController.text = ticket.remarks ?? '';
+
+    resetErrors();
+    notifyListeners();
+  }
+
+  Future<bool> rejectTicket() async {
+    if (!validateForm()) return false;
 
     try {
       isLoading = true;
@@ -108,52 +149,18 @@ class RejectTicketViewModel extends ChangeNotifier {
       error = null;
       notifyListeners();
 
-      final success = await _ticketService.rejectTicket(
-        ticketRefIdController.text,
-        remarksController.text,
-      );
-
-      if (success) {
-        await fetchOpenTickets(); // Refresh the list after rejection
-        return true;
-      }
-      return false;
+      await _ticketService.rejectTicket(currentTicketId!, remarksController.text);
+      await fetchOpenTickets();
+      return true;
     } catch (e) {
       error = e as Exception;
-      apiError = 'Failed to reject ticket: ${e.toString()}';
-      developer.log('[RejectTicketViewModel] Error rejecting ticket: $error', name: 'RejectTicketViewModel');
+      apiError = e.toString();
+      developer.log('[RejectTicketViewModel] Error rejecting ticket: $e');
       return false;
     } finally {
       isLoading = false;
       notifyListeners();
     }
-  }
-
-  void initializeTicketData(Map<String, dynamic> ticket) {
-    resetErrors();
-    currentTicketId = ticket['ticketID']?.toString() ?? '';
-    ticketIdController.text = ticket['ticketID']?.toString() ?? '';
-    ticketRefIdController.text = ticket['ticketRefID']?.toString() ?? '';
-    plazaIdController.text = ticket['plazaID']?.toString() ?? '';
-    entryLaneIdController.text = ticket['entryLaneId']?.toString() ?? '';
-    entryLaneDirectionController.text = ticket['entryLaneDirection']?.toString() ?? '';
-    floorIdController.text = ticket['floorId']?.toString() ?? '';
-    slotIdController.text = ticket['slotId']?.toString() ?? '';
-    vehicleNumberController.text = ticket['vehicleNumber']?.toString() ?? '';
-    vehicleTypeController.text = ticket['vehicleType']?.toString() ?? '';
-    ticketStatusController.text = ticket['status']?.toString() ?? '';
-    capturedImageUrl = ticket['capturedImage']?.toString();
-
-    if (ticket['entryTime'] != null) {
-      final entryTime = DateTime.parse(ticket['entryTime']);
-      entryTimeController.text = DateFormat('dd MMM yyyy, hh:mm a').format(entryTime);
-    }
-    if (ticket['ticketCreationTime'] != null) {
-      final creationTime = DateTime.parse(ticket['ticketCreationTime']);
-      ticketCreationTimeController.text = DateFormat('dd MMM yyyy, hh:mm a').format(creationTime);
-    }
-
-    notifyListeners();
   }
 
   @override
@@ -171,6 +178,7 @@ class RejectTicketViewModel extends ChangeNotifier {
     ticketCreationTimeController.dispose();
     ticketStatusController.dispose();
     remarksController.dispose();
+    capturedImageUrls = null; // Clear capturedImageUrls to prevent memory leaks
     super.dispose();
   }
 }

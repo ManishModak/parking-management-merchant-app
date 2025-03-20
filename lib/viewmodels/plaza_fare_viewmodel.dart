@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../generated/l10n.dart';
 import '../models/plaza.dart';
 import '../models/plaza_fare.dart';
 import '../services/core/plaza_service.dart';
 import '../services/payment/fare_service.dart';
 import '../services/storage/secure_storage_service.dart';
-import '../config/app_strings.dart';
 
 /// ViewModel for managing plaza fare operations including creation, validation,
 /// and submission of fares.
@@ -443,8 +443,9 @@ class PlazaFareViewModel extends ChangeNotifier {
 
   /// Submits all temporary fares to the backend.
   Future<void> submitAllFares(BuildContext context) async {
+    final strings = S.of(context);
     if (_temporaryFares.isEmpty) {
-      _showValidationError(context, AppStrings.warningNoFaresAdded);
+      _showValidationError(context, strings.warningNoFaresAdded);
       return;
     }
 
@@ -453,10 +454,10 @@ class PlazaFareViewModel extends ChangeNotifier {
       await _fareService.addFare(_temporaryFares);
       _temporaryFares.clear();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.successFareSubmission)),
+        SnackBar(content: Text(strings.successFareSubmission)),
       );
     } catch (e) {
-      _showValidationError(context, '${AppStrings.errorSubmissionFailed} $e');
+      _showValidationError(context, '${strings.errorSubmissionFailed} $e');
     } finally {
       _setLoading(false);
     }

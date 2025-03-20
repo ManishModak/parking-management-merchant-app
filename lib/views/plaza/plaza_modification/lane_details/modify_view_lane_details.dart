@@ -81,7 +81,7 @@ class _ModifyViewLaneDetailsScreenState
   Widget _buildLaneFields() {
     return Column(
       children: [
-        CustomFormFields.primaryFormField(
+        CustomFormFields.normalSizedTextFormField(context:context,
           label: "Lane Name",
           controller: laneNameController,
           keyboardType: TextInputType.text,
@@ -89,7 +89,7 @@ class _ModifyViewLaneDetailsScreenState
           isPassword: false,
         ),
         const SizedBox(height: 16),
-        CustomDropDown.normalDropDown(
+        CustomDropDown.normalDropDown(context:context,
           label: "Lane Direction",
           items: Lane.validDirections,
           value: selectedDirection,
@@ -101,7 +101,7 @@ class _ModifyViewLaneDetailsScreenState
           enabled: isEditing,
         ),
         const SizedBox(height: 16),
-        CustomDropDown.normalDropDown(
+        CustomDropDown.normalDropDown(context:context,
           label: "Lane Type",
           items: Lane.validTypes,
           value: selectedType,
@@ -113,7 +113,7 @@ class _ModifyViewLaneDetailsScreenState
           enabled: isEditing,
         ),
         const SizedBox(height: 16),
-        CustomDropDown.normalDropDown(
+        CustomDropDown.normalDropDown(context:context,
           label: "Lane Status",
           items: Lane.validStatuses,
           value: selectedStatus,
@@ -125,7 +125,7 @@ class _ModifyViewLaneDetailsScreenState
           enabled: isEditing,
         ),
         const SizedBox(height: 16),
-        CustomFormFields.primaryFormField(
+        CustomFormFields.normalSizedTextFormField(context:context,
           label: "RFID Reader ID",
           controller: rfidReaderController,
           keyboardType: TextInputType.text,
@@ -133,7 +133,7 @@ class _ModifyViewLaneDetailsScreenState
           isPassword: false,
         ),
         const SizedBox(height: 16),
-        CustomFormFields.primaryFormField(
+        CustomFormFields.normalSizedTextFormField(context:context,
           label: "Camera ID",
           controller: cameraController,
           keyboardType: TextInputType.text,
@@ -141,7 +141,7 @@ class _ModifyViewLaneDetailsScreenState
           isPassword: false,
         ),
         const SizedBox(height: 16),
-        CustomFormFields.primaryFormField(
+        CustomFormFields.normalSizedTextFormField(context:context,
           label: "WIM ID",
           controller: wimController,
           keyboardType: TextInputType.text,
@@ -149,7 +149,7 @@ class _ModifyViewLaneDetailsScreenState
           isPassword: false,
         ),
         const SizedBox(height: 16),
-        CustomFormFields.primaryFormField(
+        CustomFormFields.normalSizedTextFormField(context:context,
           label: "Boomer Barrier ID",
           controller: boomerBarrierController,
           keyboardType: TextInputType.text,
@@ -157,7 +157,7 @@ class _ModifyViewLaneDetailsScreenState
           isPassword: false,
         ),
         const SizedBox(height: 16),
-        CustomFormFields.primaryFormField(
+        CustomFormFields.normalSizedTextFormField(context:context,
           label: "LED Screen ID",
           controller: ledScreenController,
           keyboardType: TextInputType.text,
@@ -165,7 +165,7 @@ class _ModifyViewLaneDetailsScreenState
           isPassword: false,
         ),
         const SizedBox(height: 16),
-        CustomFormFields.primaryFormField(
+        CustomFormFields.normalSizedTextFormField(context:context,
           label: "Magnetic Loop ID",
           controller: magneticLoopController,
           keyboardType: TextInputType.text,
@@ -216,7 +216,7 @@ class _ModifyViewLaneDetailsScreenState
         appBar: CustomAppBar.appBarWithNavigation(
           screenTitle: "Edit Lane\nDetails",
           onPressed: () => Navigator.pop(context),
-          darkBackground: true,
+          darkBackground: true, context: context,
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -225,7 +225,7 @@ class _ModifyViewLaneDetailsScreenState
       appBar: CustomAppBar.appBarWithNavigation(
         screenTitle: "Edit Lane\nDetails",
         onPressed: () => Navigator.pop(context),
-        darkBackground: true,
+        darkBackground: true, context: context,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

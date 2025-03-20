@@ -1,29 +1,20 @@
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:merchant_app/models/ticket.dart';
 import '../../services/core/ticket_service.dart';
 
 class TicketHistoryViewModel extends ChangeNotifier {
   final TicketService _ticketService;
 
-  // Controllers for form fields
-  final TextEditingController ticketIdController = TextEditingController();
-  final TextEditingController plazaIdController = TextEditingController();
-  final TextEditingController plazaNameController = TextEditingController();
-  final TextEditingController entryLaneIdController = TextEditingController();
-  final TextEditingController entryLaneDirectionController = TextEditingController();
-  final TextEditingController floorIdController = TextEditingController();
-  final TextEditingController slotIdController = TextEditingController();
-  final TextEditingController vehicleNumberController = TextEditingController();
-  final TextEditingController vehicleTypeController = TextEditingController();
-  final TextEditingController entryTimeController = TextEditingController();
-  final TextEditingController ticketCreationTimeController = TextEditingController();
-  final TextEditingController ticketStatusController = TextEditingController();
-  final TextEditingController remarksController = TextEditingController();
+  Ticket? _ticket;
+
+  Ticket? get ticket => _ticket;
 
   bool isLoading = false;
   Exception? error;
   List<Map<String, dynamic>> tickets = [];
+  List<String>? capturedImageUrls;
 
   TicketHistoryViewModel({TicketService? ticketService})
       : _ticketService = ticketService ?? TicketService();
@@ -34,24 +25,24 @@ class TicketHistoryViewModel extends ChangeNotifier {
       error = null;
       notifyListeners();
 
-      // Note: Assuming getOpenTickets is a placeholder; replace with actual history endpoint if available
-      final fetchedTickets = await _ticketService.getOpenTickets();
+      final fetchedTickets = await _ticketService.getAllTickets();
       tickets = fetchedTickets.map((ticket) => {
         'ticketId': ticket.ticketId,
         'ticketRefId': ticket.ticketRefId,
         'plazaId': ticket.plazaId,
         'vehicleNumber': ticket.vehicleNumber,
         'vehicleType': ticket.vehicleType,
-        'plazaName': 'Plaza ${ticket.plazaId}', // Replace with actual plaza name if available
-        'entryTime': ticket.entryTime,
+        'plazaName': 'Plaza ${ticket.plazaId}', // Use actual plazaName if available
+        'entryTime': ticket.entryTime ?? DateTime.now().toIso8601String(),
         'ticketStatus': ticket.status.toString().split('.').last,
         'entryLaneId': ticket.entryLaneId,
         'entryLaneDirection': ticket.entryLaneDirection,
         'ticketCreationTime': ticket.createdTime.toIso8601String(),
         'floorId': ticket.floorId.isEmpty ? 'N/A' : ticket.floorId,
         'slotId': ticket.slotId.isEmpty ? 'N/A' : ticket.slotId,
-        //'capturedImage': ticket.capturedImage,
         'modificationTime': ticket.modificationTime?.toIso8601String(),
+        'exitTime': ticket.exitTime?.toIso8601String(),
+        'capturedImages': ticket.capturedImages ?? [],
         'remarks': ticket.remarks ?? '',
       }).toList();
 
@@ -67,80 +58,49 @@ class TicketHistoryViewModel extends ChangeNotifier {
     }
   }
 
-  void initializeTicketData(Map<String, dynamic> ticket) {
-    ticketIdController.text = ticket['ticketId']?.toString() ?? '';
-    plazaIdController.text = ticket['plazaId']?.toString() ?? '';
-    plazaNameController.text = ticket['plazaName']?.toString() ?? '';
-    entryLaneIdController.text = ticket['entryLaneId']?.toString() ?? '';
-    entryLaneDirectionController.text = ticket['entryLaneDirection']?.toString() ?? '';
-    floorIdController.text = ticket['floorId']?.toString() ?? '';
-    slotIdController.text = ticket['slotId']?.toString() ?? '';
-    vehicleNumberController.text = ticket['vehicleNumber']?.toString() ?? '';
-    vehicleTypeController.text = ticket['vehicleType']?.toString() ?? '';
-    ticketStatusController.text = ticket['ticketStatus']?.toString() ?? '';
-    remarksController.text = ticket['remarks']?.toString() ?? '';
-
-    if (ticket['entryTime'] != null) {
-      final entryTime = DateTime.parse(ticket['entryTime']);
-      entryTimeController.text = DateFormat('dd MMM yyyy, hh:mm a').format(entryTime);
-    }
-    if (ticket['ticketCreationTime'] != null) {
-      final creationTime = DateTime.parse(ticket['ticketCreationTime']);
-      ticketCreationTimeController.text = DateFormat('dd MMM yyyy, hh:mm a').format(creationTime);
-    }
-
-    notifyListeners();
-  }
-
-  Future<void> loadTicketDetails(String ticketId) async {
+  Future<void> fetchTicketDetails(String ticketId) async {
     try {
       isLoading = true;
       error = null;
       notifyListeners();
 
-      final ticket = await _ticketService.getTicketDetails(ticketId);
-      initializeTicketData({
-        'ticketId': ticket.ticketId,
-        'ticketRefId': ticket.ticketRefId,
-        'plazaId': ticket.plazaId,
-        'vehicleNumber': ticket.vehicleNumber,
-        'vehicleType': ticket.vehicleType,
-        'plazaName': 'Plaza ${ticket.plazaId}', // Replace with actual plaza name if available
-        'entryTime': ticket.entryTime,
-        'ticketStatus': ticket.status.toString().split('.').last,
-        'entryLaneId': ticket.entryLaneId,
-        'entryLaneDirection': ticket.entryLaneDirection,
-        'ticketCreationTime': ticket.createdTime.toIso8601String(),
-        'floorId': ticket.floorId.isEmpty ? 'N/A' : ticket.floorId,
-        'slotId': ticket.slotId.isEmpty ? 'N/A' : ticket.slotId,
-        //'capturedImage': ticket.capturedImage,
-        'modificationTime': ticket.modificationTime?.toIso8601String(),
-        'remarks': ticket.remarks ?? '',
-      });
+      _ticket = await _ticketService.getTicketDetails(ticketId);
+      capturedImageUrls = _ticket?.capturedImages ?? [];
+      developer.log('[TicketHistoryViewModel] Fetched ticket details for $ticketId: ${_ticket?.ticketId}');
     } catch (e) {
       error = e as Exception;
-      developer.log('[TicketHistoryViewModel] Error loading ticket details: $error', name: 'TicketHistoryViewModel');
+      developer.log('[TicketHistoryViewModel] Error fetching ticket details: $e');
     } finally {
       isLoading = false;
       notifyListeners();
     }
   }
 
+  // Helper methods to format dates directly from Ticket object, with null checks
+  String getFormattedEntryTime() {
+    if (_ticket?.entryTime == null) return 'N/A';
+    final entryTime = DateTime.parse(_ticket!.entryTime!);
+    return DateFormat('dd MMM yyyy, hh:mm a').format(entryTime);
+  }
+
+  String getFormattedExitTime() {
+    if (_ticket?.exitTime == null) return 'N/A';
+    return DateFormat('dd MMM yyyy, hh:mm a').format(_ticket!.exitTime!);
+  }
+
+  String getFormattedCreationTime() {
+    if (_ticket == null) return 'N/A';
+    return DateFormat('dd MMM yyyy, hh:mm a').format(_ticket!.createdTime);
+  }
+
+  String getFormattedModificationTime() {
+    if (_ticket?.modificationTime == null) return 'N/A';
+    return DateFormat('dd MMM yyyy, hh:mm a').format(_ticket!.modificationTime!);
+  }
+
   @override
   void dispose() {
-    ticketIdController.dispose();
-    plazaIdController.dispose();
-    plazaNameController.dispose();
-    entryLaneIdController.dispose();
-    entryLaneDirectionController.dispose();
-    floorIdController.dispose();
-    slotIdController.dispose();
-    vehicleNumberController.dispose();
-    vehicleTypeController.dispose();
-    entryTimeController.dispose();
-    ticketCreationTimeController.dispose();
-    ticketStatusController.dispose();
-    remarksController.dispose();
+    capturedImageUrls = null; // Clear to prevent memory leaks
     super.dispose();
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:merchant_app/config/app_colors.dart';
+import 'package:merchant_app/config/app_theme.dart';
+import 'dart:developer' as developer;
+import '../../generated/l10n.dart';
 
 class PaginationControls extends StatelessWidget {
   final int currentPage;
@@ -15,47 +17,97 @@ class PaginationControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = S.of(context);
+    final iconTheme = Theme.of(context).iconTheme;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
-          icon: const Icon(Icons.first_page),
-          onPressed: currentPage > 1 ? () => onPageChange(1) : null,
-          color: AppColors.primary,
-          tooltip: 'First page',
+          icon: Icon(
+            Icons.first_page,
+            color: currentPage > 1
+                ? iconTheme.color ?? context.textPrimaryColor
+                : (iconTheme.color ?? context.textPrimaryColor).withOpacity(0.5),
+          ),
+          padding: const EdgeInsets.all(12),
+          onPressed: currentPage > 1
+              ? () {
+            developer.log('First page button pressed', name: 'PaginationControls');
+            onPageChange(1);
+          }
+              : null,
+          tooltip: strings.tooltipFirstPage,
         ),
         IconButton(
-          icon: const Icon(Icons.chevron_left),
-          onPressed: currentPage > 1 ? () => onPageChange(currentPage - 1) : null,
-          color: AppColors.primary,
-          tooltip: 'Previous page',
+          icon: Icon(
+            Icons.chevron_left,
+            color: currentPage > 1
+                ? iconTheme.color ?? context.textPrimaryColor
+                : (iconTheme.color ?? context.textPrimaryColor).withOpacity(0.5),
+          ),
+          padding: const EdgeInsets.all(12),
+          onPressed: currentPage > 1
+              ? () {
+            developer.log('Previous page button pressed', name: 'PaginationControls');
+            onPageChange(currentPage - 1);
+          }
+              : null,
+          tooltip: strings.tooltipPreviousPage,
         ),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
+            color: context.cardColor,
             borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: context.shadowColor.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Text(
             '$currentPage / $totalPages',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: AppColors.primary,
+              color: context.textPrimaryColor,
             ),
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.chevron_right),
-          onPressed: currentPage < totalPages ? () => onPageChange(currentPage + 1) : null,
-          color: AppColors.primary,
-          tooltip: 'Next page',
+          icon: Icon(
+            Icons.chevron_right,
+            color: currentPage < totalPages
+                ? iconTheme.color ?? context.textPrimaryColor
+                : (iconTheme.color ?? context.textPrimaryColor).withOpacity(0.5),
+          ),
+          padding: const EdgeInsets.all(12),
+          onPressed: currentPage < totalPages
+              ? () {
+            developer.log('Next page button pressed', name: 'PaginationControls');
+            onPageChange(currentPage + 1);
+          }
+              : null,
+          tooltip: strings.tooltipNextPage,
         ),
         IconButton(
-          icon: const Icon(Icons.last_page),
-          onPressed: currentPage < totalPages ? () => onPageChange(totalPages) : null,
-          color: AppColors.primary,
-          tooltip: 'Last page',
+          icon: Icon(
+            Icons.last_page,
+            color: currentPage < totalPages
+                ? iconTheme.color ?? context.textPrimaryColor
+                : (iconTheme.color ?? context.textPrimaryColor).withOpacity(0.5),
+          ),
+          padding: const EdgeInsets.all(12),
+          onPressed: currentPage < totalPages
+              ? () {
+            developer.log('Last page button pressed', name: 'PaginationControls');
+            onPageChange(totalPages);
+          }
+              : null,
+          tooltip: strings.tooltipLastPage,
         ),
       ],
     );

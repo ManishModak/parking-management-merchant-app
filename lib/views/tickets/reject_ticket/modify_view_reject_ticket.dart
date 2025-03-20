@@ -1,86 +1,48 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_config.dart';
+import 'package:merchant_app/utils/components/button.dart';
 import 'package:provider/provider.dart';
 import 'package:merchant_app/config/app_colors.dart';
-import 'package:merchant_app/config/app_strings.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:merchant_app/utils/components/form_field.dart';
 import 'package:shimmer/shimmer.dart';
+import '../../../generated/l10n.dart';
+import '../../../utils/exceptions.dart';
 import '../../../viewmodels/ticket/reject_ticket_viewmodel.dart';
+import 'dart:developer' as developer;
 
 class ModifyViewRejectTicketScreen extends StatefulWidget {
-  const ModifyViewRejectTicketScreen({super.key});
+  final String ticketId;
+
+  const ModifyViewRejectTicketScreen({super.key, required this.ticketId});
 
   @override
-  State<ModifyViewRejectTicketScreen> createState() => _ModifyViewRejectTicketScreenState();
+  State<ModifyViewRejectTicketScreen> createState() =>
+      _ModifyViewRejectTicketScreenState();
 }
 
-class _ModifyViewRejectTicketScreenState extends State<ModifyViewRejectTicketScreen> {
-  bool isEditing = false;
+class _ModifyViewRejectTicketScreenState
+    extends State<ModifyViewRejectTicketScreen> {
+  int _currentImagePage = 0;
 
   @override
   void initState() {
     super.initState();
-    // Add listener to remarksController for real-time validation feedback
-    final viewModel = Provider.of<RejectTicketViewModel>(context, listen: false);
-    viewModel.remarksController.addListener(() {
-      if (isEditing) {
-        viewModel.validateForm(); // Trigger validation on change
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final viewModel =
+      Provider.of<RejectTicketViewModel>(context, listen: false);
+      viewModel.fetchTicketDetails(widget.ticketId);
     });
-  }
-
-  void _handleCancel() {
-    final viewModel = Provider.of<RejectTicketViewModel>(context, listen: false);
-    viewModel.resetRemarks();
-    setState(() {
-      isEditing = false;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Changes discarded')),
-    );
-  }
-
-  Future<void> _handleSave() async {
-    if (!isEditing) return;
-
-    final viewModel = Provider.of<RejectTicketViewModel>(context, listen: false);
-
-    if (!viewModel.validateForm()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(viewModel.remarksError ?? 'Please check the remarks field'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    final success = await viewModel.rejectTicket();
-
-    if (success && mounted) {
-      setState(() {
-        isEditing = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ticket rejected successfully')),
-      );
-      Navigator.pop(context); // Pop back to the previous screen after success
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(viewModel.apiError ?? 'Failed to reject ticket'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 
   void _showZoomableImageDialog(String imageUrl) {
+    developer.log(
+        '[ModifyViewRejectTicketScreen] Showing zoomable image dialog for URL: $imageUrl');
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        final strings = S.of(context);
         return Dialog(
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.all(10),
@@ -98,11 +60,17 @@ class _ModifyViewRejectTicketScreenState extends State<ModifyViewRejectTicketScr
                     highlightColor: Colors.grey.shade100,
                     child: Container(color: Colors.grey.shade300),
                   ),
-                  errorWidget: (context, url, error) => const Center(
-                    child: Icon(
-                      Icons.broken_image_outlined,
-                      size: 48,
-                      color: Colors.red,
+                  errorWidget: (context, url, error) => Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.broken_image_outlined,
+                            size: 48, color: Colors.red),
+                        const SizedBox(height: 8),
+                        Text(strings.errorImageLoadFailed,
+                            style: const TextStyle(
+                                color: Colors.red, fontSize: 12)),
+                      ],
                     ),
                   ),
                 ),
@@ -122,77 +90,190 @@ class _ModifyViewRejectTicketScreenState extends State<ModifyViewRejectTicketScr
     );
   }
 
+  void _showRemarksDialog(RejectTicketViewModel viewModel) {
+    final strings = S.of(context);
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(strings.buttonRejectTicket),
+          content: CustomFormFields.largeSizedTextFormField(
+              label: strings.labelRemarks,
+              controller: viewModel.remarksController,
+              enabled: true, context: context),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(strings.buttonCancel),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (viewModel.validateForm()) {
+                  Navigator.pop(context);
+                  await _handleReject(viewModel);
+                }
+              },
+              child: Text(strings.buttonSubmit),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _handleReject(RejectTicketViewModel viewModel) async {
+    final strings = S.of(context);
+    final success = await viewModel.rejectTicket();
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(strings.messageTicketRejectedSuccess),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.pop(context);
+    } else if (mounted) {
+      String errorMessage =
+          viewModel.apiError ?? strings.errorFailedToRejectTicket;
+      if (viewModel.error is HttpException) {
+        final httpError = viewModel.error as HttpException;
+        errorMessage = httpError.statusCode == 404
+            ? strings.errorTicketNotFound
+            : httpError.serverMessage ?? strings.errorServerError;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   Widget _buildImageSection(RejectTicketViewModel viewModel) {
+    final strings = S.of(context);
+    developer.log(
+        '[ModifyViewRejectTicketScreen] Building image section with capturedImageUrls: ${viewModel.capturedImageUrls}');
+    if (viewModel.isLoading) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+        child: Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(height: 150, color: Colors.grey.shade300),
+        ),
+      );
+    }
+
+    if (viewModel.capturedImageUrls == null ||
+        viewModel.capturedImageUrls!.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+        child: SizedBox(
+          height: 150,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 48, color: AppColors.primary),
+                const SizedBox(height: 8),
+                Text(strings.messageNoImagesAvailable,
+                    style: const TextStyle(color: Colors.red, fontSize: 16)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final totalImages = viewModel.capturedImageUrls!.length;
+    final totalPages = (totalImages / 3).ceil();
+    final startIndex = _currentImagePage * 3;
+    final endIndex =
+    (startIndex + 3) > totalImages ? totalImages : (startIndex + 3);
+    final currentImages =
+    viewModel.capturedImageUrls!.sublist(startIndex, endIndex);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Captured Image',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
+          Text(strings.labelCapturedImages,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 12),
-          Container(
-            height: 250,
-            width: AppConfig.deviceWidth * 0.9,
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.primary),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: viewModel.capturedImageUrl == null
-                  ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: AppColors.primary,
+          SizedBox(
+            height: 150,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: currentImages.length,
+              itemBuilder: (context, index) {
+                final imageUrl = currentImages[index];
+                developer.log(
+                    '[ModifyViewRejectTicketScreen] Rendering image at index $index: $imageUrl');
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Container(
+                    width: AppConfig.deviceWidth / 3 - 16,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.primary),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'No Image Available',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-                  : GestureDetector(
-                onTap: () => _showZoomableImageDialog(viewModel.capturedImageUrl!),
-                child: CachedNetworkImage(
-                  imageUrl: viewModel.capturedImageUrl!,
-                  fit: BoxFit.contain,
-                  placeholder: (context, url) => Shimmer.fromColors(
-                    baseColor: Colors.grey.shade300,
-                    highlightColor: Colors.grey.shade100,
-                    child: Container(color: Colors.grey.shade300),
-                  ),
-                  errorWidget: (context, url, error) => Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.broken_image_outlined,
-                            size: 48, color: AppColors.primary),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Failed to load image',
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 16,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: GestureDetector(
+                        onTap: () => _showZoomableImageDialog(imageUrl),
+                        child: CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Shimmer.fromColors(
+                            baseColor: Colors.grey.shade300,
+                            highlightColor: Colors.grey.shade100,
+                            child: Container(color: Colors.grey.shade300),
+                          ),
+                          errorWidget: (context, url, error) => Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.broken_image_outlined,
+                                    size: 48, color: AppColors.primary),
+                                const SizedBox(height: 8),
+                                Text(strings.errorImageLoadFailed,
+                                    style: const TextStyle(
+                                        color: Colors.red, fontSize: 12)),
+                              ],
+                            ),
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_left),
+                onPressed: _currentImagePage > 0
+                    ? () => setState(() => _currentImagePage--)
+                    : null,
+              ),
+              Text(
+                  '${strings.labelPage} ${_currentImagePage + 1} ${strings.labelOf} $totalPages',
+                  style: const TextStyle(fontSize: 14)),
+              IconButton(
+                icon: const Icon(Icons.arrow_right),
+                onPressed: _currentImagePage < totalPages - 1
+                    ? () => setState(() => _currentImagePage++)
+                    : null,
+              ),
+            ],
           ),
         ],
       ),
@@ -200,24 +281,27 @@ class _ModifyViewRejectTicketScreenState extends State<ModifyViewRejectTicketScr
   }
 
   Widget _buildReadOnlyField(String label, TextEditingController controller) {
-    return CustomFormFields.primaryFormField(
+    return CustomFormFields.normalSizedTextFormField(
       label: label,
       controller: controller,
       enabled: false,
       errorText: null,
-      isPassword: false,
+      isPassword: false, context: context,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final strings = S.of(context);
     return Consumer<RejectTicketViewModel>(
       builder: (context, viewModel, child) {
+        developer.log(
+            '[ModifyViewRejectTicketScreen] Building UI with capturedImageUrls: ${viewModel.capturedImageUrls}');
         return Scaffold(
           appBar: CustomAppBar.appBarWithNavigation(
-            screenTitle: AppStrings.titleModifyViewTicketDetails,
+            screenTitle: strings.titleModifyViewTicketDetails,
             onPressed: () => Navigator.pop(context),
-            darkBackground: true,
+            darkBackground: true, context: context,
           ),
           backgroundColor: AppColors.lightThemeBackground,
           body: Stack(
@@ -231,41 +315,41 @@ class _ModifyViewRejectTicketScreenState extends State<ModifyViewRejectTicketScr
                       children: [
                         _buildImageSection(viewModel),
                         const SizedBox(height: 16),
-                        _buildReadOnlyField('Ticket ID', viewModel.ticketIdController),
+                        _buildReadOnlyField(
+                            strings.labelTicketId, viewModel.ticketIdController),
                         const SizedBox(height: 16),
-                        _buildReadOnlyField('Ticket Reference ID', viewModel.ticketRefIdController),
+                        _buildReadOnlyField(strings.labelTicketReferenceId,
+                            viewModel.ticketRefIdController),
                         const SizedBox(height: 16),
-                        _buildReadOnlyField('Plaza ID', viewModel.plazaIdController),
+                        _buildReadOnlyField(
+                            strings.labelPlazaId, viewModel.plazaIdController),
                         const SizedBox(height: 16),
-                        _buildReadOnlyField('Entry Lane ID', viewModel.entryLaneIdController),
+                        _buildReadOnlyField(strings.labelEntryLaneId,
+                            viewModel.entryLaneIdController),
                         const SizedBox(height: 16),
-                        _buildReadOnlyField('Entry Lane Direction', viewModel.entryLaneDirectionController),
+                        _buildReadOnlyField(strings.labelEntryLaneDirection,
+                            viewModel.entryLaneDirectionController),
                         const SizedBox(height: 16),
-                        _buildReadOnlyField('Floor ID', viewModel.floorIdController),
+                        _buildReadOnlyField(
+                            strings.labelFloorId, viewModel.floorIdController),
                         const SizedBox(height: 16),
-                        _buildReadOnlyField('Slot ID', viewModel.slotIdController),
+                        _buildReadOnlyField(
+                            strings.labelSlotId, viewModel.slotIdController),
                         const SizedBox(height: 16),
-                        _buildReadOnlyField('Vehicle Number', viewModel.vehicleNumberController),
+                        _buildReadOnlyField(strings.labelVehicleNumber,
+                            viewModel.vehicleNumberController),
                         const SizedBox(height: 16),
-                        _buildReadOnlyField('Vehicle Type', viewModel.vehicleTypeController),
+                        _buildReadOnlyField(strings.labelVehicleType,
+                            viewModel.vehicleTypeController),
                         const SizedBox(height: 16),
-                        _buildReadOnlyField('Vehicle Entry Timestamp', viewModel.entryTimeController),
+                        _buildReadOnlyField(strings.labelVehicleEntryTimestamp,
+                            viewModel.entryTimeController),
                         const SizedBox(height: 16),
-                        _buildReadOnlyField('Ticket Creation Time', viewModel.ticketCreationTimeController),
+                        _buildReadOnlyField(strings.labelTicketCreationTime,
+                            viewModel.ticketCreationTimeController),
                         const SizedBox(height: 16),
-                        _buildReadOnlyField('Ticket Status', viewModel.ticketStatusController),
-                        const SizedBox(height: 16),
-                        CustomFormFields.remarksFormField(
-                          label: 'Remarks (Required - minimum 10 characters)',
-                          controller: viewModel.remarksController,
-                          enabled: isEditing,
-                          errorText: viewModel.remarksError,
-                          onChanged: (value) {
-                            if (isEditing) {
-                              viewModel.validateForm(); // Trigger validation on change
-                            }
-                          },
-                        ),
+                        _buildReadOnlyField(strings.labelTicketStatus,
+                            viewModel.ticketStatusController),
                         const SizedBox(height: 80),
                       ],
                     ),
@@ -277,40 +361,24 @@ class _ModifyViewRejectTicketScreenState extends State<ModifyViewRejectTicketScr
                   color: Colors.black.withOpacity(0.5),
                   child: const Center(
                     child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                      valueColor:
+                      AlwaysStoppedAnimation<Color>(AppColors.primary),
                     ),
                   ),
                 ),
             ],
           ),
-          floatingActionButton: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (isEditing) ...[
-                FloatingActionButton(
-                  heroTag: 'cancel',
-                  onPressed: viewModel.isLoading ? null : _handleCancel,
-                  backgroundColor: Colors.red,
-                  child: const Icon(Icons.close),
-                ),
-                const SizedBox(width: 16),
-              ],
-              FloatingActionButton(
-                heroTag: 'edit',
-                onPressed: viewModel.isLoading
-                    ? null
-                    : () {
-                  if (isEditing) {
-                    _handleSave();
-                  } else {
-                    setState(() {
-                      isEditing = true;
-                    });
-                  }
-                },
-                child: Icon(isEditing ? Icons.save : Icons.edit),
-              ),
-            ],
+          bottomNavigationBar: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: CustomButtons.primaryButton(
+              text: strings.buttonRejectTicket,
+              onPressed: viewModel.isLoading
+                  ? null
+                  : () {
+                viewModel.resetRemarks();
+                _showRemarksDialog(viewModel);
+              }, context: context,
+            ),
           ),
         );
       },

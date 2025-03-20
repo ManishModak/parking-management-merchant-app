@@ -1,4 +1,3 @@
-// Updated exceptions.dart (assumed separate file, included here for completeness)
 class PlazaException implements Exception {
   final String message;
   final int? statusCode;
@@ -17,6 +16,14 @@ class PlazaException implements Exception {
     }
     return 'PlazaException: $message';
   }
+}
+
+class StorageException implements Exception {
+  final String message;
+  StorageException(this.message);
+
+  @override
+  String toString() => message;
 }
 
 class HttpException implements Exception {
@@ -66,6 +73,21 @@ class NoInternetException implements Exception {
 
   @override
   String toString() => message;
+}
+
+class ServerConnectionException implements Exception {
+  final String message;
+  final String? host;
+
+  ServerConnectionException(this.message, {this.host});
+
+  @override
+  String toString() {
+    if (host != null) {
+      return 'ServerConnectionException: $message (Host: $host)';
+    }
+    return 'ServerConnectionException: $message';
+  }
 }
 
 class RequestTimeoutException implements Exception {

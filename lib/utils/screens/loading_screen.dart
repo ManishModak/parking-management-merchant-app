@@ -1,42 +1,71 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:merchant_app/config/app_colors.dart';
-import 'package:merchant_app/config/app_strings.dart';
+import 'package:merchant_app/config/app_theme.dart';
+import 'dart:developer' as developer;
+import '../../generated/l10n.dart';
 
-class LoadingScreen extends StatelessWidget {
+class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
 
   @override
+  State<LoadingScreen> createState() => _LoadingScreenState();
+}
+
+class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    developer.log('LoadingScreen initialized', name: 'LoadingScreen');
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final strings = S.of(context);
     return Scaffold(
       body: Container(
         width: double.infinity,
-        color: Colors.white,
-        child: const SafeArea(
+        color: context.backgroundColor,
+        child: SafeArea(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SpinKitFadingCircle(
-                color: AppColors.primaryLight,
+                color: Theme.of(context).primaryColor,
                 size: 50.0,
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               Text(
-                AppStrings.titleLoading,
-                style: TextStyle(
+                strings.titleLoading,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: AppColors.textPrimary,
+                  color: context.textPrimaryColor,
                 ),
               ),
-              SizedBox(height: 8),
-              Text(
-                AppStrings.loadingMessage,
-                textAlign: TextAlign.center,
-                style: TextStyle(
+              const SizedBox(height: 8),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 500),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
+                  color: _controller.value < 0.5
+                      ? context.textSecondaryColor
+                      : context.textSecondaryColor.withOpacity(0.7),
+                ),
+                child: Text(
+                  strings.loadingMessage,
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],

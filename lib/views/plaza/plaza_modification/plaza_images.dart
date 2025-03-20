@@ -376,7 +376,7 @@ class _PlazaImagesModificationScreenState
           appBar: CustomAppBar.appBarWithNavigation(
             screenTitle: 'Plaza Images',
             onPressed: () => Navigator.pop(context),
-            darkBackground: true,
+            darkBackground: true, context: context,
           ),
           backgroundColor: AppColors.lightThemeBackground,
           body: viewModel.isLoading

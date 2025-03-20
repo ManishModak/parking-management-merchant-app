@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:merchant_app/views/dispute/dispute_list.dart';
 import '../models/plaza.dart';
+import '../views/dispute/process_dispute_details.dart';
+import '../views/dispute/view_dispute_details.dart';
 import '../views/home.dart';
 import '../views/notification.dart';
-import '../views/onboarding/set_username.dart';
 import '../views/plaza/plaza fare/add_fare.dart';
 import '../views/plaza/plaza fare/plaza_fares_list.dart';
 import '../views/plaza/plaza_registration.dart';
@@ -27,7 +29,7 @@ import '../views/tickets/reject_ticket/reject_ticket.dart';
 import '../views/tickets/ticket_history/ticket_history.dart';
 import '../views/welcome.dart';
 import '../utils/screens/loading_screen.dart';
-import '../utils/screens/success_screen.dart';
+import '../views/onboarding/success_screen.dart';
 
 class AppRoutes {
   static const String welcome = '/welcome';
@@ -58,111 +60,94 @@ class AppRoutes {
   static const String rejectTicket = '/reject-ticket';
   static const String ticketHistory = '/ticket-history';
   static const String markExit = '/mark-exit';
+  static const String disputeList = '/dispute-list';
+  static const String disputeDetail = '/dispute-detail'; // New route
+  static const String processDispute = '/process-dispute'; // New route
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case welcome:
         return MaterialPageRoute(builder: (_) => const WelcomeScreen());
-
       case login:
         return MaterialPageRoute(builder: (_) => const LoginScreen());
-
       case register:
         return MaterialPageRoute(builder: (_) => const RegisterScreen());
-
       case forgotPassword:
         return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
-
       case dashboard:
         return MaterialPageRoute(builder: (_) => const DashboardScreen());
-
       case plazaList:
         final args = settings.arguments as Map<String, dynamic>?;
         final modifyPlazaInfo = args?['modifyPlazaInfo'] ?? true;
         return MaterialPageRoute(
             builder: (_) => PlazaListScreen(modifyPlazaInfo: modifyPlazaInfo));
-
       case userList:
         return MaterialPageRoute(builder: (_) => const UserListScreen());
-
       case success:
         final args = settings.arguments as Map<String, dynamic>?;
         final userId = args?['userId'] as String? ?? '';
         return MaterialPageRoute(builder: (_) => SuccessScreen(userId: userId));
-
       case loading:
         return MaterialPageRoute(builder: (_) => const LoadingScreen());
-
       case plazaInfo:
         final plazaId = settings.arguments;
         return MaterialPageRoute(builder: (_) => PlazaInfoScreen(plazaId: plazaId));
-
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());
-
       case notification:
         return MaterialPageRoute(builder: (_) => const NotificationsScreen());
-
       case userProfile:
         return MaterialPageRoute(builder: (_) => const UserProfileScreen());
-
-      case setUsername:
-        final args = settings.arguments as Map<String, String>;
-        return MaterialPageRoute(
-            builder: (_) => SetUsernameScreen(
-              email: args['email'] ?? '',
-              password: args['password'] ?? '',
-              mobileNo: args['mobileNo'] ?? '',
-              confirmPassword: args['repeatPassword'] ?? '',
-            ));
-
       case userInfo:
         final args = settings.arguments as Map<String, dynamic>?;
         final operatorId = args?['operatorId'] as String? ?? '';
         return MaterialPageRoute(builder: (_) => UserInfoScreen(operatorId: operatorId));
-
       case userRegistration:
         return MaterialPageRoute(builder: (_) => const UserRegistrationScreen());
-
       case plazaRegistration:
         return MaterialPageRoute(builder: (_) => const PlazaRegistrationScreen());
-
       case basicDetailsModification:
         return MaterialPageRoute(builder: (_) => const BasicDetailsModificationScreen());
-
       case bankDetailsModification:
         return MaterialPageRoute(builder: (_) => const BankDetailsModificationScreen());
-
       case laneDetailsModification:
         return MaterialPageRoute(builder: (_) => const LaneDetailsModificationScreen());
-
       case plazaImagesModification:
         return MaterialPageRoute(builder: (_) => const PlazaImagesModificationScreen());
-
       case plazaAddFare:
         final args = settings.arguments as Map<String, dynamic>?;
         final selectedPlaza = args?['plaza'] as Plaza?;
         return MaterialPageRoute(builder: (_) => AddFareScreen(selectedPlaza: selectedPlaza));
-
       case plazaFaresList:
         final plaza = settings.arguments as Plaza;
         return MaterialPageRoute(builder: (_) => PlazaFaresListScreen(plaza: plaza));
-
       case newTicket:
         return MaterialPageRoute(builder: (_) => const NewTicketScreen());
-
       case openTickets:
         return MaterialPageRoute(builder: (_) => const OpenTicketsScreen());
-
       case rejectTicket:
         return MaterialPageRoute(builder: (_) => const RejectTicketScreen());
-
       case ticketHistory:
         return MaterialPageRoute(builder: (_) => const TicketHistoryScreen());
-
       case markExit:
         return MaterialPageRoute(builder: (_) => const MarkExitScreen());
-
+      case disputeList:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final viewDisputeOptionSelect = args?['viewDisputeOptionSelect'] as bool? ?? true;
+        return MaterialPageRoute(
+            builder: (_) => DisputeList(viewDisputeOptionSelect: viewDisputeOptionSelect));
+      case disputeDetail:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final ticketId = args?['ticketId'] as String? ?? '';
+        return MaterialPageRoute(
+          builder: (_) => ViewDisputeDetailsScreen(ticketId: ticketId), // Define this screen
+        );
+      case processDispute:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final ticketId = args?['ticketId'] as String? ?? '';
+        return MaterialPageRoute(
+          builder: (_) => ProcessDisputeDetailsScreen(ticketId: ticketId), // Define this screen
+        );
       default:
         return MaterialPageRoute(
             builder: (_) => Scaffold(

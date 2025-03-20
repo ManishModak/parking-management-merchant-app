@@ -1,38 +1,63 @@
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
+import 'package:merchant_app/config/app_theme.dart';
 import 'package:merchant_app/utils/components/icon.dart';
-
+import 'dart:developer' as developer;
 import '../../config/app_config.dart';
+import '../../generated/l10n.dart'; // Import localization
 
 class CustomButtons {
   static Widget primaryButton({
     required String text,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
     double height = 0,
-    double width = 0
+    double width = 0,
+    bool isEnabled = true,
+    required BuildContext context,
   }) {
-    width = width != 0 ? width : AppConfig.deviceWidth * 0.8;
-    height = height != 0 ? height : 60;
+    final strings = S.of(context); // Access localized strings
+    double effectiveWidth = width != 0 ? width : AppConfig.deviceWidth * 0.8;
+    double effectiveHeight = height != 0 ? height : 64;
+    double fontSize = effectiveHeight < 50 ? 14 : 16;
+
+    final primaryColor = Theme.of(context).brightness == Brightness.light
+        ? AppColors.primary
+        : AppColors.secondary;
 
     return SizedBox(
-      width: width,
-      height: height,
+      width: effectiveWidth,
+      height: effectiveHeight,
       child: ElevatedButton(
-        onPressed: onPressed,
+        onPressed: isEnabled
+            ? () {
+          developer.log('Primary button pressed: $text', name: 'CustomButtons');
+          onPressed?.call();
+        }
+            : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: isEnabled ? primaryColor : AppColors.grey,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+          padding: EdgeInsets.zero,
         ),
-        child: Center(
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          alignment: Alignment.center,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: FontWeight.w500,
+                color: context.primaryButtonTextColor, // Theme-aware text color
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
           ),
         ),
@@ -43,30 +68,55 @@ class CustomButtons {
   static Widget secondaryButton({
     required String text,
     required VoidCallback onPressed,
+    double height = 0,
+    double width = 0,
+    required BuildContext context,
   }) {
-    double width = AppConfig.deviceWidth;
-    double height = 60;
+    final strings = S.of(context); // Access localized strings
+    double effectiveWidth = width != 0 ? width : AppConfig.deviceWidth * 0.8;
+    double effectiveHeight = height != 0 ? height : 64;
+    double fontSize = effectiveHeight < 50 ? 14 : 16;
+
+    final buttonColor = Theme.of(context).brightness == Brightness.light
+        ? AppColors.buttonLight
+        : AppColors.buttonDark;
+    final borderColor = Theme.of(context).brightness == Brightness.light
+        ? AppColors.primary
+        : AppColors.secondary;
 
     return SizedBox(
-      width: width * 0.8,
-      height: height,
+      width: effectiveWidth,
+      height: effectiveHeight,
       child: ElevatedButton(
-        onPressed: onPressed,
+        onPressed: () {
+          developer.log('Secondary button pressed: $text', name: 'CustomButtons');
+          onPressed();
+        },
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
+          backgroundColor: buttonColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: AppColors.primary, width: 2),
+            side: BorderSide(color: borderColor, width: 2),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+          padding: EdgeInsets.zero,
         ),
-        child: Center(
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w500,
-              color: AppColors.primary,
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          alignment: Alignment.center,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: FontWeight.w500,
+                color: context.secondaryButtonTextColor, // Theme-aware text color
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
           ),
         ),
@@ -77,76 +127,61 @@ class CustomButtons {
   static Widget backIconButton({
     required VoidCallback onPressed,
     required bool darkBackground,
+    required BuildContext context,
   }) {
+    final strings = S.of(context); // Access localized strings
+    final isDarkTheme = Theme.of(context).brightness == Brightness.dark;
+
     return IconButton(
-        onPressed: onPressed,
-        icon: darkBackground
-            ? CustomIcons.backIconWhite()
-            : CustomIcons.backIconBlack());
+      onPressed: () {
+        developer.log('Back icon button pressed', name: 'CustomButtons');
+        onPressed();
+      },
+      tooltip: strings.actionBack, // Add localization for accessibility
+      icon: isDarkTheme ? CustomIcons.backIconWhite(context) : CustomIcons.backIconBlack(context),
+      color: context.textPrimaryColor, // Theme-aware color
+    );
   }
 
   static Widget downloadIconButton({
     required VoidCallback onPressed,
     required bool darkBackground,
+    required BuildContext context,
   }) {
+    final strings = S.of(context); // Access localized strings
+    final isDarkTheme = Theme.of(context).brightness == Brightness.dark;
+
     return IconButton(
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(), // Removes any default constraints
-      onPressed: onPressed,
-      icon: CustomIcons.downloadIconWhite(),
+      constraints: const BoxConstraints(),
+      onPressed: () {
+        developer.log('Download icon button pressed', name: 'CustomButtons');
+        onPressed();
+      },
+      tooltip: strings.actionDownload, // Add localization for accessibility
+      icon: isDarkTheme ? CustomIcons.downloadIconWhite(context) : CustomIcons.downloadIconBlack(context),
+      color: context.textPrimaryColor, // Theme-aware color
     );
   }
 
   static Widget searchIconButton({
     required VoidCallback onPressed,
     required bool darkBackground,
+    required BuildContext context,
   }) {
+    final strings = S.of(context); // Access localized strings
+    final isDarkTheme = Theme.of(context).brightness == Brightness.dark;
+
     return IconButton(
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(), // Removes any default constraints
-      onPressed: onPressed,
-      icon: darkBackground
-          ? CustomIcons.backIconWhite()
-          : CustomIcons.searchIconBlack(),
-    );
-  }
-
-  static Widget changeInfoButton({
-    required String text,
-    required VoidCallback onPressed,
-    Color? backgroundColor,
-  }) {
-    double width = AppConfig.deviceWidth;
-    double height = 60;
-
-    return SizedBox(
-      width: width * 0.44,
-      height: height,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          elevation: 10,
-          backgroundColor: backgroundColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(height / 2),
-            side: const BorderSide(
-              color: Colors.black, // Set the border color
-              width: 2, // Set the border width
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-        ),
-        child: Center(
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
-            ),
-          ),
-        ),
-      ),
+      constraints: const BoxConstraints(),
+      onPressed: () {
+        developer.log('Search icon button pressed', name: 'CustomButtons');
+        onPressed();
+      },
+      tooltip: strings.labelSearch, // Add localization for accessibility
+      icon: isDarkTheme ? CustomIcons.searchIconWhite(context) : CustomIcons.searchIconBlack(context),
+      color: context.textPrimaryColor, // Theme-aware color
     );
   }
 }

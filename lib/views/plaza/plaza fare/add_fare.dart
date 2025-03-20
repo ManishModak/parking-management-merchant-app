@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:merchant_app/config/app_strings.dart';
 import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:merchant_app/utils/components/button.dart';
@@ -9,6 +8,7 @@ import 'package:merchant_app/viewmodels/plaza_fare_viewmodel.dart';
 import 'package:provider/provider.dart';
 
 import '../../../config/app_config.dart';
+import '../../../generated/l10n.dart';
 import '../../../models/plaza.dart';
 import '../../../models/plaza_fare.dart';
 import '../../../utils/components/form_field.dart';
@@ -247,6 +247,7 @@ class _AddFareScreenState extends State<AddFareScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = S.of(context);
     return ChangeNotifierProvider.value(
       value: viewModel,
       child: Consumer<PlazaFareViewModel>(
@@ -254,9 +255,9 @@ class _AddFareScreenState extends State<AddFareScreen> {
           return Scaffold(
             backgroundColor: AppColors.lightThemeBackground,
             appBar: CustomAppBar.appBarWithNavigation(
-              screenTitle: AppStrings.titleAddFare,
+              screenTitle: strings.titleAddFare,
               onPressed: () => Navigator.pop(context),
-              darkBackground: true,
+              darkBackground: true, context: context,
             ),
             body: model.isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -324,7 +325,7 @@ class _AddFareScreenState extends State<AddFareScreen> {
               padding: const EdgeInsets.all(8.0),
               child: CustomButtons.primaryButton(
                 text: "Submit",
-                onPressed: () => model.submitAllFares(context),
+                onPressed: () => model.submitAllFares(context), context: context,
               ),
             )
                 : null,
@@ -381,7 +382,8 @@ class AddFareDialog extends StatelessWidget {
     return GestureDetector(
       onTap: () => _selectDate(context, controller, firstDate: firstDate),
       child: AbsorbPointer(
-        child: CustomFormFields.primaryFormField(
+        child:   CustomFormFields.normalSizedTextFormField(context:context,
+
           label: label,
           controller: controller,
           errorText: errorText,
@@ -393,12 +395,15 @@ class AddFareDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildFareInputField({
+  Widget _buildFareInputField(
+{
     required String label,
     required TextEditingController controller,
     required String? errorText,
+    required BuildContext context,
   }) {
-    return CustomFormFields.primaryFormField(
+    return   CustomFormFields.normalSizedTextFormField(context:context,
+
       label: label,
       controller: controller,
       errorText: errorText,
@@ -458,7 +463,7 @@ class AddFareDialog extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               // Fare Type dropdown
-              CustomDropDown.normalDropDown(
+              CustomDropDown.normalDropDown(context:context,
                 label: 'Select Fare Type',
                 value: viewModel.selectedFareType,
                 items: viewModel.fareTypes,
@@ -468,7 +473,7 @@ class AddFareDialog extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               // Vehicle Type dropdown
-              CustomDropDown.normalDropDown(
+              CustomDropDown.normalDropDown(context:context,
                 label: 'Select Vehicle Type',
                 value: viewModel.selectedVehicleType,
                 items: viewModel.vehicleTypes,
@@ -479,7 +484,8 @@ class AddFareDialog extends StatelessWidget {
               const SizedBox(height: 16),
               // Fare input fields based on fare type.
               if (viewModel.isDailyFareVisible) ...[
-                _buildFareInputField(
+                _buildFareInputField(context:context,
+
                   label: 'Daily Fare',
                   controller: viewModel.dailyFareController,
                   errorText: viewModel.validationErrors['dailyFare'],
@@ -487,7 +493,8 @@ class AddFareDialog extends StatelessWidget {
                 const SizedBox(height: 16),
               ],
               if (viewModel.isHourlyFareVisible) ...[
-                _buildFareInputField(
+                _buildFareInputField(context:context,
+
                   label: 'Hourly Fare',
                   controller: viewModel.hourlyFareController,
                   errorText: viewModel.validationErrors['hourlyFare'],
@@ -495,19 +502,22 @@ class AddFareDialog extends StatelessWidget {
                 const SizedBox(height: 16),
               ],
               if (viewModel.isHourWiseCustomVisible) ...[
-                _buildFareInputField(
+                _buildFareInputField(context:context,
+
                   label: 'Base Hours',
                   controller: viewModel.baseHoursController,
                   errorText: viewModel.validationErrors['baseHours'],
                 ),
                 const SizedBox(height: 16),
-                _buildFareInputField(
+                _buildFareInputField(context:context,
+
                   label: 'Base Hourly Fare',
                   controller: viewModel.baseHourlyFareController,
                   errorText: viewModel.validationErrors['baseHourlyFare'],
                 ),
                 const SizedBox(height: 16),
-                _buildFareInputField(
+                _buildFareInputField(context:context,
+
                   label: 'Discount for Extended Hours',
                   controller: viewModel.discountController,
                   errorText: viewModel.validationErrors['discount'],
@@ -515,7 +525,8 @@ class AddFareDialog extends StatelessWidget {
                 const SizedBox(height: 16),
               ],
               if (viewModel.isMonthlyFareVisible) ...[
-                _buildFareInputField(
+                _buildFareInputField(context:context,
+
                   label: 'Monthly Fare',
                   controller: viewModel.monthlyFareController,
                   errorText: viewModel.validationErrors['monthlyFare'],

@@ -1,8 +1,15 @@
+import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:merchant_app/config/app_theme.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
+import 'package:merchant_app/config/app_colors.dart';
+import 'dart:math';
+import '../../generated/l10n.dart';
 
-String formatNumber(dynamic number) {
+String formatNumber(dynamic number, {String locale = 'en_US'}) {
   if (number is int || number is double) {
     if (number >= 1000000) {
       return '${(number / 1000000).toStringAsFixed(1)}M';
@@ -14,13 +21,19 @@ String formatNumber(dynamic number) {
   return '0';
 }
 
-// Common tooltip constants for a unified look
-const Color kTooltipBg = Colors.black;
-const double kTooltipOpacity = 0.8;
-const TextStyle kTooltipTextStyle = TextStyle(
-  color: Colors.white,
-  fontWeight: FontWeight.bold,
-);
+class PlazaData {
+  final String name;
+  final double revenue;
+  final int total;
+  final int cancelled;
+
+  PlazaData({
+    required this.name,
+    required this.revenue,
+    required this.total,
+    required this.cancelled,
+  });
+}
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -30,139 +43,219 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // Filter options and selected value.
-  final List<String> _filterOptions = ['Daily', 'Weekly', 'Monthly', 'Quarterly'];
-  String _selectedFilter = 'Monthly';
+  final List<String> _filterOptions = [];
+  String _selectedFilter = '';
+  late PageController _summaryPageController;
+  bool _isRefreshing = false;
+  Timer? _debounceTimer;
 
-  final List<FlSpot> plazaRevenueSpots = [
-    FlSpot(0, 85.5), // Central Mall
-    FlSpot(1, 72.3), // City Center
-    FlSpot(2, 93.7), // Metro Plaza
+  final List<PlazaData> plazaData = [
+    PlazaData(name: 'Central Mall', revenue: 85.5, total: 180, cancelled: 45),
+    PlazaData(name: 'City Center', revenue: 72.3, total: 150, cancelled: 30),
+    PlazaData(name: 'Metro Plaza', revenue: 93.7, total: 200, cancelled: 55),
   ];
 
-  final List<Map<String, dynamic>> plazaData = [
-    {'name': 'Central Mall', 'total': 180, 'cancelled': 45},
-    {'name': 'City Center', 'total': 150, 'cancelled': 30},
-    {'name': 'Metro Plaza', 'total': 200, 'cancelled': 55},
-  ];
-
-  final List<PieChartSectionData> revenueDistributionSections = [
-    PieChartSectionData(
-      value: 45,
-      color: const Color(0xFF6200EA),
-      title: '45%',
-      radius: 50,
-      titleStyle: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      ),
-    ),
-    PieChartSectionData(
-      value: 35,
-      color: const Color(0xFF3700B3),
-      title: '35%',
-      radius: 45,
-      titleStyle: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      ),
-    ),
-    PieChartSectionData(
-      value: 20,
-      color: const Color(0xFF9C27B0),
-      title: '20%',
-      radius: 40,
-      titleStyle: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      ),
-    ),
+  final List<Map<String, dynamic>> paymentData = [
+    {'method': 'UPI/Card', 'percentage': 45.0, 'color': null},
+    {'method': 'Cash', 'percentage': 35.0, 'color': null},
+    {'method': 'QR', 'percentage': 20.0, 'color': null},
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _summaryPageController = PageController();
+    developer.log('Initializing DashboardScreen', name: 'DashboardScreen');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final strings = S.of(context);
+      setState(() {
+        _filterOptions.clear();
+        _filterOptions.addAll([
+          strings.filterDaily,
+          strings.filterWeekly,
+          strings.filterMonthly,
+          strings.filterQuarterly,
+        ]);
+        _selectedFilter = _filterOptions.isNotEmpty ? _filterOptions[2] : ''; // Default to Monthly
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _summaryPageController.dispose();
+    _debounceTimer?.cancel();
+    developer.log('Disposing DashboardScreen', name: 'DashboardScreen');
+    super.dispose();
+  }
+
+  Future<void> _refreshDashboardData() async {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
+      final strings = S.of(context);
+      setState(() => _isRefreshing = true);
+      developer.log('Refreshing dashboard data for filter: $_selectedFilter', name: 'DashboardScreen');
+      try {
+        // Simulate data refresh (replace with actual API call)
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(strings.dataRefreshSuccess),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (e) {
+        developer.log('Data refresh failed: $e', name: 'DashboardScreen', level: 1000);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${strings.dataRefreshFailed}: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isRefreshing = false);
+        }
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final strings = S.of(context);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    developer.log('Building DashboardScreen, isDarkMode: $isDarkMode', name: 'DashboardScreen');
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: context.backgroundColor,
       appBar: CustomAppBar.appBarWithTitle(
-        screenTitle: 'Dashboard',
-        darkBackground: true,
+        screenTitle: strings.titleDashboard,
+        darkBackground: isDarkMode,
+        context: context,
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildFilterDropdown(),
-              const SizedBox(height: 16),
-              _buildSummaryCards(),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4.0),
-                child: _buildMonthlyEarningsCard(),
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: _refreshDashboardData,
+            color: Theme.of(context).primaryColor,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(), // Ensure scrollable for RefreshIndicator
+              padding: EdgeInsets.symmetric(
+                horizontal: MediaQuery.of(context).size.width > 600 ? 16 : 4,
+                vertical: 8.0,
               ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4.0),
-                child: _buildPlazaBookingsCard(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildFilterDropdown(),
+                  const SizedBox(height: 16),
+                  _buildSummaryCards(strings),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4.0),
+                    child: _buildMonthlyEarningsCard(strings),
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4.0),
+                    child: _buildPlazaBookingsCard(strings),
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4.0),
+                    child: _buildRevenueDistributionCard(strings),
+                  ),
+                  const SizedBox(height: 16),
+                ],
               ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4.0),
-                child: _buildRevenueDistributionCard(),
-              ),
-              const SizedBox(height: 16),
-            ],
+            ),
           ),
-        ),
+          if (_isRefreshing)
+            Container(
+              color: context.shadowColor.withOpacity(0.5),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: Theme.of(context).primaryColor),
+                    const SizedBox(height: 16),
+                    Text(
+                      strings.labelLoading,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: context.textPrimaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  // Improved filter dropdown design.
   Widget _buildFilterDropdown() {
+    if (_filterOptions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0),
       child: Row(
         children: [
-          const Icon(Icons.filter_list, color: Colors.black54),
+          Icon(Icons.filter_list, color: context.textSecondaryColor),
           const SizedBox(width: 8),
           Expanded(
-            child: DropdownButtonFormField<String>(
-              value: _selectedFilter,
-              decoration: InputDecoration(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              items: _filterOptions.map((String filter) {
-                return DropdownMenuItem<String>(
-                  value: filter,
-                  child: Text(
-                    filter,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: DropdownButtonFormField<String>(
+                key: ValueKey(_selectedFilter),
+                value: _filterOptions.contains(_selectedFilter) ? _selectedFilter : _filterOptions[0],
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: context.inputBorderColor),
                   ),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    _selectedFilter = newValue;
-                    // TODO: Update your chart data based on the filter selection.
-                  });
-                }
-              },
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: context.inputBorderColor),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+                  ),
+                  filled: true,
+                  fillColor: context.secondaryCardColor,
+                ),
+                items: _filterOptions.map((String filter) {
+                  return DropdownMenuItem<String>(
+                    value: filter,
+                    child: Text(
+                      filter,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: context.textPrimaryColor,
+                      ),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    developer.log('Filter changed to: $newValue', name: 'DashboardScreen');
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      _selectedFilter = newValue;
+                      _refreshDashboardData(); // Trigger refresh on filter change
+                    });
+                  }
+                },
+                dropdownColor: context.cardColor,
+              ),
             ),
           ),
         ],
@@ -170,22 +263,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Reusable card widget.
   Widget _buildCard({
     required String title,
     required Widget child,
     required double height,
   }) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
       width: double.infinity,
       height: height,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.secondaryCardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: context.shadowColor,
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -196,9 +289,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 16,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: context.textPrimaryColor,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -209,62 +301,113 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Summary cards widget.
-  Widget _buildSummaryCards() {
-    final PageController pageController = PageController();
+  Widget _buildSummaryCards(S strings) {
     final List<List<Widget>> pairedCards = [
       [
         _buildSummaryCard(
-          title: 'Total Plaza',
+          title: strings.summaryTotalPlaza,
           values: {'Count': '110'},
           increase: '+12.5%',
-          color: const Color(0xFF6200EA),
+          color: context.chartPrimaryColor,
         ),
         _buildSummaryCard(
-          title: 'Total Txns',
+          title: strings.summaryTotalTxns,
           values: {'Count': '100', 'Amount': '12,500'},
           increase: '+8.2%',
-          color: const Color(0xFF6200EA),
+          color: context.chartPrimaryColor,
         ),
       ],
       [
         _buildSummaryCard(
-          title: 'Settled Txns',
+          title: strings.summarySettledTxns,
           values: {'Count': '50', 'Amount': '5,500'},
           increase: '+15.3%',
-          color: const Color(0xFF6200EA),
+          color: context.chartPrimaryColor,
         ),
         _buildSummaryCard(
-          title: 'Pending Txns',
+          title: strings.summaryPendingTxns,
           values: {'Count': '50', 'Amount': '7,000'},
           increase: '+5.8%',
-          color: const Color(0xFF6200EA),
+          color: context.chartPrimaryColor,
         ),
       ],
     ];
 
     return SizedBox(
       height: 150,
-      child: PageView.builder(
-        controller: pageController,
-        itemCount: pairedCards.length,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                Expanded(child: pairedCards[index][0]),
-                const SizedBox(width: 8),
-                Expanded(child: pairedCards[index][1]),
-              ],
+      child: Stack(
+        children: [
+          PageView.builder(
+            controller: _summaryPageController,
+            itemCount: pairedCards.length,
+            itemBuilder: (context, index) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    Expanded(child: pairedCards[index][0]),
+                    const SizedBox(width: 8),
+                    Expanded(child: pairedCards[index][1]),
+                  ],
+                ),
+              );
+            },
+          ),
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: GestureDetector(
+              onTap: () {
+                if (_summaryPageController.hasClients && _summaryPageController.page! > 0) {
+                  HapticFeedback.lightImpact();
+                  _summaryPageController.previousPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                }
+              },
+              child: Container(
+                width: 40,
+                color: Colors.transparent,
+                child: Icon(
+                  Icons.chevron_left,
+                  color: Theme.of(context).primaryColor,
+                  size: 24,
+                ),
+              ),
             ),
-          );
-        },
+          ),
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            child: GestureDetector(
+              onTap: () {
+                if (_summaryPageController.hasClients && _summaryPageController.page! < pairedCards.length - 1) {
+                  HapticFeedback.lightImpact();
+                  _summaryPageController.nextPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                }
+              },
+              child: Container(
+                width: 40,
+                color: Colors.transparent,
+                child: Icon(
+                  Icons.chevron_right,
+                  color: Theme.of(context).primaryColor,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // Helper method for individual summary card.
   Widget _buildSummaryCard({
     required String title,
     required Map<String, String> values,
@@ -275,11 +418,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       height: 150,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.secondaryCardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: context.shadowColor,
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -293,9 +436,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: Color(0xFF1A1A1A),
-                  fontSize: 13,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: context.textSecondaryColor,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -307,9 +449,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 child: Text(
                   increase,
-                  style: TextStyle(
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: color,
-                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -322,17 +463,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Text(
                 entry.key,
-                style: const TextStyle(
-                  color: Color(0xFF1A1A1A),
-                  fontSize: 12,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: context.textSecondaryColor,
                   fontWeight: FontWeight.w400,
                 ),
               ),
               Text(
                 entry.value,
-                style: const TextStyle(
-                  color: Color(0xFF1A1A1A),
-                  fontSize: 16,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: context.textPrimaryColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -344,11 +483,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Line chart for monthly earnings with improved label insets and unified tooltips.
-  Widget _buildMonthlyEarningsCard() {
+  Widget _buildMonthlyEarningsCard(S strings) {
+    if (plazaData.isEmpty) {
+      return _buildCard(
+        title: strings.cardPlazaRevenueSummary,
+        height: 280,
+        child: Center(
+          child: Text(
+            strings.errorNotFound,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.error),
+          ),
+        ),
+      );
+    }
+
+    final List<FlSpot> revenueSpots = List.generate(
+      plazaData.length,
+          (index) => FlSpot(index.toDouble(), plazaData[index].revenue),
+    );
+
     return _buildCard(
-      title: 'Plaza-wise Revenue Summary',
-      height: 280,
+      title: strings.cardPlazaRevenueSummary,
+      height: MediaQuery.of(context).size.height * 0.35, // Dynamic height
       child: Padding(
         padding: const EdgeInsets.only(top: 8.0),
         child: LineChart(
@@ -356,13 +512,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             lineTouchData: LineTouchData(
               enabled: true,
               touchTooltipData: LineTouchTooltipData(
-                getTooltipColor: (touchedSpot) =>
-                    kTooltipBg.withOpacity(kTooltipOpacity),
+                getTooltipColor: (_) => context.textPrimaryColor.withOpacity(0.8),
                 getTooltipItems: (List<LineBarSpot> touchedSpots) {
                   return touchedSpots.map((lineBarSpot) {
+                    final index = lineBarSpot.x.toInt();
+                    final plazaName = index >= 0 && index < plazaData.length ? plazaData[index].name : '';
                     return LineTooltipItem(
-                      'Revenue: ${lineBarSpot.y.toStringAsFixed(1)}K',
-                      kTooltipTextStyle,
+                      '$plazaName: ${lineBarSpot.y.toStringAsFixed(1)}K',
+                      Theme.of(context).textTheme.bodySmall!.copyWith(
+                        color: context.secondaryCardColor,
+                        fontWeight: FontWeight.bold,
+                      ),
                     );
                   }).toList();
                 },
@@ -370,20 +530,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             lineBarsData: [
               LineChartBarData(
-                spots: plazaRevenueSpots,
+                spots: revenueSpots,
                 isCurved: true,
                 barWidth: 2,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6200EA), Color(0xFF3700B3)],
+                gradient: LinearGradient(
+                  colors: [
+                    context.chartPrimaryColor,
+                    context.chartSecondaryColor,
+                  ],
                 ),
                 dotData: FlDotData(
                   show: true,
                   getDotPainter: (spot, percent, barData, index) {
                     return FlDotCirclePainter(
                       radius: 4,
-                      color: Colors.white,
+                      color: context.secondaryCardColor,
                       strokeWidth: 2,
-                      strokeColor: const Color(0xFF6200EA),
+                      strokeColor: context.chartPrimaryColor,
                     );
                   },
                 ),
@@ -391,8 +554,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   show: true,
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFF6200EA).withOpacity(0.2),
-                      const Color(0xFF3700B3).withOpacity(0.0),
+                      context.chartPrimaryColor.withOpacity(0.2),
+                      context.chartSecondaryColor.withOpacity(0.0),
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -406,7 +569,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               horizontalInterval: 20,
               getDrawingHorizontalLine: (value) {
                 return FlLine(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: context.textSecondaryColor.withOpacity(0.1),
                   strokeWidth: 0.5,
                 );
               },
@@ -415,42 +578,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
               bottomTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
-                  reservedSize: 60,
+                  reservedSize: 70,
                   interval: 1,
                   getTitlesWidget: (value, meta) {
-                    const plazaNames = {
-                      0: 'Central\nMall',
-                      1: 'City\nCenter',
-                      2: 'Metro\nPlaza'
-                    };
                     final index = value.toInt();
-                    if (!plazaNames.containsKey(index)) {
-                      return const SizedBox.shrink();
-                    }
+                    if (index < 0 || index >= plazaData.length) return const SizedBox.shrink();
                     return Padding(
                       padding: EdgeInsets.only(
                         top: 16.0,
                         left: index == 0 ? 16.0 : 0.0,
-                        right: index == plazaNames.length - 1 ? 28.0 : 0.0,
+                        right: index == plazaData.length - 1 ? 28.0 : 0.0,
                       ),
                       child: Transform.rotate(
                         angle: -0.6,
                         child: Align(
                           alignment: index == 0
                               ? Alignment.centerLeft
-                              : index == plazaNames.length - 1
+                              : index == plazaData.length - 1
                               ? Alignment.centerRight
                               : Alignment.center,
                           child: Text(
-                            plazaNames[index]!,
-                            style: const TextStyle(
-                              color: Color(0xFF1A1A1A),
-                              fontSize: 11,
+                            _formatLongName(plazaData[index].name),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: context.textPrimaryColor,
                               fontWeight: FontWeight.w500,
                               height: 1.2,
                             ),
                             textAlign: TextAlign.center,
                             maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ),
@@ -468,9 +624,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       padding: const EdgeInsets.only(right: 8.0),
                       child: Text(
                         '${value.toInt()}K',
-                        style: const TextStyle(
-                          color: Color(0xFF1A1A1A),
-                          fontSize: 10,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.textSecondaryColor,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -478,8 +633,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                 ),
               ),
-              rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             ),
             borderData: FlBorderData(show: false),
           ),
@@ -488,58 +643,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Bar chart for plaza bookings with unified tooltips.
-  Widget _buildPlazaBookingsCard() {
-    // Function to split plaza name into two lines.
-    String formatPlazaName(String name) {
-      final words = name.split(' ');
-      if (words.length > 1) {
-        return '${words[0]}\n${words.sublist(1).join(' ')}';
-      }
-      return name;
+  Widget _buildPlazaBookingsCard(S strings) {
+    if (plazaData.isEmpty) {
+      developer.log('No booking data available for chart', name: 'DashboardScreen', level: 900);
+      return _buildCard(
+        title: strings.cardPlazaBookingSummary,
+        height: 350,
+        child: Center(
+          child: Text(
+            strings.errorNotFound,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.error),
+          ),
+        ),
+      );
     }
 
+    final maxTotal = plazaData.map((e) => e.total).reduce(max);
+
     return _buildCard(
-      title: 'Plaza-wise Booking Summary',
-      height: 350,
+      title: strings.cardPlazaBookingSummary,
+      height: MediaQuery.of(context).size.height * 0.45, // Dynamic height
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 8),
           Expanded(
             child: BarChart(
               BarChartData(
                 alignment: BarChartAlignment.spaceAround,
-                barGroups: List.generate(
-                  plazaData.length,
-                      (index) => BarChartGroupData(
-                    x: index,
-                    barRods: [
-                      BarChartRodData(
-                        toY: plazaData[index]['total']!.toDouble(),
-                        width: 16,
-                        color: const Color(0xFF6200EA),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-                      ),
-                      BarChartRodData(
-                        toY: plazaData[index]['cancelled']!.toDouble(),
-                        width: 16,
-                        color: const Color(0xFF9C27B0),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-                      ),
-                    ],
-                    barsSpace: 4,
+                maxY: maxTotal * 1.2,
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (_) => context.textPrimaryColor.withOpacity(0.8),
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final plaza = plazaData[groupIndex];
+                      return BarTooltipItem(
+                        '${plaza.name}\n${strings.totalBookings}: ${plaza.total}\n${strings.cancelledBookings}: ${plaza.cancelled}',
+                        Theme.of(context).textTheme.bodySmall!.copyWith(
+                          color: context.secondaryCardColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    },
                   ),
                 ),
                 gridData: FlGridData(
                   show: true,
+                  checkToShowHorizontalLine: (value) => value % 50 == 0,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: context.textSecondaryColor.withOpacity(0.1),
+                    strokeWidth: 0.5,
+                  ),
                   drawVerticalLine: false,
-                  horizontalInterval: 50,
-                  getDrawingHorizontalLine: (value) {
-                    return FlLine(
-                      color: Colors.grey.withOpacity(0.1),
-                      strokeWidth: 0.5,
-                    );
-                  },
                 ),
                 titlesData: FlTitlesData(
                   show: true,
@@ -549,24 +704,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       reservedSize: 60,
                       getTitlesWidget: (value, meta) {
                         final index = value.toInt();
-                        if (index < 0 || index >= plazaData.length) {
-                          return const SizedBox.shrink();
-                        }
+                        if (index < 0 || index >= plazaData.length) return const SizedBox.shrink();
                         return Padding(
-                          padding: const EdgeInsets.only(top: 16.0),
-                          child: Transform.rotate(
-                            angle: -0.6,
-                            child: Text(
-                              formatPlazaName(plazaData[index]['name']!.toString()),
-                              style: const TextStyle(
-                                color: Color(0xFF1A1A1A),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                height: 1.2,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            _formatLongName(plazaData[index].name, maxCharsPerLine: 8),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: context.textPrimaryColor,
+                              fontWeight: FontWeight.w500,
                             ),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         );
                       },
@@ -576,64 +725,107 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 40,
+                      interval: 50,
                       getTitlesWidget: (value, meta) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: Text(
-                            value.toInt().toString(),
-                            style: const TextStyle(
-                              color: Color(0xFF1A1A1A),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                            ),
+                        return Text(
+                          value.toInt().toString(),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: context.textSecondaryColor,
+                            fontWeight: FontWeight.w500,
                           ),
                         );
                       },
                     ),
                   ),
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
                 borderData: FlBorderData(show: false),
-                barTouchData: BarTouchData(
-                  enabled: true,
-                  touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (group) =>
-                        kTooltipBg.withOpacity(kTooltipOpacity),
-                    fitInsideHorizontally: true,
-                    fitInsideVertically: true,
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      return BarTooltipItem(
-                        '${rodIndex == 0 ? 'Total' : 'Cancelled'}: ${rod.toY.toInt()}',
-                        kTooltipTextStyle,
-                      );
-                    },
-                  ),
-                ),
+                barGroups: List.generate(plazaData.length, (index) {
+                  final plaza = plazaData[index];
+                  return BarChartGroupData(
+                    x: index,
+                    barRods: [
+                      BarChartRodData(
+                        toY: plaza.total.toDouble(),
+                        width: 16,
+                        gradient: LinearGradient(
+                          colors: [
+                            context.chartPrimaryColor,
+                            context.chartSecondaryColor,
+                          ],
+                        ),
+                        backDrawRodData: BackgroundBarChartRodData(
+                          show: true,
+                          toY: maxTotal * 1.2,
+                          color: context.chartPrimaryColor.withOpacity(0.05),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildLegendItem('Total Bookings', '', const Color(0xFF6200EA)),
-                const SizedBox(width: 24),
-                _buildLegendItem('Cancelled Bookings', '', const Color(0xFF9C27B0)),
-              ],
-            ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLegendItem(
+                strings.legendTotalBookings,
+                '',
+                context.chartPrimaryColor,
+              ),
+              const SizedBox(width: 24),
+              _buildLegendItem(
+                strings.legendCancelledBookings,
+                '',
+                context.chartSecondaryColor,
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  // Pie chart for revenue distribution with touch enabled.
-  Widget _buildRevenueDistributionCard() {
+  List<PieChartSectionData> _getRevenueDistributionSections(BuildContext context) {
+    paymentData[0]['color'] = context.chartPrimaryColor;
+    paymentData[1]['color'] = context.chartSecondaryColor;
+    paymentData[2]['color'] = context.chartTertiaryColor;
+
+    return List.generate(paymentData.length, (index) {
+      final data = paymentData[index];
+      return PieChartSectionData(
+        value: data['percentage'],
+        title: '${data['percentage'].toStringAsFixed(0)}%',
+        color: data['color'] as Color,
+        radius: 60,
+        titleStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+          color: context.secondaryCardColor,
+        ),
+      );
+    });
+  }
+
+  Widget _buildRevenueDistributionCard(S strings) {
+    if (paymentData.isEmpty) {
+      return _buildCard(
+        title: strings.cardRevenueDistribution,
+        height: 350,
+        child: Center(
+          child: Text(
+            strings.errorNotFound,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.error),
+          ),
+        ),
+      );
+    }
+
     return _buildCard(
-      title: 'Revenue Distribution',
-      height: 350,
+      title: strings.cardRevenueDistribution,
+      height: MediaQuery.of(context).size.height * 0.45, // Dynamic height
       child: Column(
         children: [
           Expanded(
@@ -642,8 +834,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               PieChartData(
                 pieTouchData: PieTouchData(
                   enabled: true,
+                  touchCallback: (event, pieTouchResponse) {
+                    if (pieTouchResponse != null && pieTouchResponse.touchedSection != null) {
+                      HapticFeedback.lightImpact();
+                    }
+                  },
                 ),
-                sections: revenueDistributionSections,
+                sections: _getRevenueDistributionSections(context),
                 sectionsSpace: 2,
                 centerSpaceRadius: 40,
                 startDegreeOffset: -90,
@@ -659,13 +856,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   Expanded(
-                    child: _buildLegendItem('UPI/Debit\nCredit Card', '45%', const Color(0xFF6200EA)),
+                    child: _buildLegendItem(
+                      strings.legendUpiCard,
+                      '${paymentData[0]['percentage'].toStringAsFixed(0)}%',
+                      paymentData[0]['color'] as Color,
+                    ),
                   ),
                   Expanded(
-                    child: _buildLegendItem('Cash', '35%', const Color(0xFF3700B3)),
+                    child: _buildLegendItem(
+                      strings.legendCash,
+                      '${paymentData[1]['percentage'].toStringAsFixed(0)}%',
+                      paymentData[1]['color'] as Color,
+                    ),
                   ),
                   Expanded(
-                    child: _buildLegendItem('QR', '20%', const Color(0xFF9C27B0)),
+                    child: _buildLegendItem(
+                      strings.legendQr,
+                      '${paymentData[2]['percentage'].toStringAsFixed(0)}%',
+                      paymentData[2]['color'] as Color,
+                    ),
                   ),
                 ],
               ),
@@ -676,7 +885,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Legend widget.
   Widget _buildLegendItem(String label, String percentage, Color color) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -690,28 +898,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF1A1A1A),
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
+        Flexible(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: context.textPrimaryColor,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          textAlign: TextAlign.center,
-          maxLines: 2,
         ),
         if (percentage.isNotEmpty) ...[
           const SizedBox(height: 2),
-          Text(
-            percentage,
-            style: const TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+          Flexible(
+            child: Text(
+              percentage,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: context.textPrimaryColor,
+                fontWeight: FontWeight.bold,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
       ],
     );
+  }
+
+  String _formatLongName(String name, {int maxCharsPerLine = 10}) {
+    if (name.isEmpty) return '';
+    if (name.length <= maxCharsPerLine) return name;
+
+    final words = name.trim().split(' ');
+    if (words.length > 1) {
+      String firstLine = '';
+      String secondLine = '';
+
+      for (var word in words) {
+        if ((firstLine + word).length <= maxCharsPerLine) {
+          firstLine = firstLine.isEmpty ? word : '$firstLine $word';
+        } else if (secondLine.isEmpty || (secondLine + word).length <= maxCharsPerLine) {
+          secondLine = secondLine.isEmpty ? word : '$secondLine $word';
+        } else {
+          secondLine = '$secondLine...';
+          break;
+        }
+      }
+
+      return '$firstLine\n$secondLine';
+    } else {
+      return '${name.substring(0, maxCharsPerLine - 1)}-\n${name.substring(maxCharsPerLine - 1, min(name.length, maxCharsPerLine * 2 - 1))}${name.length > maxCharsPerLine * 2 - 1 ? '...' : ''}';
+    }
   }
 }

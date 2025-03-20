@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/config/app_config.dart';
+import 'package:merchant_app/config/app_theme.dart';
 import 'package:merchant_app/models/notification_model.dart';
 import 'package:merchant_app/models/transaction_model.dart';
 import 'package:merchant_app/utils/components/icon.dart';
@@ -10,7 +11,9 @@ import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:merchant_app/models/plaza_fare.dart'; // Added for PlazaFare
+import 'package:merchant_app/models/plaza_fare.dart';
+import 'dart:developer' as developer;
+import '../../generated/l10n.dart';
 
 class CustomCards {
   static Widget plazaCard({
@@ -19,16 +22,21 @@ class CustomCards {
     required String location,
     required String plazaId,
     VoidCallback? onTap,
+    required BuildContext context,
   }) {
+    final strings = S.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6,horizontal: 8),
       child: Card(
+        margin: EdgeInsets.zero,
         elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        color: context.secondaryCardColor,
         child: InkWell(
-          onTap: onTap,
+          onTap: () {
+            developer.log('Plaza card tapped: $plazaName', name: 'CustomCards');
+            onTap?.call();
+          },
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -39,7 +47,7 @@ class CustomCards {
                   child: SizedBox(
                     width: 100,
                     height: 100,
-                    child: _buildImageWidget(imageUrl),
+                    child: _buildImageWidget(imageUrl, context),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -50,19 +58,20 @@ class CustomCards {
                     children: [
                       Text(
                         plazaName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
+                          color: context.textPrimaryColor,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "Plaza ID: $plazaId",
+                        "${strings.labelPlazaId} $plazaId",
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[600],
+                          color: context.textSecondaryColor,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -70,7 +79,7 @@ class CustomCards {
                         location,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[600],
+                          color: context.textSecondaryColor,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -78,10 +87,7 @@ class CustomCards {
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.chevron_right,
-                  color: Colors.grey[600],
-                ),
+                Icon(Icons.chevron_right, color: context.textSecondaryColor),
               ],
             ),
           ),
@@ -90,7 +96,7 @@ class CustomCards {
     );
   }
 
-  static Widget _buildImageWidget(String? imageUrl) {
+  static Widget _buildImageWidget(String? imageUrl, BuildContext context) {
     final customCacheManager = CacheManager(
       Config(
         'plazaImageCache',
@@ -98,17 +104,18 @@ class CustomCards {
         maxNrOfCacheObjects: 100,
       ),
     );
+    final strings = S.of(context);
 
     if (imageUrl == null || imageUrl.isEmpty) {
       return Container(
         decoration: BoxDecoration(
-          color: Colors.grey[300],
+          color: AppColors.grey,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Icon(
+        child: Icon(
           Icons.image_not_supported,
           size: 40,
-          color: Colors.grey,
+          color: context.textSecondaryColor,
         ),
       );
     }
@@ -118,26 +125,32 @@ class CustomCards {
       cacheManager: customCacheManager,
       fit: BoxFit.cover,
       placeholder: (context, url) => Shimmer.fromColors(
-        baseColor: Colors.grey.shade300,
-        highlightColor: Colors.grey.shade100,
+        baseColor: Theme.of(context).brightness == Brightness.light
+            ? AppColors.shimmerBaseLight
+            : AppColors.shimmerBaseDark,
+        highlightColor: Theme.of(context).brightness == Brightness.light
+            ? AppColors.shimmerHighlightLight
+            : AppColors.shimmerHighlightDark,
         direction: ShimmerDirection.ltr,
         period: const Duration(milliseconds: 1200),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.grey.shade300,
+            color: Theme.of(context).brightness == Brightness.light
+                ? AppColors.shimmerBaseLight
+                : AppColors.shimmerBaseDark,
             borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
       errorWidget: (context, url, error) => Container(
         decoration: BoxDecoration(
-          color: Colors.grey[300],
+          color: AppColors.grey,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Icon(
+        child: Icon(
           Icons.error_outline,
           size: 40,
-          color: Colors.red,
+          color: AppColors.error,
         ),
       ),
       fadeInDuration: const Duration(milliseconds: 300),
@@ -148,18 +161,22 @@ class CustomCards {
   static Widget menuCard({
     required String menu,
     VoidCallback? onTap,
+    required BuildContext context,
   }) {
+    final strings = S.of(context);
     return Container(
       padding: const EdgeInsets.only(top: 8.0),
-      width: (AppConfig.deviceWidth) * 0.9,
+      width: AppConfig.deviceWidth * 0.9,
       child: Card(
         margin: EdgeInsets.zero,
         elevation: 5,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        color: context.cardColor,
         child: InkWell(
-          onTap: onTap,
+          onTap: () {
+            developer.log('Menu card tapped: $menu', name: 'CustomCards');
+            onTap?.call();
+          },
           borderRadius: BorderRadius.circular(24),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -168,16 +185,14 @@ class CustomCards {
                 Expanded(
                   child: Text(
                     menu,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
+                      color: context.textPrimaryColor,
                     ),
                   ),
                 ),
-                Icon(
-                  Icons.chevron_right,
-                  color: Colors.grey[600],
-                ),
+                Icon(Icons.chevron_right, color: context.textSecondaryColor),
               ],
             ),
           ),
@@ -190,24 +205,27 @@ class CustomCards {
     VoidCallback? onTap,
     double? width,
     double? height,
+    required BuildContext context,
   }) {
+    final strings = S.of(context);
     return SizedBox(
       width: width,
       height: height ?? 80,
       child: Card(
         elevation: 0,
-        color: Colors.grey[200],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        color: context.surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: InkWell(
-          onTap: onTap,
+          onTap: () {
+            developer.log('Add card tapped', name: 'CustomCards');
+            onTap?.call();
+          },
           borderRadius: BorderRadius.circular(12),
           child: Center(
             child: Icon(
               Icons.add,
               size: 24,
-              color: Colors.grey[600],
+              color: context.textSecondaryColor,
             ),
           ),
         ),
@@ -220,14 +238,16 @@ class CustomCards {
     required String userId,
     String? imageUrl,
     VoidCallback? onTap,
+    required BuildContext context,
   }) {
+    final strings = S.of(context);
     return Card(
       margin: const EdgeInsets.all(0),
       elevation: 5,
-      color: const Color(0xFF014245),
+      color: context.cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(color: Colors.black, width: 2),
+        side: BorderSide(color: context.inputBorderColor, width: 2), // Use theme-aware border
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -235,8 +255,11 @@ class CustomCards {
           children: [
             CircleAvatar(
               radius: 40,
-              backgroundColor: Colors.blue[100],
-              child: const Icon(Icons.person, size: 50, color: Colors.blue),
+              backgroundColor: context.surfaceColor,
+              child: imageUrl == null || imageUrl.isEmpty
+                  ? Icon(Icons.person, size: 50, color: Theme.of(context).brightness == Brightness.light ? AppColors.primary : AppColors.secondary)
+                  : null,
+              backgroundImage: imageUrl != null && imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -246,16 +269,16 @@ class CustomCards {
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: context.textPrimaryColor,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "ID: $userId",
-                    style: TextStyle(fontSize: 16, color: Colors.grey[300]),
+                    "${strings.labelUserId} $userId",
+                    style: TextStyle(fontSize: 16, color: context.textSecondaryColor),
                   ),
                 ],
               ),
@@ -270,29 +293,33 @@ class CustomCards {
     required NotificationModel notification,
     required BuildContext context,
   }) {
+    final strings = S.of(context);
     return Dismissible(
       key: Key(notification.id),
       background: Container(
-        color: Colors.red,
+        color: AppColors.error,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: const Icon(Icons.delete, color: AppColors.textLight),
       ),
       onDismissed: (direction) {
         context.read<NotificationsViewModel>().deleteNotification(notification.id);
+        developer.log('Notification dismissed: ${notification.title}', name: 'CustomCards');
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 8),
         child: Card(
           elevation: 5,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          color: context.secondaryCardColor, // Use theme-aware notification color
           child: ListTile(
-            leading: CustomIcons.buildNotificationIcon(notification),
+            leading: CustomIcons.buildNotificationIcon(notification, context),
             title: Text(
               notification.title,
               style: TextStyle(
                 fontSize: 16,
-                fontWeight: notification.isRead ? FontWeight.normal : FontWeight.w500,
+                fontWeight: notification.isRead ? FontWeight.w400 : FontWeight.w500,
+                color: context.textPrimaryColor,
               ),
             ),
             subtitle: Column(
@@ -302,16 +329,19 @@ class CustomCards {
                   notification.message,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 14, color: context.textSecondaryColor),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _getTimeAgo(notification.timestamp),
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  _getTimeAgo(notification.timestamp, strings),
+                  style: TextStyle(fontSize: 12, color: context.textSecondaryColor),
                 ),
               ],
             ),
-            onTap: () => _handleNotificationTap(context, notification),
+            onTap: () {
+              developer.log('Notification tapped: ${notification.title}', name: 'CustomCards');
+              _handleNotificationTap(context, notification);
+            },
           ),
         ),
       ),
@@ -342,20 +372,20 @@ class CustomCards {
     }
   }
 
-  static String _getTimeAgo(DateTime timestamp) {
+  static String _getTimeAgo(DateTime timestamp, S strings) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
     if (difference.inDays > 7) {
       final formatter = DateFormat('MMM d, y');
       return formatter.format(timestamp);
     } else if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
+      return '${difference.inDays}${strings.labelDaysAgo}';
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
+      return '${difference.inHours}${strings.labelHoursAgo}';
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
+      return '${difference.inMinutes}${strings.labelMinutesAgo}';
     } else {
-      return 'Just now';
+      return strings.labelJustNow;
     }
   }
 
@@ -363,18 +393,28 @@ class CustomCards {
     required TransactionModel transaction,
     required BuildContext context,
   }) {
+    final strings = S.of(context);
     return Card(
       elevation: 5,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      color: context.secondaryCardColor,
       child: ListTile(
-        title: Text(transaction.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('${transaction.amount}', style: const TextStyle(color: Colors.grey)),
+        title: Text(
+          transaction.title,
+          style: TextStyle(fontWeight: FontWeight.w600, color: context.textPrimaryColor),
+        ),
+        subtitle: Text(
+          '${transaction.amount}',
+          style: TextStyle(color: context.textSecondaryColor),
+        ),
         trailing: Icon(
           transaction.type == TransactionType.payment ? Icons.arrow_downward : Icons.arrow_upward,
-          color: transaction.type == TransactionType.payment ? Colors.green : Colors.red,
+          color: transaction.type == TransactionType.payment ? AppColors.success : AppColors.error,
         ),
-        onTap: () {},
+        onTap: () {
+          developer.log('Transaction card tapped: ${transaction.title}', name: 'CustomCards');
+        },
       ),
     );
   }
@@ -382,20 +422,25 @@ class CustomCards {
   static Widget plazaImageCard({
     final List<String>? imageUrls,
     final VoidCallback? onTap,
+    required BuildContext context,
   }) {
+    final strings = S.of(context);
     return Container(
       width: AppConfig.deviceWidth,
       height: AppConfig.deviceHeight * 0.2,
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       child: Card(
         elevation: 5,
-        color: Colors.teal[100],
+        color: context.surfaceColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: Colors.black, width: 2),
+          side: BorderSide(color: context.inputBorderColor, width: 2), // Use theme-aware border
         ),
         child: InkWell(
-          onTap: onTap,
+          onTap: () {
+            developer.log('Plaza image card tapped', name: 'CustomCards');
+            onTap?.call();
+          },
           borderRadius: BorderRadius.circular(24),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -430,15 +475,23 @@ class CustomCards {
                       height: AppConfig.deviceHeight * 0.15,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        color: Colors.grey[300],
+                        color: AppColors.grey,
                       ),
-                      child: const Center(
-                        child: Icon(Icons.image_not_supported, color: Colors.grey, size: 30),
+                      child: Center(
+                        child: Icon(
+                          Icons.image_not_supported,
+                          color: context.textSecondaryColor,
+                          size: 30,
+                        ),
                       ),
                     ),
                   ),
                 const SizedBox(width: 16),
-                addCard(height: AppConfig.deviceHeight * 0.15, width: AppConfig.deviceWidth * 0.2),
+                addCard(
+                  height: AppConfig.deviceHeight * 0.15,
+                  width: AppConfig.deviceWidth * 0.2,
+                  context: context,
+                ),
               ],
             ),
           ),
@@ -454,7 +507,9 @@ class CustomCards {
     VoidCallback? onTap,
     VoidCallback? onConfirm,
     required IconData icon,
+    required BuildContext context,
   }) {
+    final strings = S.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
@@ -463,13 +518,27 @@ class CustomCards {
         keyboardType: keyboardType,
         decoration: InputDecoration(
           labelText: labelText,
+          labelStyle: TextStyle(color: context.textPrimaryColor),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           disabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderSide: BorderSide(color: context.inputBorderColor),
           ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: context.inputBorderColor),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+                color: Theme.of(context).brightness == Brightness.light
+                    ? AppColors.primary
+                    : AppColors.secondary,
+                width: 2),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         ),
-        style: TextStyle(color: Colors.black),
+        style: TextStyle(color: context.textPrimaryColor),
       ),
     );
   }
@@ -480,20 +549,26 @@ class CustomCards {
     required String role,
     required String contactNumber,
     required VoidCallback onTap,
+    required BuildContext context,
   }) {
+    final strings = S.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
       child: Card(
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        color: context.cardColor,
         child: InkWell(
-          onTap: onTap,
+          onTap: () {
+            developer.log('Operator card tapped: $operatorName', name: 'CustomCards');
+            onTap();
+          },
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                _buildOperatorImage(imageUrl),
+                _buildOperatorImage(imageUrl, context),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -502,22 +577,33 @@ class CustomCards {
                     children: [
                       Text(
                         operatorName,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: context.textPrimaryColor,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         role,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: context.textSecondaryColor,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         contactNumber,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: context.textSecondaryColor,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right, color: Colors.grey[600]),
+                Icon(Icons.chevron_right, color: context.textSecondaryColor),
               ],
             ),
           ),
@@ -526,16 +612,17 @@ class CustomCards {
     );
   }
 
-  static Widget _buildOperatorImage(String? imageUrl) {
+  static Widget _buildOperatorImage(String? imageUrl, BuildContext context) {
     final customCacheManager = CacheManager(
       Config('operatorImageCache', stalePeriod: const Duration(hours: 24), maxNrOfCacheObjects: 100),
     );
+    final strings = S.of(context);
 
     if (imageUrl == null || imageUrl.isEmpty) {
       return CircleAvatar(
         radius: 40,
-        backgroundColor: Colors.blue[100],
-        child: const Icon(Icons.person, size: 40, color: Colors.blue),
+        backgroundColor: context.surfaceColor,
+        child: Icon(Icons.person, size: 40, color: Theme.of(context).brightness == Brightness.light ? AppColors.primary : AppColors.secondary),
       );
     }
 
@@ -547,18 +634,27 @@ class CustomCards {
         width: 80,
         height: 80,
         placeholder: (context, url) => Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
+          baseColor: Theme.of(context).brightness == Brightness.light
+              ? AppColors.shimmerBaseLight
+              : AppColors.shimmerBaseDark,
+          highlightColor: Theme.of(context).brightness == Brightness.light
+              ? AppColors.shimmerHighlightLight
+              : AppColors.shimmerHighlightDark,
           child: Container(
             width: 80,
             height: 80,
-            decoration: BoxDecoration(color: Colors.grey.shade300, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.light
+                  ? AppColors.shimmerBaseLight
+                  : AppColors.shimmerBaseDark,
+              shape: BoxShape.circle,
+            ),
           ),
         ),
         errorWidget: (context, url, error) => CircleAvatar(
           radius: 40,
-          backgroundColor: Colors.grey[300],
-          child: const Icon(Icons.person, size: 40, color: Colors.grey),
+          backgroundColor: AppColors.grey,
+          child: Icon(Icons.person, size: 40, color: AppColors.error),
         ),
         fadeInDuration: const Duration(milliseconds: 300),
         fadeOutDuration: const Duration(milliseconds: 300),
@@ -570,20 +666,26 @@ class CustomCards {
     required PlazaFare fare,
     required String plazaName,
     required VoidCallback onTap,
+    required BuildContext context,
   }) {
+    final strings = S.of(context);
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       elevation: 3,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
         side: BorderSide(
-          color: fare.isDeleted ? Colors.red.shade100 : Colors.green.shade100,
+          color: fare.isDeleted ? AppColors.error.withOpacity(0.2) : AppColors.success.withOpacity(0.2),
           width: 1,
         ),
       ),
+      color: context.cardColor,
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
-        onTap: onTap,
+        onTap: () {
+          developer.log('Fare card tapped for plaza: $plazaName', name: 'CustomCards');
+          onTap();
+        },
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -602,12 +704,16 @@ class CustomCards {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Plaza Name",
-                                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                                strings.labelPlazaName,
+                                style: TextStyle(fontSize: 16, color: context.textPrimaryColor),
                               ),
                               Text(
                                 plazaName,
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: context.textPrimaryColor,
+                                ),
                               ),
                             ],
                           ),
@@ -618,13 +724,13 @@ class CustomCards {
                             width: 60,
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: fare.isDeleted ? Colors.red.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+                              color: fare.isDeleted ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              fare.isDeleted ? 'Inactive' : 'Active',
+                              fare.isDeleted ? strings.labelInactive : strings.labelActive,
                               style: TextStyle(
-                                color: fare.isDeleted ? Colors.red : Colors.green,
+                                color: fare.isDeleted ? AppColors.error : AppColors.success,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13,
                               ),
@@ -643,12 +749,12 @@ class CustomCards {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Vehicle Type',
-                                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                strings.labelVehicleType,
+                                style: TextStyle(color: context.textPrimaryColor, fontSize: 12),
                               ),
                               Text(
                                 fare.vehicleType,
-                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: context.textPrimaryColor),
                               ),
                             ],
                           ),
@@ -658,12 +764,12 @@ class CustomCards {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Fare Type',
-                                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                strings.labelFareType,
+                                style: TextStyle(color: context.textPrimaryColor, fontSize: 12),
                               ),
                               Text(
                                 fare.fareType,
-                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: context.textPrimaryColor),
                               ),
                             ],
                           ),
@@ -679,12 +785,12 @@ class CustomCards {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Amount',
-                                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                strings.labelAmount,
+                                style: TextStyle(color: context.textPrimaryColor, fontSize: 12),
                               ),
                               Text(
                                 '₹${fare.fareRate}',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: context.textPrimaryColor),
                               ),
                             ],
                           ),
@@ -694,12 +800,12 @@ class CustomCards {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Effective Period',
-                                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                strings.labelEffectivePeriod,
+                                style: TextStyle(color: context.textPrimaryColor, fontSize: 12),
                               ),
                               Text(
-                                '${DateFormat('dd MMM yyyy').format(fare.startEffectDate)} - ${fare.endEffectDate != null ? DateFormat('dd MMM yyyy').format(fare.endEffectDate!) : 'Ongoing'}',
-                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                '${DateFormat('dd MMM yyyy').format(fare.startEffectDate)} - ${fare.endEffectDate != null ? DateFormat('dd MMM yyyy').format(fare.endEffectDate!) : strings.labelOngoing}',
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: context.textPrimaryColor),
                               ),
                             ],
                           ),
@@ -712,7 +818,7 @@ class CustomCards {
               Container(
                 width: 30,
                 alignment: Alignment.center,
-                child: Icon(Icons.chevron_right, color: AppColors.primary, size: 24),
+                child: Icon(Icons.chevron_right, color: context.textPrimaryColor, size: 24),
               ),
             ],
           ),

@@ -1,13 +1,14 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../../config/app_colors.dart';
-import '../../../../config/app_strings.dart';
 import '../../../../utils/components/appbar.dart';
 import '../../../../utils/components/form_field.dart';
 import '../../../../utils/components/pagination_controls.dart';
+import '../../../generated/l10n.dart';
 import '../../../utils/exceptions.dart';
 import 'modify_view_open_ticket.dart';
 import '../../../viewmodels/ticket/open_ticket_viewmodel.dart';
@@ -28,6 +29,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
   int _currentPage = 1;
   static const int _itemsPerPage = 10;
   bool _isLoading = false;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -35,9 +37,12 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
     _viewModel = OpenTicketViewModel();
     _loadInitialData();
     _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text.toLowerCase();
-        _currentPage = 1;
+      if (_debounce?.isActive ?? false) _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 300), () {
+        setState(() {
+          _searchQuery = _searchController.text.toLowerCase();
+          _currentPage = 1;
+        });
       });
     });
   }
@@ -57,6 +62,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _routeObserver.unsubscribe(this);
     _scrollController.dispose();
     _searchController.dispose();
@@ -100,6 +106,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
   }
 
   Widget _buildSearchField() {
+    final strings = S.of(context); // Localization instance
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
       child: Column(
@@ -107,11 +114,11 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
         children: [
           CustomFormFields.searchFormField(
             controller: _searchController,
-            hintText: 'Search by Ticket ID, Plaza, Vehicle Number...',
+            hintText: strings.searchHint ?? 'Search by Ticket ID, Plaza, Vehicle Number...', context: context, // Add this to S class if needed
           ),
           const SizedBox(height: 8),
           Text(
-            'Last updated: ${DateTime.now().toString().substring(0, 16)}. Swipe down to refresh.',
+            '${strings.lastUpdated ?? 'Last updated'}: ${DateTime.now().toString().substring(0, 16)}. ${strings.swipeToRefresh ?? 'Swipe down to refresh.'}',
             style: const TextStyle(fontSize: 12, color: Colors.grey),
             textAlign: TextAlign.center,
           ),
@@ -121,6 +128,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
   }
 
   Widget _buildEmptyState() {
+    final strings = S.of(context); // Localization instance
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -128,18 +136,23 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
           Icon(Icons.confirmation_number_outlined, size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
-            'No open tickets',
+            strings.noOpenTickets ?? 'No open tickets',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
-            _searchQuery.isEmpty ? 'There are no open tickets available' : 'No tickets match your search criteria',
+            _searchQuery.isEmpty
+                ? strings.noTicketsAvailable
+                : strings.noTicketsMatchSearch,
             style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
             textAlign: TextAlign.center,
           ),
           if (_searchQuery.isNotEmpty) ...[
             const SizedBox(height: 16),
-            TextButton(onPressed: () => _searchController.clear(), child: const Text('Clear Search')),
+            TextButton(
+              onPressed: () => _searchController.clear(),
+              child: Text(strings.clearSearch),
+            ),
           ],
         ],
       ),
@@ -180,43 +193,51 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              Expanded(child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(width: 80, height: 12, color: Colors.white),
-                                  const SizedBox(height: 4),
-                                  Container(width: 100, height: 14, color: Colors.white),
-                                ],
-                              )),
-                              Expanded(child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(width: 80, height: 12, color: Colors.white),
-                                  const SizedBox(height: 4),
-                                  Container(width: 100, height: 14, color: Colors.white),
-                                ],
-                              )),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(width: 80, height: 12, color: Colors.white),
+                                    const SizedBox(height: 4),
+                                    Container(width: 100, height: 14, color: Colors.white),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(width: 80, height: 12, color: Colors.white),
+                                    const SizedBox(height: 4),
+                                    Container(width: 100, height: 14, color: Colors.white),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              Expanded(child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(width: 80, height: 12, color: Colors.white),
-                                  const SizedBox(height: 4),
-                                  Container(width: 120, height: 14, color: Colors.white),
-                                ],
-                              )),
-                              Expanded(child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(width: 80, height: 12, color: Colors.white),
-                                  const SizedBox(height: 4),
-                                  Container(width: 140, height: 13, color: Colors.white),
-                                ],
-                              )),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(width: 80, height: 12, color: Colors.white),
+                                    const SizedBox(height: 4),
+                                    Container(width: 120, height: 14, color: Colors.white),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(width: 80, height: 12, color: Colors.white),
+                                    const SizedBox(height: 4),
+                                    Container(width: 140, height: 13, color: Colors.white),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -234,35 +255,59 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
   }
 
   Widget _buildErrorState() {
-    String errorTitle = 'Unable to Load Tickets';
-    String errorMessage = 'Something went wrong. Please try again.';
-    String? errorDetails;
-
+    final strings = S.of(context); // Localization instance
+    String errorTitle = strings.errorUnableToLoadTickets; // Now defined
+    String errorMessage = strings.errorGeneric; // Now defined
     final error = _viewModel.error;
+
     if (error != null) {
       developer.log('Error occurred: $error');
       if (error is NoInternetException) {
-        errorTitle = 'No Internet Connection';
-        errorMessage = 'Please check your internet connection and try again.';
+        errorTitle = strings.errorNoInternet;
+        errorMessage = strings.errorNoInternetMessage;
       } else if (error is RequestTimeoutException) {
-        errorTitle = 'Request Timed Out';
-        errorMessage = 'The server is taking too long to respond. Please try again later.';
+        errorTitle = strings.errorRequestTimeout;
+        errorMessage = strings.errorRequestTimeoutMessage;
       } else if (error is HttpException) {
-        errorTitle = 'Server Error';
-        errorMessage = 'We couldn’t reach the server. Please try again.';
+        errorTitle = strings.errorServerError;
+        errorMessage = strings.errorServerErrorMessage;
         switch (error.statusCode) {
-          case 400: errorTitle = 'Invalid Request'; errorMessage = 'The request was incorrect.'; break;
-          case 401: errorTitle = 'Unauthorized'; errorMessage = 'Please log in again.'; break;
-          case 403: errorTitle = 'Access Denied'; errorMessage = 'You don’t have permission.'; break;
-          case 404: errorTitle = 'Not Found'; errorMessage = 'No open tickets were found.'; break;
-          case 500: errorTitle = 'Server Issue'; errorMessage = 'Problem on our end.'; break;
-          case 502: errorTitle = 'Service Unavailable'; errorMessage = 'Service is temporarily down.'; break;
-          case 503: errorTitle = 'Service Overloaded'; errorMessage = 'Server is busy.'; break;
-          default: errorTitle = 'Server Error'; errorMessage = 'Unexpected server issue.'; break;
+          case 400:
+            errorTitle = strings.errorInvalidRequest;
+            errorMessage = strings.errorInvalidRequestMessage;
+            break;
+          case 401:
+            errorTitle = strings.errorUnauthorized;
+            errorMessage = strings.errorUnauthorizedMessage;
+            break;
+          case 403:
+            errorTitle = strings.errorAccessDenied;
+            errorMessage = strings.errorAccessDeniedMessage;
+            break;
+          case 404:
+            errorTitle = strings.errorNotFound;
+            errorMessage = strings.errorNotFoundMessage;
+            break;
+          case 500:
+            errorTitle = strings.errorServerIssue;
+            errorMessage = strings.errorServerIssueMessage;
+            break;
+          case 502:
+            errorTitle = strings.errorServiceUnavailable;
+            errorMessage = strings.errorServiceUnavailableMessage;
+            break;
+          case 503:
+            errorTitle = strings.errorServiceOverloaded;
+            errorMessage = strings.errorServiceOverloadedMessage;
+            break;
+          default:
+            errorTitle = strings.errorServerError;
+            errorMessage = strings.errorServerErrorMessage;
+            break;
         }
       } else if (error is ServiceException) {
-        errorTitle = 'Unexpected Error';
-        errorMessage = 'An unexpected issue occurred.';
+        errorTitle = strings.errorUnexpected;
+        errorMessage = strings.errorUnexpectedMessage;
       }
     }
 
@@ -272,20 +317,32 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
         children: [
           Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
           const SizedBox(height: 16),
-          Text(errorTitle, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+          Text(
+            errorTitle,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(errorMessage, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
+            child: Text(
+              errorMessage,
+              style: const TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
           ),
           const SizedBox(height: 24),
-          ElevatedButton(onPressed: _refreshData, child: const Text('Retry')),
+          ElevatedButton(
+            onPressed: _refreshData,
+            child: Text(strings.buttonRetry), // "Retry"
+          ),
         ],
       ),
     );
   }
 
   Widget _buildTicketCard(Map<String, dynamic> ticket) {
+    final strings = S.of(context); // Localization instance
     DateTime entryTime = DateTime.parse(ticket['entryTime']);
     String formattedEntryTime = DateFormat('dd MMM yyyy, hh:mm a').format(entryTime);
 
@@ -324,8 +381,8 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Ticket Id:', style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
-                              Text(ticket['ticketRefID'].toString(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              Text(strings.labelTicketId ?? 'Ticket ID:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                              Text(ticket['ticketRefID'].toString(), style: const TextStyle(fontSize: 16)),
                             ],
                           ),
                         ),
@@ -350,39 +407,47 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Expanded(child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Vehicle Number', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                            Text(ticket['vehicleNumber'].toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                          ],
-                        )),
-                        Expanded(child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Vehicle Type', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                            Text(ticket['vehicleType'].toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                          ],
-                        )),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(strings.labelVehicleNumber ?? 'Vehicle Number', style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold)),
+                              Text(ticket['vehicleNumber'].toString(), style: const TextStyle(fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(strings.labelVehicleType ?? 'Vehicle Type', style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold)),
+                              Text(ticket['vehicleType'].toString(), style: const TextStyle(fontSize: 14)),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Expanded(child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Plaza Name', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                            Text(ticket['plazaName'].toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                          ],
-                        )),
-                        Expanded(child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Entry Time', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                            Text(formattedEntryTime, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                          ],
-                        )),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(strings.labelPlazaName ?? 'Plaza Name', style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold)),
+                              Text(ticket['plazaName'].toString(), style: const TextStyle(fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(strings.labelEntryTime ?? 'Entry Time', style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold)),
+                              Text(formattedEntryTime, style: const TextStyle(fontSize: 13)),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -402,6 +467,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
+    final strings = S.of(context); // Localization instance
     final filteredTickets = _getFilteredTickets(_viewModel.tickets);
     final totalPages = (filteredTickets.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
     final paginatedTickets = _getPaginatedTickets(filteredTickets);
@@ -409,9 +475,9 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
     return Scaffold(
       backgroundColor: AppColors.lightThemeBackground,
       appBar: CustomAppBar.appBarWithNavigation(
-        screenTitle: AppStrings.titleOpenTickets,
+        screenTitle: strings.titleOpenTickets, // Use localized string
         onPressed: () => Navigator.pop(context),
-        darkBackground: true,
+        darkBackground: true, context: context,
       ),
       body: Column(
         children: [

@@ -7,20 +7,35 @@ import 'package:http_parser/http_parser.dart';
 import '../../config/api_config.dart';
 import '../../models/ticket.dart';
 import '../../utils/exceptions.dart';
+import '../network/connectivity_service.dart';
 
 class TicketService {
   final http.Client _client;
+  final ConnectivityService _connectivityService;
 
-  TicketService({http.Client? client}) : _client = client ?? http.Client();
+  TicketService({
+    http.Client? client,
+    ConnectivityService? connectivityService,
+  })  : _client = client ?? http.Client(),
+        _connectivityService = connectivityService ?? ConnectivityService();
 
   /// Fetches all open tickets.
   Future<List<Ticket>> getOpenTickets() async {
-    final url = ApiConfig.getFullUrl(ApiConfig.getOpenTicketsEndpoint);
+    final url = ApiConfig.getFullUrl(TicketApi.getOpenTickets);
+    final serverUrl = Uri.parse(url);
+
+    if (!(await _connectivityService.isConnected())) {
+      throw NoInternetException('No internet connection. Please check your network settings.');
+    }
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      throw ServerConnectionException('Cannot reach the ticket server.', host: serverUrl.host);
+    }
+
     developer.log('[TICKET] Fetching open tickets at URL: $url', name: 'TicketService');
 
     try {
       final response = await _client.get(
-        Uri.parse(url),
+        serverUrl,
         headers: {'Content-Type': 'application/json'},
       ).timeout(const Duration(seconds: 10));
 
@@ -29,53 +44,96 @@ class TicketService {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        if (responseData["message"] == "Open tickets fetched successfully." &&
-            responseData["data"] != null) {
+        if (responseData["success"] == true && responseData["data"] != null) {
           final List<Ticket> tickets = (responseData['data'] as List)
               .map((ticketJson) => Ticket.fromJson(ticketJson))
               .toList();
-          developer.log('[TICKET] Successfully retrieved ${tickets.length} tickets.', name: 'TicketService');
+          developer.log('[TICKET] Successfully retrieved ${tickets.length} tickets', name: 'TicketService');
           return tickets;
         }
+        developer.log('[TICKET] No tickets in response, returning empty list', name: 'TicketService');
         return [];
-      } else if (response.statusCode == 404) {
-        final responseData = json.decode(response.body);
-        if (responseData["message"] == "No open tickets found.") {
-          developer.log('[TICKET] No open tickets found, returning empty list.', name: 'TicketService');
-          return [];
-        }
       }
-      throw HttpException(
-        'Failed to get tickets',
-        statusCode: response.statusCode,
-        serverMessage: json.decode(response.body)['message'] ?? 'Unknown server error',
-      );
-    } on SocketException {
-      throw NoInternetException('No internet connection available');
+
+      throw _handleErrorResponse(response, 'Failed to fetch open tickets');
+    } on SocketException catch (e) {
+      throw ServerConnectionException('Failed to connect to the ticket server: $e');
     } on TimeoutException {
       throw RequestTimeoutException('Request timed out');
     } catch (e, stackTrace) {
-      developer.log(
-        '[TICKET] Unexpected error while getting tickets: $e',
-        name: 'TicketService',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      developer.log('[TICKET] Error in getOpenTickets: $e',
+          name: 'TicketService', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
 
-  /// Creates a new ticket.
-  Future<Ticket> createTicket(Ticket ticket) async {
-    final url = ApiConfig.getFullUrl(ApiConfig.createTicketEndpoint);
-    developer.log('[TICKET] Creating ticket at URL: $url', name: 'TicketService');
+  /// Fetches all tickets regardless of status.
+  Future<List<Ticket>> getAllTickets() async {
+    final url = ApiConfig.getFullUrl(TicketApi.getAllTickets);
+    final serverUrl = Uri.parse(url);
+
+    if (!(await _connectivityService.isConnected())) {
+      throw NoInternetException('No internet connection. Please check your network settings.');
+    }
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      throw ServerConnectionException('Cannot reach the ticket server.', host: serverUrl.host);
+    }
+
+    developer.log('[TICKET] Fetching all tickets at URL: $url', name: 'TicketService');
 
     try {
-      final body = json.encode(ticket.toCreateRequest());
-      developer.log('[TICKET] Request Body: $body', name: 'TicketService');
+      final response = await _client.get(
+        serverUrl,
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
 
+      developer.log('[TICKET] Response Status Code: ${response.statusCode}', name: 'TicketService');
+      developer.log('[TICKET] Response Body: ${response.body}', name: 'TicketService');
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData["success"] == true && responseData["data"] != null) {
+          final List<Ticket> tickets = (responseData['data'] as List)
+              .map((ticketJson) => Ticket.fromJson(ticketJson))
+              .toList();
+          developer.log('[TICKET] Successfully retrieved ${tickets.length} tickets', name: 'TicketService');
+          return tickets;
+        }
+        developer.log('[TICKET] No tickets in response, returning empty list', name: 'TicketService');
+        return [];
+      }
+
+      throw _handleErrorResponse(response, 'Failed to fetch all tickets');
+    } on SocketException catch (e) {
+      throw ServerConnectionException('Failed to connect to the ticket server: $e');
+    } on TimeoutException {
+      throw RequestTimeoutException('Request timed out');
+    } catch (e, stackTrace) {
+      developer.log('[TICKET] Error in getAllTickets: $e',
+          name: 'TicketService', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Creates a new ticket without images.
+  Future<Ticket> createTicket(Ticket ticket) async {
+    final url = ApiConfig.getFullUrl(TicketApi.createTicket);
+    final serverUrl = Uri.parse(url);
+
+    if (!(await _connectivityService.isConnected())) {
+      throw NoInternetException('No internet connection. Please check your network settings.');
+    }
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      throw ServerConnectionException('Cannot reach the ticket server.', host: serverUrl.host);
+    }
+
+    developer.log('[TICKET] Creating ticket at URL: $url', name: 'TicketService');
+    final body = json.encode(ticket.toCreateRequest());
+    developer.log('[TICKET] Request Body: $body', name: 'TicketService');
+
+    try {
       final response = await _client.post(
-        Uri.parse(url),
+        serverUrl,
         headers: {'Content-Type': 'application/json'},
         body: body,
       ).timeout(const Duration(seconds: 10));
@@ -86,69 +144,58 @@ class TicketService {
       if (response.statusCode == 201) {
         final responseData = json.decode(response.body);
         if (responseData['success'] == true && responseData['ticket'] != null) {
-          final Ticket createdTicket = Ticket.fromJson(responseData['ticket']);
+          final createdTicket = Ticket.fromJson(responseData['ticket']);
           developer.log('[TICKET] Successfully created ticket: ${createdTicket.ticketId}', name: 'TicketService');
           return createdTicket;
         }
-        throw ServiceException(responseData['msg'] ?? 'Failed to create ticket');
+        throw ServiceException(responseData['message'] ?? 'Invalid response format');
       }
-      throw HttpException(
-        'Failed to create ticket',
-        statusCode: response.statusCode,
-        serverMessage: json.decode(response.body)['message'] ?? 'Unknown server error',
-      );
-    } on SocketException {
-      throw NoInternetException('No internet connection available');
+
+      throw _handleErrorResponse(response, 'Failed to create ticket');
+    } on SocketException catch (e) {
+      throw ServerConnectionException('Failed to connect to the ticket server: $e');
     } on TimeoutException {
       throw RequestTimeoutException('Request timed out');
     } catch (e, stackTrace) {
-      developer.log(
-        '[TICKET] Unexpected error while creating ticket: $e',
-        name: 'TicketService',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      developer.log('[TICKET] Error in createTicket: $e',
+          name: 'TicketService', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
 
-  /// Creates a new ticket with images.
+  /// Creates a new ticket with associated images.
   Future<Ticket> createTicketWithImages(Ticket ticket, List<String> imagePaths) async {
-    final url = ApiConfig.getFullUrl(ApiConfig.createTicketEndpoint);
+    final url = ApiConfig.getFullUrl(TicketApi.createTicket);
+    final serverUrl = Uri.parse(url);
+
+    if (!(await _connectivityService.isConnected())) {
+      throw NoInternetException('No internet connection. Please check your network settings.');
+    }
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      throw ServerConnectionException('Cannot reach the ticket server.', host: serverUrl.host);
+    }
+
     developer.log('[TICKET] Creating ticket with images at URL: $url', name: 'TicketService');
 
     try {
-      var request = http.MultipartRequest('POST', Uri.parse(url));
-
-      // Add ticket data as fields.
+      var request = http.MultipartRequest('POST', serverUrl);
       Map<String, dynamic> ticketData = ticket.toCreateRequest();
-      ticketData.forEach((key, value) {
-        request.fields[key] = value.toString();
-      });
-      developer.log('[TICKET] Request Fields: ${request.fields}', name: 'TicketService');
+      request.fields.addAll(ticketData.map((key, value) => MapEntry(key, value.toString())));
 
-      // Add image files.
-      if (imagePaths.isNotEmpty) {
-        for (var i = 0; i < imagePaths.length; i++) {
-          final file = File(imagePaths[i]);
-          if (await file.exists()) {
-            final bytes = await file.readAsBytes();
-            final filename = 'vehicle_image_${i + 1}.jpg';
-            request.files.add(http.MultipartFile.fromBytes(
-              'images',
-              bytes,
-              filename: filename,
-              contentType: MediaType('image', 'jpeg'),
-            ));
-            developer.log('[TICKET] Added image: $filename (size: ${bytes.length} bytes)', name: 'TicketService');
-          } else {
-            developer.log('[TICKET] File not found at path: ${imagePaths[i]}', name: 'TicketService');
-          }
+      for (var i = 0; i < imagePaths.length; i++) {
+        final file = File(imagePaths[i]);
+        if (await file.exists()) {
+          final bytes = await file.readAsBytes();
+          request.files.add(http.MultipartFile.fromBytes(
+            'images',
+            bytes,
+            filename: 'vehicle_image_${i + 1}.jpg',
+            contentType: MediaType('image', 'jpeg'),
+          ));
         }
       }
 
-      // Log headers and file details.
-      developer.log('[TICKET] Request Headers: ${request.headers}', name: 'TicketService');
+      developer.log('[TICKET] Request Fields: ${request.fields}', name: 'TicketService');
       developer.log('[TICKET] Request Files: ${request.files.map((f) => f.filename).toList()}', name: 'TicketService');
 
       final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
@@ -157,44 +204,46 @@ class TicketService {
       developer.log('[TICKET] Response Status Code: ${response.statusCode}', name: 'TicketService');
       developer.log('[TICKET] Response Body: ${response.body}', name: 'TicketService');
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      if (response.statusCode == 201) {
         final responseData = json.decode(response.body);
-        if (responseData['data'] != null) {
-          final Ticket createdTicket = Ticket.fromJson(responseData['data']);
+        if (responseData['success'] == true && responseData['data'] != null) {
+          final createdTicket = Ticket.fromJson(responseData['data']);
           developer.log('[TICKET] Successfully created ticket with images: ${createdTicket.ticketId}', name: 'TicketService');
           return createdTicket;
         }
-        throw ServiceException(responseData['message'] ?? 'Failed to create ticket');
+        throw ServiceException(responseData['message'] ?? 'Invalid response format');
       }
-      throw HttpException(
-        'Failed to create ticket',
-        statusCode: response.statusCode,
-        serverMessage: json.decode(response.body)['message'] ?? 'Unknown server error',
-      );
-    } on SocketException {
-      throw NoInternetException('No internet connection available');
+
+      throw _handleErrorResponse(response, 'Failed to create ticket with images');
+    } on SocketException catch (e) {
+      throw ServerConnectionException('Failed to connect to the ticket server: $e');
     } on TimeoutException {
       throw RequestTimeoutException('Request timed out');
     } catch (e, stackTrace) {
-      developer.log(
-        '[TICKET] Unexpected error while creating ticket with images: $e',
-        name: 'TicketService',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      developer.log('[TICKET] Error in createTicketWithImages: $e',
+          name: 'TicketService', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
 
-  /// Gets ticket details by ID.
+  /// Retrieves detailed information for a specific ticket.
   Future<Ticket> getTicketDetails(String ticketId) async {
-    final url = ApiConfig.getFullUrl(ApiConfig.ticketDetailsEndpoint + ticketId);
+    final url = ApiConfig.getFullUrl('${TicketApi.getTicketDetails}$ticketId');
+    final serverUrl = Uri.parse(url);
+
+    if (!(await _connectivityService.isConnected())) {
+      throw NoInternetException('No internet connection. Please check your network settings.');
+    }
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      throw ServerConnectionException('Cannot reach the ticket server.', host: serverUrl.host);
+    }
+
     developer.log('[TICKET] Fetching ticket details at URL: $url', name: 'TicketService');
     developer.log('[TICKET] Ticket ID: $ticketId', name: 'TicketService');
 
     try {
       final response = await _client.get(
-        Uri.parse(url),
+        serverUrl,
         headers: {'Content-Type': 'application/json'},
       ).timeout(const Duration(seconds: 10));
 
@@ -204,44 +253,47 @@ class TicketService {
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         if (responseData['success'] == true && responseData['ticket'] != null) {
-          final Ticket ticket = Ticket.fromJson(responseData['ticket']);
-          developer.log('[TICKET] Successfully retrieved ticket details', name: 'TicketService');
+          final ticketData = Map<String, dynamic>.from(responseData['ticket']);
+          _mapImageUrls(ticketData);
+          final ticket = Ticket.fromJson(ticketData);
+          developer.log('[TICKET] Successfully retrieved ticket details for ID: $ticketId', name: 'TicketService');
           return ticket;
         }
         throw ServiceException('Ticket not found with ID: $ticketId');
       }
-      throw HttpException(
-        'Failed to get ticket',
-        statusCode: response.statusCode,
-        serverMessage: json.decode(response.body)['message'] ?? 'Unknown server error',
-      );
-    } on SocketException {
-      throw NoInternetException('No internet connection available');
+
+      throw _handleErrorResponse(response, 'Failed to fetch ticket details');
+    } on SocketException catch (e) {
+      throw ServerConnectionException('Failed to connect to the ticket server: $e');
     } on TimeoutException {
       throw RequestTimeoutException('Request timed out');
     } catch (e, stackTrace) {
-      developer.log(
-        '[TICKET] Unexpected error while getting ticket details: $e',
-        name: 'TicketService',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      developer.log('[TICKET] Error in getTicketDetails: $e',
+          name: 'TicketService', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
 
-  /// Rejects a ticket.
+  /// Rejects a ticket with provided remarks.
   Future<bool> rejectTicket(String ticketId, String remarks) async {
-    final url = ApiConfig.getFullUrl(ApiConfig.rejectTicketEndpoint + ticketId);
+    final url = ApiConfig.getFullUrl('${TicketApi.rejectTicket}$ticketId');
+    final serverUrl = Uri.parse(url);
+
+    if (!(await _connectivityService.isConnected())) {
+      throw NoInternetException('No internet connection. Please check your network settings.');
+    }
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      throw ServerConnectionException('Cannot reach the ticket server.', host: serverUrl.host);
+    }
+
     developer.log('[TICKET] Rejecting ticket at URL: $url', name: 'TicketService');
     developer.log('[TICKET] Ticket ID: $ticketId', name: 'TicketService');
+    final body = json.encode({'remarks': remarks});
+    developer.log('[TICKET] Request Body: $body', name: 'TicketService');
 
     try {
-      final body = json.encode({'remarks': remarks});
-      developer.log('[TICKET] Request Body: $body', name: 'TicketService');
-
       final response = await _client.post(
-        Uri.parse(url),
+        serverUrl,
         headers: {'Content-Type': 'application/json'},
         body: body,
       ).timeout(const Duration(seconds: 10));
@@ -251,42 +303,45 @@ class TicketService {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        final bool success = responseData['success'] == true;
-        developer.log('[TICKET] Reject operation ${success ? 'successful' : 'failed'}', name: 'TicketService');
-        return success;
+        if (responseData['success'] == true) {
+          developer.log('[TICKET] Successfully rejected ticket: $ticketId', name: 'TicketService');
+          return true;
+        }
+        return false;
       }
-      throw HttpException(
-        'Failed to reject ticket',
-        statusCode: response.statusCode,
-        serverMessage: json.decode(response.body)['message'] ?? 'Unknown server error',
-      );
-    } on SocketException {
-      throw NoInternetException('No internet connection available');
+
+      throw _handleErrorResponse(response, 'Failed to reject ticket');
+    } on SocketException catch (e) {
+      throw ServerConnectionException('Failed to connect to the ticket server: $e');
     } on TimeoutException {
       throw RequestTimeoutException('Request timed out');
     } catch (e, stackTrace) {
-      developer.log(
-        '[TICKET] Unexpected error while rejecting ticket: $e',
-        name: 'TicketService',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      developer.log('[TICKET] Error in rejectTicket: $e',
+          name: 'TicketService', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
 
-  /// Modifies a ticket.
+  /// Modifies an existing ticket.
   Future<Ticket> modifyTicket(String ticketId, Ticket ticket) async {
-    final url = ApiConfig.getFullUrl(ApiConfig.modifyTicketEndpoint + ticketId);
+    final url = ApiConfig.getFullUrl('${TicketApi.modifyTicket}$ticketId');
+    final serverUrl = Uri.parse(url);
+
+    if (!(await _connectivityService.isConnected())) {
+      throw NoInternetException('No internet connection. Please check your network settings.');
+    }
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      throw ServerConnectionException('Cannot reach the ticket server.', host: serverUrl.host);
+    }
+
     developer.log('[TICKET] Modifying ticket at URL: $url', name: 'TicketService');
     developer.log('[TICKET] Ticket ID: $ticketId', name: 'TicketService');
+    final body = json.encode(ticket.toModifyRequest());
+    developer.log('[TICKET] Request Body: $body', name: 'TicketService');
 
     try {
-      final body = json.encode(ticket.toModifyRequest());
-      developer.log('[TICKET] Request Body: $body', name: 'TicketService');
-
       final response = await _client.post(
-        Uri.parse(url),
+        serverUrl,
         headers: {'Content-Type': 'application/json'},
         body: body,
       ).timeout(const Duration(seconds: 10));
@@ -297,29 +352,104 @@ class TicketService {
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         if (responseData['success'] == true && responseData['ticket'] != null) {
-          final Ticket modifiedTicket = Ticket.fromJson(responseData['ticket']);
-          developer.log('[TICKET] Successfully modified ticket', name: 'TicketService');
+          final modifiedTicket = Ticket.fromJson(responseData['ticket']);
+          developer.log('[TICKET] Successfully modified ticket: ${modifiedTicket.ticketId}', name: 'TicketService');
           return modifiedTicket;
         }
-        throw ServiceException(responseData['msg'] ?? 'Failed to modify ticket');
+        throw ServiceException(responseData['message'] ?? 'Invalid response format');
       }
-      throw HttpException(
-        'Failed to modify ticket',
-        statusCode: response.statusCode,
-        serverMessage: json.decode(response.body)['message'] ?? 'Unknown server error',
-      );
-    } on SocketException {
-      throw NoInternetException('No internet connection available');
+
+      throw _handleErrorResponse(response, 'Failed to modify ticket');
+    } on SocketException catch (e) {
+      throw ServerConnectionException('Failed to connect to the ticket server: $e');
     } on TimeoutException {
       throw RequestTimeoutException('Request timed out');
     } catch (e, stackTrace) {
-      developer.log(
-        '[TICKET] Unexpected error while modifying ticket: $e',
-        name: 'TicketService',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      developer.log('[TICKET] Error in modifyTicket: $e',
+          name: 'TicketService', error: e, stackTrace: stackTrace);
       rethrow;
+    }
+  }
+
+  /// Marks a ticket as exited and returns detailed exit data.
+  Future<Map<String, dynamic>> markTicketExit(String ticketId) async {
+    final url = ApiConfig.getFullUrl('${TicketApi.markVehicleExit}$ticketId');
+    final serverUrl = Uri.parse(url);
+
+    if (!(await _connectivityService.isConnected())) {
+      throw NoInternetException('No internet connection. Please check your network settings.');
+    }
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      throw ServerConnectionException('Cannot reach the ticket server.', host: serverUrl.host);
+    }
+
+    developer.log('[TICKET] Marking ticket as exited at URL: $url', name: 'TicketService');
+    developer.log('[TICKET] Ticket ID: $ticketId', name: 'TicketService');
+
+    try {
+      final response = await _client.get(
+        serverUrl,
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      developer.log('[TICKET] Response Status Code: ${response.statusCode}', name: 'TicketService');
+      developer.log('[TICKET] Response Body: ${response.body}', name: 'TicketService');
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData['success'] == true && responseData['ticket'] != null) {
+          final ticketData = Map<String, dynamic>.from(responseData['ticket']);
+          _mapImageUrls(ticketData);
+          developer.log('[TICKET] Successfully marked ticket as exited for ID: $ticketId', name: 'TicketService');
+          return ticketData;
+        }
+        throw ServiceException(responseData['message'] ?? 'Invalid response format');
+      }
+
+      throw _handleErrorResponse(response, 'Failed to mark ticket as exited');
+    } on SocketException catch (e) {
+      throw ServerConnectionException('Failed to connect to the ticket server: $e');
+    } on TimeoutException {
+      throw RequestTimeoutException('Request timed out');
+    } catch (e, stackTrace) {
+      developer.log('[TICKET] Error in markTicketExit: $e',
+          name: 'TicketService', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Helper method to handle error responses consistently
+  HttpException _handleErrorResponse(http.Response response, String defaultMessage) {
+    String? serverMessage;
+    try {
+      final errorData = json.decode(response.body);
+      serverMessage = errorData['message'] as String?;
+    } catch (_) {
+      serverMessage = null;
+    }
+    return HttpException(
+      defaultMessage,
+      statusCode: response.statusCode,
+      serverMessage: serverMessage ?? 'Unknown server error',
+    );
+  }
+
+  /// Helper method to map image paths to full URLs
+  void _mapImageUrls(Map<String, dynamic> ticketData) {
+    if (ticketData['images'] != null) {
+      final baseUrl = ApiConfig.baseUrl.endsWith('/')
+          ? ApiConfig.baseUrl
+          : '${ApiConfig.baseUrl}/';
+      ticketData['captured_images'] = (ticketData['images'] as List)
+          .map((img) {
+        final path = img['image_path'] as String;
+        final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
+        return '$baseUrl$normalizedPath';
+      })
+          .toList();
+      developer.log('[TICKET] Mapped images to: ${ticketData['captured_images']}', name: 'TicketService');
+    } else {
+      ticketData['captured_images'] = [];
     }
   }
 }

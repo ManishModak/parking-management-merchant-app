@@ -127,7 +127,7 @@ class PlazaViewModel extends ChangeNotifier {
   TextEditingController plazaNameController = TextEditingController();
   TextEditingController plazaOwnerController = TextEditingController();
   TextEditingController operatorNameController = TextEditingController();
-  TextEditingController operatorIdController = TextEditingController();
+  //TextEditingController operatorIdController = TextEditingController();
   TextEditingController mobileController = TextEditingController();
   TextEditingController emailController = TextEditingController();
   TextEditingController addressController = TextEditingController();
@@ -201,11 +201,11 @@ class PlazaViewModel extends ChangeNotifier {
     if (currentUser.role == "Plaza Owner") {
       formState.basicDetails['plazaOwner'] = currentUser.entityName?.trim() ?? '';
       formState.basicDetails['ownerId'] = currentUser.id.trim();
-      plazaOwnerController.text = '${currentUser.entityName?.trim()} (ID:${currentUser.id.trim()})';
+      plazaOwnerController.text = '${currentUser.entityName?.trim()} ID:${currentUser.id.trim()}';
     } else {
       formState.basicDetails['plazaOwner'] = plazaOwnerController.text = currentUser.entityName?.trim() ?? '';
       formState.basicDetails['ownerId'] = currentUser.entityId?.trim() ?? '';
-      plazaOwnerController.text = '${currentUser.entityName?.trim()} (ID:${currentUser.entityId?.trim()})';
+      plazaOwnerController.text = '${currentUser.entityName?.trim()} ID:${currentUser.entityId?.trim()}';
     }
 
     _completeTillStep = -1;
@@ -219,9 +219,9 @@ class PlazaViewModel extends ChangeNotifier {
     operatorNameController.addListener(() {
       formState.basicDetails['operatorName'] = operatorNameController.text.trim();
     });
-    operatorIdController.addListener(() {
-      formState.basicDetails['operatorId'] = operatorIdController.text.trim();
-    });
+    // operatorIdController.addListener(() {
+    //   formState.basicDetails['operatorId'] = operatorIdController.text.trim();
+    // });
     mobileController.addListener(() {
       formState.basicDetails['mobileNumber'] = mobileController.text.trim();
     });
@@ -824,7 +824,7 @@ class PlazaViewModel extends ChangeNotifier {
         plazaNameController.clear();
         plazaOwnerController.clear();
         operatorNameController.clear();
-        operatorIdController.clear();
+        //operatorIdController.clear();
         mobileController.clear();
         emailController.clear();
         addressController.clear();
@@ -988,7 +988,7 @@ class PlazaViewModel extends ChangeNotifier {
         'plazaName': plaza.plazaName,
         'plazaId': plaza.plazaId,
         'operatorName': plaza.plazaOperatorName,
-        'operatorId': plaza.plazaOperatorId,
+        //'operatorId': plaza.plazaOperatorId,
         'plazaOwner': plaza.plazaOwner,
         'ownerId': plaza.plazaOwnerId,
         'mobileNumber': plaza.mobileNumber,
@@ -1070,7 +1070,7 @@ class PlazaViewModel extends ChangeNotifier {
   void _populateBasicDetailsControllers() {
     plazaNameController.text = formState.basicDetails['plazaName'] ?? '';
     operatorNameController.text = formState.basicDetails['operatorName'] ?? '';
-    operatorIdController.text = formState.basicDetails['operatorId'] ?? '';
+    //operatorIdController.text = formState.basicDetails['operatorId'] ?? '';
     mobileController.text = formState.basicDetails['mobileNumber'] ?? '';
     emailController.text = formState.basicDetails['email'] ?? '';
     addressController.text = formState.basicDetails['address'] ?? '';
@@ -1156,7 +1156,7 @@ class PlazaViewModel extends ChangeNotifier {
         plazaOwner: formState.basicDetails['plazaOwner'] ?? '',
         plazaOwnerId: formState.basicDetails['ownerId'] ?? '',
         plazaOperatorName: formState.basicDetails['operatorName'] ?? '',
-        plazaOperatorId: formState.basicDetails['operatorId'] ?? '',
+        //plazaOperatorId: formState.basicDetails['operatorId'] ?? '',
         mobileNumber: formState.basicDetails['mobileNumber'] ?? '',
         email: formState.basicDetails['email'] ?? '',
         address: formState.basicDetails['address'] ?? '',
@@ -1212,7 +1212,7 @@ class PlazaViewModel extends ChangeNotifier {
         plazaOwner: formState.basicDetails['plazaOwner'] ?? '',
         plazaOwnerId: formState.basicDetails['ownerId'] ?? '',
         plazaOperatorName: formState.basicDetails['operatorName'] ?? '',
-        plazaOperatorId: formState.basicDetails['operatorId'] ?? '',
+        //plazaOperatorId: formState.basicDetails['operatorId'] ?? '',
         mobileNumber: formState.basicDetails['mobileNumber'] ?? '',
         email: formState.basicDetails['email'] ?? '',
         address: formState.basicDetails['address'] ?? '',
@@ -1339,7 +1339,7 @@ class PlazaViewModel extends ChangeNotifier {
     plazaNameController.dispose();
     plazaOwnerController.dispose();
     operatorNameController.dispose();
-    operatorIdController.dispose();
+    //operatorIdController.dispose();
     mobileController.dispose();
     emailController.dispose();
     addressController.dispose();

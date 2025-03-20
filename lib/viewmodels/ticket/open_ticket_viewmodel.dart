@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import 'package:merchant_app/models/plaza_fare.dart';
 import '../../models/ticket.dart';
 import '../../services/core/ticket_service.dart';
 import '../../utils/exceptions.dart';
@@ -35,7 +36,7 @@ class OpenTicketViewModel extends ChangeNotifier {
   String? currentTicketId;
 
   String? selectedVehicleType;
-  List<String> get vehicleTypes => ['Car', 'Truck', 'Motorcycle', 'Van']; // Adjust as per your needs
+  List<String> get vehicleTypes => VehicleTypes.values; // Adjust as per your needs
 
   List<String>? capturedImageUrls;
 
@@ -125,6 +126,7 @@ class OpenTicketViewModel extends ChangeNotifier {
 
       final ticket = await _ticketService.getTicketDetails(ticketId);
       initializeTicketData(ticket);
+      developer.log('[OpenTicketViewModel] Initialized ticket data with capturedImageUrls: $capturedImageUrls', name: 'OpenTicketViewModel');
     } catch (e) {
       error = e as Exception;
       developer.log('[OpenTicketViewModel] Error fetching ticket details: $error', name: 'OpenTicketViewModel');
@@ -141,8 +143,8 @@ class OpenTicketViewModel extends ChangeNotifier {
     plazaIdController.text = ticket.plazaId;
     entryLaneIdController.text = ticket.entryLaneId;
     entryLaneDirectionController.text = ticket.entryLaneDirection;
-    floorIdController.text = ticket.floorId;
-    slotIdController.text = ticket.slotId;
+    floorIdController.text = ticket.floorId.isEmpty ? 'N/A' : ticket.floorId; // Updated to handle empty string
+    slotIdController.text = ticket.slotId.isEmpty ? 'N/A' : ticket.slotId;     // Updated to handle empty string
     vehicleNumberController.text = ticket.vehicleNumber;
     vehicleTypeController.text = ticket.vehicleType;
     selectedVehicleType = ticket.vehicleType;
@@ -151,6 +153,7 @@ class OpenTicketViewModel extends ChangeNotifier {
     ticketStatusController.text = ticket.status.toString().split('.').last;
     capturedImageUrls = ticket.capturedImages;
     modificationTimeController.text = ticket.modificationTime?.toIso8601String() ?? '';
+    developer.log('[OpenTicketViewModel] Captured Image URLs set to: $capturedImageUrls', name: 'OpenTicketViewModel');
     notifyListeners();
   }
 
@@ -168,13 +171,13 @@ class OpenTicketViewModel extends ChangeNotifier {
       notifyListeners();
 
       final updatedTicket = Ticket(
-        ticketId: ticketIdController.text.isEmpty ? null : ticketIdController.text,
+        ticketId: currentTicketId,
         ticketRefId: ticketRefIdController.text,
         plazaId: plazaIdController.text,
         entryLaneId: entryLaneIdController.text,
         entryLaneDirection: entryLaneDirectionController.text,
-        floorId: floorIdController.text,
-        slotId: slotIdController.text,
+        floorId: floorIdController.text == 'N/A' ? '' : floorIdController.text, // Convert back to empty string for API
+        slotId: slotIdController.text == 'N/A' ? '' : slotIdController.text,   // Convert back to empty string for API
         vehicleNumber: vehicleNumberController.text,
         vehicleType: vehicleTypeController.text,
         status: Status.pending,
@@ -183,7 +186,7 @@ class OpenTicketViewModel extends ChangeNotifier {
         modificationTime: DateTime.now(),
       );
 
-      await _ticketService.modifyTicket(ticketRefIdController.text, updatedTicket);
+      await _ticketService.modifyTicket(currentTicketId!, updatedTicket);
       await fetchOpenTickets();
       return true;
     } catch (e) {

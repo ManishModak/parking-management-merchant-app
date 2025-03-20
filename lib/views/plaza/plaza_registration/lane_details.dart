@@ -43,16 +43,16 @@ class _LaneDetailsStepState extends State<LaneDetailsStep> {
                 child: ElevatedButton.icon(
                   onPressed: isEditable
                       ? () {
-                          showDialog(
-                            context: context,
-                            builder: (context) {
-                              return _AddLaneDialog(
-                                onSave: (lane) => viewModel.addNewLane(lane),
-                                plazaId: viewModel.plazaId!,
-                              );
-                            },
-                          );
-                        }
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return _AddLaneDialog(
+                          onSave: (lane) => viewModel.addNewLane(lane),
+                          plazaId: viewModel.plazaId!,
+                        );
+                      },
+                    );
+                  }
                       : null,
                   icon: const Icon(Icons.add_road),
                   label: const Text('Add Lane'),
@@ -88,7 +88,7 @@ class _LaneDetailsStepState extends State<LaneDetailsStep> {
               if (isEditable)
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                     color: Colors.blue.shade50,
@@ -478,7 +478,7 @@ class _AddLaneDialogState extends State<_AddLaneDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
+                CustomFormFields.normalSizedTextFormField(context:context,
                   label: "Lane Name",
                   controller: laneNameController,
                   keyboardType: TextInputType.text,
@@ -487,7 +487,7 @@ class _AddLaneDialogState extends State<_AddLaneDialog> {
                   errorText: viewModel.formState.errors['laneName'],
                 ),
                 const SizedBox(height: 16),
-                CustomDropDown.normalDropDown(
+                CustomDropDown.normalDropDown(context:context,
                   label: "Direction",
                   items: Lane.validDirections,
                   value: selectedDirection,
@@ -500,7 +500,7 @@ class _AddLaneDialogState extends State<_AddLaneDialog> {
                   errorText: viewModel.formState.errors['laneDirection'],
                 ),
                 const SizedBox(height: 16),
-                CustomDropDown.normalDropDown(
+                CustomDropDown.normalDropDown(context:context,
                   label: "Type",
                   items: Lane.validTypes,
                   value: selectedType,
@@ -513,7 +513,7 @@ class _AddLaneDialogState extends State<_AddLaneDialog> {
                   errorText: viewModel.formState.errors['laneType'],
                 ),
                 const SizedBox(height: 16),
-                CustomDropDown.normalDropDown(
+                CustomDropDown.normalDropDown(context:context,
                   label: "Status",
                   items: Lane.validStatuses,
                   value: selectedStatus,
@@ -526,7 +526,7 @@ class _AddLaneDialogState extends State<_AddLaneDialog> {
                   errorText: viewModel.formState.errors['laneStatus'],
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
+                CustomFormFields.normalSizedTextFormField(context:context,
                   label: "RFID Reader ID",
                   controller: rfidReaderController,
                   keyboardType: TextInputType.text,
@@ -535,7 +535,7 @@ class _AddLaneDialogState extends State<_AddLaneDialog> {
                   errorText: viewModel.formState.errors['RFIDReaderID'],
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
+                CustomFormFields.normalSizedTextFormField(context:context,
                   label: "Camera ID",
                   controller: cameraController,
                   keyboardType: TextInputType.text,
@@ -544,7 +544,7 @@ class _AddLaneDialogState extends State<_AddLaneDialog> {
                   errorText: viewModel.formState.errors['CameraID'],
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
+                CustomFormFields.normalSizedTextFormField(context:context,
                   label: "WIM ID",
                   controller: wimController,
                   keyboardType: TextInputType.text,
@@ -553,7 +553,7 @@ class _AddLaneDialogState extends State<_AddLaneDialog> {
                   errorText: viewModel.formState.errors['WIMID'],
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
+                CustomFormFields.normalSizedTextFormField(context:context,
                   label: "Boomer Barrier ID",
                   controller: boomerBarrierController,
                   keyboardType: TextInputType.text,
@@ -562,7 +562,7 @@ class _AddLaneDialogState extends State<_AddLaneDialog> {
                   errorText: viewModel.formState.errors['BoomerBarrierID'],
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
+                CustomFormFields.normalSizedTextFormField(context:context,
                   label: "LED Screen ID",
                   controller: ledScreenController,
                   keyboardType: TextInputType.text,
@@ -571,7 +571,7 @@ class _AddLaneDialogState extends State<_AddLaneDialog> {
                   errorText: viewModel.formState.errors['LEDScreenID'],
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
+                CustomFormFields.normalSizedTextFormField(context:context,
                   label: "Magnetic Loop ID",
                   controller: magneticLoopController,
                   keyboardType: TextInputType.text,
@@ -713,7 +713,7 @@ class _EditLaneDialogState extends State<_EditLaneDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
+                CustomFormFields.normalSizedTextFormField(context:context,
                   label: "Lane Name",
                   controller: laneNameController,
                   keyboardType: TextInputType.text,
@@ -722,7 +722,7 @@ class _EditLaneDialogState extends State<_EditLaneDialog> {
                   errorText: viewModel.formState.errors['laneName'],
                 ),
                 const SizedBox(height: 16),
-                CustomDropDown.normalDropDown(
+                CustomDropDown.normalDropDown(context:context,
                   label: "Direction",
                   items: Lane.validDirections,
                   value: selectedDirection,
@@ -735,7 +735,7 @@ class _EditLaneDialogState extends State<_EditLaneDialog> {
                   errorText: viewModel.formState.errors['laneDirection'],
                 ),
                 const SizedBox(height: 16),
-                CustomDropDown.normalDropDown(
+                CustomDropDown.normalDropDown(context:context,
                   label: "Type",
                   items: Lane.validTypes,
                   value: selectedType,
@@ -748,7 +748,7 @@ class _EditLaneDialogState extends State<_EditLaneDialog> {
                   errorText: viewModel.formState.errors['laneType'],
                 ),
                 const SizedBox(height: 16),
-                CustomDropDown.normalDropDown(
+                CustomDropDown.normalDropDown(context:context,
                   label: "Status",
                   items: Lane.validStatuses,
                   value: selectedStatus,
@@ -761,7 +761,7 @@ class _EditLaneDialogState extends State<_EditLaneDialog> {
                   errorText: viewModel.formState.errors['laneStatus'],
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
+                CustomFormFields.normalSizedTextFormField(context:context,
                   label: "RFID Reader ID",
                   controller: rfidReaderController,
                   keyboardType: TextInputType.text,
@@ -770,7 +770,7 @@ class _EditLaneDialogState extends State<_EditLaneDialog> {
                   errorText: viewModel.formState.errors['RFIDReaderID'],
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
+                CustomFormFields.normalSizedTextFormField(context:context,
                   label: "Camera ID",
                   controller: cameraController,
                   keyboardType: TextInputType.text,
@@ -779,7 +779,7 @@ class _EditLaneDialogState extends State<_EditLaneDialog> {
                   errorText: viewModel.formState.errors['CameraID'],
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
+                CustomFormFields.normalSizedTextFormField(context:context,
                   label: "WIM ID",
                   controller: wimController,
                   keyboardType: TextInputType.text,
@@ -788,7 +788,7 @@ class _EditLaneDialogState extends State<_EditLaneDialog> {
                   errorText: viewModel.formState.errors['WIMID'],
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
+                CustomFormFields.normalSizedTextFormField(context:context,
                   label: "Boomer Barrier ID",
                   controller: boomerBarrierController,
                   keyboardType: TextInputType.text,
@@ -797,7 +797,7 @@ class _EditLaneDialogState extends State<_EditLaneDialog> {
                   errorText: viewModel.formState.errors['BoomerBarrierID'],
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
+                CustomFormFields.normalSizedTextFormField(context:context,
                   label: "LED Screen ID",
                   controller: ledScreenController,
                   keyboardType: TextInputType.text,
@@ -806,7 +806,7 @@ class _EditLaneDialogState extends State<_EditLaneDialog> {
                   errorText: viewModel.formState.errors['LEDScreenID'],
                 ),
                 const SizedBox(height: 16),
-                CustomFormFields.primaryFormField(
+                CustomFormFields.normalSizedTextFormField(context:context,
                   label: "Magnetic Loop ID",
                   controller: magneticLoopController,
                   keyboardType: TextInputType.text,

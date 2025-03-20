@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_config.dart';
+import 'package:merchant_app/config/app_theme.dart';
 import 'package:provider/provider.dart';
 import '../../../utils/components/appbar.dart';
 import '../../../utils/components/button.dart';
@@ -38,7 +39,7 @@ class NewTicketView extends StatelessWidget {
           appBar: CustomAppBar.appBarWithNavigation(
             screenTitle: 'New Ticket',
             onPressed: () => Navigator.pop(context),
-            darkBackground: true,
+            darkBackground: true, context: context,
           ),
           body: SingleChildScrollView(
             child: Padding(
@@ -48,7 +49,7 @@ class NewTicketView extends StatelessWidget {
                 children: [
                   _buildImageSection(viewModel, context),
                   const SizedBox(height: 24),
-                  _buildVehicleDetailsCard(viewModel),
+                  _buildVehicleDetailsCard(viewModel,context),
                   const SizedBox(height: 16),
                   _buildParkingDetailsCard(context, viewModel),
                   const SizedBox(height: 24),
@@ -199,11 +200,12 @@ class NewTicketView extends StatelessWidget {
     );
   }
 
-  Widget _buildVehicleDetailsCard(NewTicketViewmodel viewModel) {
+  Widget _buildVehicleDetailsCard(NewTicketViewmodel viewModel, BuildContext context) {
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
+      color: context.secondaryCardColor,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -214,7 +216,7 @@ class NewTicketView extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            CustomFormFields.primaryFormField(
+            CustomFormFields.normalSizedTextFormField(context:context,
               label: 'Vehicle Number',
               controller: viewModel.vehicleNumberController,
               keyboardType: TextInputType.visiblePassword,
@@ -230,7 +232,7 @@ class NewTicketView extends StatelessWidget {
               onChanged: viewModel.updateVehicleType,
               icon: Icons.directions_car,
               enabled: true,
-              errorText: viewModel.vehicleTypeError,
+              errorText: viewModel.vehicleTypeError, context: context,
             ),
           ],
         ),
@@ -243,6 +245,7 @@ class NewTicketView extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
+      color: context.secondaryCardColor,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -253,7 +256,7 @@ class NewTicketView extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            CustomFormFields.primaryFormField(
+            CustomFormFields.normalSizedTextFormField(context:context,
               label: 'Floor ID',
               controller: viewModel.floorIdController,
               keyboardType: TextInputType.visiblePassword,
@@ -262,7 +265,7 @@ class NewTicketView extends StatelessWidget {
               errorText: viewModel.floorIdError,
             ),
             const SizedBox(height: 16),
-            CustomFormFields.primaryFormField(
+            CustomFormFields.normalSizedTextFormField(context:context,
               label: 'Slot ID',
               controller: viewModel.slotIdController,
               keyboardType: TextInputType.visiblePassword,
@@ -271,7 +274,7 @@ class NewTicketView extends StatelessWidget {
               errorText: viewModel.slotIdError,
             ),
             const SizedBox(height: 16),
-            CustomFormFields.primaryFormField(
+            CustomFormFields.normalSizedTextFormField(context:context,
               label: 'Plaza ID',
               keyboardType: TextInputType.visiblePassword,
               controller: viewModel.plazaIdController,
@@ -280,7 +283,7 @@ class NewTicketView extends StatelessWidget {
               errorText: viewModel.plazaIdError,
             ),
             const SizedBox(height: 16),
-            CustomFormFields.primaryFormField(
+            CustomFormFields.normalSizedTextFormField(context:context,
               label: 'Entry Lane ID',
               controller: viewModel.entryLaneIdController,
               keyboardType: TextInputType.visiblePassword,
@@ -295,7 +298,7 @@ class NewTicketView extends StatelessWidget {
               items: viewModel.laneDirections,
               onChanged: viewModel.updateDirection,
               enabled: true,
-              errorText: viewModel.laneDirectionError,
+              errorText: viewModel.laneDirectionError, context: context,
             ),
           ],
         ),
@@ -323,7 +326,7 @@ class NewTicketView extends StatelessWidget {
           _showFailureSnackbar(context, errorMessage);
         }
       },
-      height: 50,
+      height: 50, context: context,
     );
   }
 
@@ -332,8 +335,10 @@ class NewTicketView extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Success'),
-          content: const Text('Ticket created successfully!'),
+          // title: const Text('Success'),
+          content: const Text('Ticket created successfully!',style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),),
           actions: [
             TextButton(
               child: const Text('OK'),

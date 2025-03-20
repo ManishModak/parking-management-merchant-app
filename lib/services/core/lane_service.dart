@@ -1,242 +1,335 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../../models/lane.dart';
 import '../../config/api_config.dart';
 import '../../utils/exceptions.dart';
+import '../network/connectivity_service.dart';
 
 class LaneService {
   final http.Client _client;
-  final String baseUrl = ApiConfig.apiGateway;
+  final ConnectivityService _connectivityService;
+  final String baseUrl = ApiConfig.baseUrl;
 
-  LaneService({http.Client? client}) : _client = client ?? http.Client();
+  LaneService({
+    http.Client? client,
+    ConnectivityService? connectivityService,
+  })  : _client = client ?? http.Client(),
+        _connectivityService = connectivityService ?? ConnectivityService();
 
+  /// Adds one or more lanes to a plaza.
   Future<String> addLane(List<Lane> lanes) async {
+    final fullUrl = ApiConfig.getFullUrl(PlazaApi.createLane);
+    final serverUrl = Uri.parse(fullUrl);
+
+    if (!(await _connectivityService.isConnected())) {
+      throw NoInternetException('No internet connection. Please check your network settings.');
+    }
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      throw ServerConnectionException('Cannot reach the lane server.', host: serverUrl.host);
+    }
+
+    developer.log('[LANE] Adding lanes at URL: $fullUrl', name: 'LaneService');
+
     try {
-      // Validate each lane in the list
       for (var lane in lanes) {
         final validationError = lane.validate();
         if (validationError != null) {
-          throw Exception(validationError);
+          throw ServiceException('Lane validation failed: $validationError');
         }
       }
 
-      final fullUrl = ApiConfig.getFullUrl(ApiConfig.createLaneEndpoint);
+      final body = json.encode(lanes.map((lane) => lane.toJson()).toList());
+      developer.log('[LANE] Request Body: $body', name: 'LaneService');
 
-      // Serialize the list of lanes into an array
-      final body = json.encode(
-        lanes.map((lane) => lane.toJson()).toList(),
-      );
-
-      print('Request - Add Lane:');
-      print('  Base URL: $baseUrl');
-      print('  Endpoint: ${ApiConfig.createLaneEndpoint}');
-      print('  Full URL: $fullUrl');
-      print('  Body: $body');
-
-      // Make the POST request
-      final response = await _client.post(
-        Uri.parse(fullUrl),
+      final response = await _client
+          .post(
+        serverUrl,
         headers: {'Content-Type': 'application/json'},
         body: body,
-      );
+      )
+          .timeout(const Duration(seconds: 10));
 
-      print('Response - Add Lane:');
-      print('  Status Code: ${response.statusCode}');
-      print('  Body: ${response.body}');
+      developer.log('[LANE] Response Status Code: ${response.statusCode}', name: 'LaneService');
+      developer.log('[LANE] Response Body: ${response.body}', name: 'LaneService');
 
-      // Check if the request was successful
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        throw HttpException('Failed to add lane: ${response.statusCode}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseBody = json.decode(response.body) as Map<String, dynamic>;
+        if (responseBody['success'] == true) {
+          developer.log('[LANE] Successfully added ${lanes.length} lanes', name: 'LaneService');
+          return responseBody['msg'] ?? 'Lanes added successfully';
+        }
+        throw ServiceException('Lane creation failed: ${responseBody['msg'] ?? 'Unknown error'}');
       }
 
-      // Parse the response body
-      final responseBody = json.decode(response.body) as Map<String, dynamic>;
-
-      if (responseBody['success'] == true) {
-        return responseBody['msg'] ?? 'Lanes added successfully';
-      } else {
-        throw PlazaException('Lane creation failed: ${responseBody['msg']}');
-      }
-    } catch (e) {
-      print('Error - Add Lane:');
-      print('  Error details: $e');
-      throw PlazaException('Error adding lane: $e');
+      throw _handleErrorResponse(response, 'Failed to add lanes');
+    } on SocketException catch (e) {
+      throw ServerConnectionException('Failed to connect to the lane server: $e');
+    } on TimeoutException {
+      throw RequestTimeoutException('Request timed out');
+    } catch (e, stackTrace) {
+      developer.log('[LANE] Error in addLane: $e', name: 'LaneService', error: e, stackTrace: stackTrace);
+      rethrow;
     }
   }
 
+  /// Deletes a lane by its ID.
   Future<bool> deleteLane(String laneId) async {
+    final fullUrl = '${ApiConfig.getFullUrl(PlazaApi.updateLane)}$laneId';
+    final serverUrl = Uri.parse(fullUrl);
+
+    if (!(await _connectivityService.isConnected())) {
+      throw NoInternetException('No internet connection. Please check your network settings.');
+    }
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      throw ServerConnectionException('Cannot reach the lane server.', host: serverUrl.host);
+    }
+
+    developer.log('[LANE] Deleting lane at URL: $fullUrl', name: 'LaneService');
+    developer.log('[LANE] Lane ID: $laneId', name: 'LaneService');
+
     try {
-      final fullUrl = '${ApiConfig.getFullUrl('plaza/lane/delete/')}$laneId';
-
-      print('Request - Delete Lane:');
-      print('  Base URL: $baseUrl');
-      print('  Endpoint: plaza/lane/delete/$laneId');
-      print('  Full URL: $fullUrl');
-
-      final response = await _client.delete(
-        Uri.parse(fullUrl),
+      final response = await _client
+          .delete(
+        serverUrl,
         headers: {'Content-Type': 'application/json'},
-      );
+      )
+          .timeout(const Duration(seconds: 10));
 
-      print('Response - Delete Lane:');
-      print('  Status Code: ${response.statusCode}');
-      print('  Body: ${response.body}');
+      developer.log('[LANE] Response Status Code: ${response.statusCode}', name: 'LaneService');
+      developer.log('[LANE] Response Body: ${response.body}', name: 'LaneService');
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
-        return responseData['success'] == true;
+        final responseData = json.decode(response.body);
+        if (responseData['success'] == true) {
+          developer.log('[LANE] Successfully deleted lane ID: $laneId', name: 'LaneService');
+          return true;
+        }
+        return false;
       }
-      throw HttpException('Failed to delete lane: ${response.statusCode}');
-    } catch (e) {
-      print('Error - Delete Lane:');
-      print('  Error details: $e');
-      throw PlazaException('Error deleting lane: $e');
+
+      throw _handleErrorResponse(response, 'Failed to delete lane');
+    } on SocketException catch (e) {
+      throw ServerConnectionException('Failed to connect to the lane server: $e');
+    } on TimeoutException {
+      throw RequestTimeoutException('Request timed out');
+    } catch (e, stackTrace) {
+      developer.log('[LANE] Error in deleteLane: $e', name: 'LaneService', error: e, stackTrace: stackTrace);
+      rethrow;
     }
   }
 
+  /// Toggles the active status of a lane.
   Future<bool> toggleLaneStatus(String laneId, bool isActive) async {
+    final fullUrl = '${ApiConfig.getFullUrl(PlazaApi.updateLane)}$laneId';
+    final serverUrl = Uri.parse(fullUrl);
+
+    if (!(await _connectivityService.isConnected())) {
+      throw NoInternetException('No internet connection. Please check your network settings.');
+    }
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      throw ServerConnectionException('Cannot reach the lane server.', host: serverUrl.host);
+    }
+
+    developer.log('[LANE] Toggling lane status at URL: $fullUrl', name: 'LaneService');
+    developer.log('[LANE] Lane ID: $laneId, New Status: $isActive', name: 'LaneService');
+
+    final body = json.encode({'isActive': isActive});
+    developer.log('[LANE] Request Body: $body', name: 'LaneService');
+
     try {
-      final fullUrl = '${ApiConfig.getFullUrl('plaza/lane/toggle-status/')}$laneId';
-      final body = json.encode({'isActive': isActive});
-
-      print('Request - Toggle Lane Status:');
-      print('  Base URL: $baseUrl');
-      print('  Endpoint: plaza/lane/toggle-status/$laneId');
-      print('  Full URL: $fullUrl');
-      print('  Body: $body');
-
-      final response = await _client.put(
-        Uri.parse(fullUrl),
+      final response = await _client
+          .put(
+        serverUrl,
         headers: {'Content-Type': 'application/json'},
         body: body,
-      );
+      )
+          .timeout(const Duration(seconds: 10));
 
-      print('Response - Toggle Lane Status:');
-      print('  Status Code: ${response.statusCode}');
-      print('  Body: ${response.body}');
+      developer.log('[LANE] Response Status Code: ${response.statusCode}', name: 'LaneService');
+      developer.log('[LANE] Response Body: ${response.body}', name: 'LaneService');
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
-        return responseData['success'] == true;
+        final responseData = json.decode(response.body);
+        if (responseData['success'] == true) {
+          developer.log('[LANE] Successfully toggled lane status for ID: $laneId', name: 'LaneService');
+          return true;
+        }
+        return false;
       }
-      throw HttpException('Failed to toggle lane status: ${response.statusCode}');
-    } catch (e) {
-      print('Error - Toggle Lane Status:');
-      print('  Error details: $e');
-      throw PlazaException('Error toggling lane status: $e');
+
+      throw _handleErrorResponse(response, 'Failed to toggle lane status');
+    } on SocketException catch (e) {
+      throw ServerConnectionException('Failed to connect to the lane server: $e');
+    } on TimeoutException {
+      throw RequestTimeoutException('Request timed out');
+    } catch (e, stackTrace) {
+      developer.log('[LANE] Error in toggleLaneStatus: $e', name: 'LaneService', error: e, stackTrace: stackTrace);
+      rethrow;
     }
   }
 
+  /// Retrieves a lane by its ID.
   Future<Lane> getLaneById(String laneId) async {
+    final uri = Uri.parse(ApiConfig.getFullUrl(PlazaApi.getLane)).replace(queryParameters: {'id': laneId});
+
+    if (!(await _connectivityService.isConnected())) {
+      throw NoInternetException('No internet connection. Please check your network settings.');
+    }
+    if (!(await _connectivityService.canReachServer(uri.host))) {
+      throw ServerConnectionException('Cannot reach the lane server.', host: uri.host);
+    }
+
+    developer.log('[LANE] Fetching lane by ID at URL: $uri', name: 'LaneService');
+    developer.log('[LANE] Lane ID: $laneId', name: 'LaneService');
+
     try {
-      // Use 'id' as the query parameter key
-      final uri = Uri.parse(ApiConfig.getFullUrl(ApiConfig.getLaneByIdEndpoint))
-          .replace(queryParameters: {'id': laneId});
-
-      print('Request - Get Lane By ID:');
-      print('  Base URL: $baseUrl');
-      print('  Endpoint: ${ApiConfig.getLaneByIdEndpoint}');
-      print('  Full URL: $uri');
-      print('  Parameters: id=$laneId');
-
-      final response = await _client.get(
+      final response = await _client
+          .get(
         uri,
         headers: {'Content-Type': 'application/json'},
-      );
+      )
+          .timeout(const Duration(seconds: 10));
 
-      print('Response - Get Lane By ID:');
-      print('  Status Code: ${response.statusCode}');
-      print('  Body: ${response.body}');
+      developer.log('[LANE] Response Status Code: ${response.statusCode}', name: 'LaneService');
+      developer.log('[LANE] Response Body: ${response.body}', name: 'LaneService');
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body) as Map<String, dynamic>;
-
-        // Check for laneData in the response
+        final responseData = json.decode(response.body) as Map<String, dynamic>;
         if (responseData['success'] == true && responseData['laneData'] != null) {
+          developer.log('[LANE] Successfully fetched lane ID: $laneId', name: 'LaneService');
           return Lane.fromJson(responseData['laneData']);
         }
-        throw HttpException('Failed to fetch lane: Invalid response format');
+        throw ServiceException('Invalid response format: missing lane data');
       }
-      throw HttpException('Failed to fetch lane: ${response.statusCode}');
-    } catch (e) {
-      print('Error - Get Lane By ID:');
-      print('  Error details: $e');
-      throw PlazaException('Error fetching lane: $e');
+
+      throw _handleErrorResponse(response, 'Failed to fetch lane');
+    } on SocketException catch (e) {
+      throw ServerConnectionException('Failed to connect to the lane server: $e');
+    } on TimeoutException {
+      throw RequestTimeoutException('Request timed out');
+    } catch (e, stackTrace) {
+      developer.log('[LANE] Error in getLaneById: $e', name: 'LaneService', error: e, stackTrace: stackTrace);
+      rethrow;
     }
   }
 
+  /// Retrieves all lanes associated with a plaza by its ID.
   Future<List<Lane>> getLanesByPlazaId(String plazaId) async {
+    final uri = Uri.parse(ApiConfig.getFullUrl(PlazaApi.getLanesByPlaza)).replace(queryParameters: {'plazaId': plazaId});
+
+    if (!(await _connectivityService.isConnected())) {
+      throw NoInternetException('No internet connection. Please check your network settings.');
+    }
+    if (!(await _connectivityService.canReachServer(uri.host))) {
+      throw ServerConnectionException('Cannot reach the lane server.', host: uri.host);
+    }
+
+    developer.log('[LANE] Fetching lanes by plaza ID at URL: $uri', name: 'LaneService');
+    developer.log('[LANE] Plaza ID: $plazaId', name: 'LaneService');
+
     try {
-      final uri = Uri.parse(ApiConfig.getFullUrl(ApiConfig.getLanesByPlazaIdEndpoint))
-          .replace(queryParameters: {'plazaId': plazaId});
-
-      print('Request - Get Lanes By Plaza ID:');
-      print('  Base URL: $baseUrl');
-      print('  Endpoint: ${ApiConfig.getLanesByPlazaIdEndpoint}');
-      print('  Full URL: $uri');
-      print('  Parameters: plazaId=$plazaId');
-
-      final response = await _client.get(
+      final response = await _client
+          .get(
         uri,
         headers: {'Content-Type': 'application/json'},
-      );
+      )
+          .timeout(const Duration(seconds: 10));
 
-      print('Response - Get Lanes By Plaza ID:');
-      print('  Status Code: ${response.statusCode}');
-      print('  Body: ${response.body}');
+      developer.log('[LANE] Response Status Code: ${response.statusCode}', name: 'LaneService');
+      developer.log('[LANE] Response Body: ${response.body}', name: 'LaneService');
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
-        if (responseData['success'] == true && responseData['laneData'] != null) {
-          final List<dynamic> lanesJson = responseData['laneData'];
-          return lanesJson.map((json) => Lane.fromJson(json)).toList();
+        final responseData = json.decode(response.body) as Map<String, dynamic>;
+        if (responseData['success'] == true) {
+          final List<dynamic> lanesJson = responseData['laneData'] ?? [];
+          final lanes = lanesJson.map((json) => Lane.fromJson(json)).toList();
+          developer.log('[LANE] Successfully fetched ${lanes.length} lanes for plaza ID: $plazaId', name: 'LaneService');
+          return lanes;
         }
-        throw HttpException('Failed to fetch lanes: Invalid response format');
+        throw ServiceException('Invalid response format: missing lane data');
       }
-      throw HttpException('Failed to fetch lanes: ${response.statusCode}');
-    } catch (e) {
-      print('Error - Get Lanes By Plaza ID:');
-      print('  Error details: $e');
-      throw PlazaException('Error fetching lanes: $e');
+
+      throw _handleErrorResponse(response, 'Failed to fetch lanes');
+    } on SocketException catch (e) {
+      throw ServerConnectionException('Failed to connect to the lane server: $e');
+    } on TimeoutException {
+      throw RequestTimeoutException('Request timed out');
+    } catch (e, stackTrace) {
+      developer.log('[LANE] Error in getLanesByPlazaId: $e', name: 'LaneService', error: e, stackTrace: stackTrace);
+      rethrow;
     }
   }
 
+  /// Updates an existing lane.
   Future<bool> updateLane(Lane lane) async {
+    final fullUrl = ApiConfig.getFullUrl(PlazaApi.updateLane);
+    final serverUrl = Uri.parse(fullUrl);
+
+    if (!(await _connectivityService.isConnected())) {
+      throw NoInternetException('No internet connection. Please check your network settings.');
+    }
+    if (!(await _connectivityService.canReachServer(serverUrl.host))) {
+      throw ServerConnectionException('Cannot reach the lane server.', host: serverUrl.host);
+    }
+
+    developer.log('[LANE] Updating lane at URL: $fullUrl', name: 'LaneService');
+
     try {
       final validationError = lane.validate();
       if (validationError != null) {
-        throw Exception(validationError);
+        throw ServiceException('Lane validation failed: $validationError');
       }
 
-      final fullUrl = ApiConfig.getFullUrl(ApiConfig.updateLaneEndpoint);
       final body = json.encode(lane.toJson());
+      developer.log('[LANE] Request Body: $body', name: 'LaneService');
 
-      print('Request - Update Lane:');
-      print('  Base URL: $baseUrl');
-      print('  Endpoint: ${ApiConfig.updateLaneEndpoint}');
-      print('  Full URL: $fullUrl');
-      print('  Body: $body');
-
-      final response = await _client.put(
-        Uri.parse(fullUrl),
+      final response = await _client
+          .put(
+        serverUrl,
         headers: {'Content-Type': 'application/json'},
         body: body,
-      );
+      )
+          .timeout(const Duration(seconds: 10));
 
-      print('Response - Update Lane:');
-      print('  Status Code: ${response.statusCode}');
-      print('  Body: ${response.body}');
+      developer.log('[LANE] Response Status Code: ${response.statusCode}', name: 'LaneService');
+      developer.log('[LANE] Response Body: ${response.body}', name: 'LaneService');
 
-      if (response.statusCode != 200) {
-        throw HttpException('Failed to update lane: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body) as Map<String, dynamic>;
+        if (responseBody['success'] == true) {
+          developer.log('[LANE] Successfully updated lane', name: 'LaneService');
+          return true;
+        }
+        return false;
       }
 
-      final responseBody = json.decode(response.body) as Map<String, dynamic>;
-      return responseBody['success'] == true;
-    } catch (e) {
-      print('Error - Update Lane:');
-      print('  Error details: $e');
-      throw PlazaException('Error updating lane: $e');
+      throw _handleErrorResponse(response, 'Failed to update lane');
+    } on SocketException catch (e) {
+      throw ServerConnectionException('Failed to connect to the lane server: $e');
+    } on TimeoutException {
+      throw RequestTimeoutException('Request timed out');
+    } catch (e, stackTrace) {
+      developer.log('[LANE] Error in updateLane: $e', name: 'LaneService', error: e, stackTrace: stackTrace);
+      rethrow;
     }
+  }
+
+  /// Helper method to handle error responses consistently.
+  HttpException _handleErrorResponse(http.Response response, String defaultMessage) {
+    String? serverMessage;
+    try {
+      final responseData = json.decode(response.body);
+      serverMessage = responseData['msg'] as String?;
+    } catch (_) {
+      serverMessage = null;
+    }
+    return HttpException(
+      defaultMessage,
+      statusCode: response.statusCode,
+      serverMessage: serverMessage ?? 'Unknown server error',
+    );
   }
 }

@@ -10,7 +10,7 @@ class Plaza {
   final String plazaOwner;
   final String plazaOwnerId;
   final String plazaOperatorName;
-  final String plazaOperatorId;
+  //final String plazaOperatorId;
   final String mobileNumber;
   final String address;
   final String email;
@@ -41,7 +41,7 @@ class Plaza {
     required this.plazaOwner,
     required this.plazaOwnerId,
     required this.plazaOperatorName,
-    required this.plazaOperatorId,
+    //required this.plazaOperatorId,
     required this.mobileNumber,
     required this.address,
     required this.email,
@@ -104,7 +104,7 @@ class Plaza {
       plazaOwner: plazaOwner ?? this.plazaOwner,
       plazaOwnerId: plazaOwnerId ?? this.plazaOwnerId,
       plazaOperatorName: plazaOperatorName ?? this.plazaOperatorName,
-      plazaOperatorId: plazaOperatorId ?? this.plazaOperatorId,
+      //plazaOperatorId: plazaOperatorId ?? this.plazaOperatorId,
       mobileNumber: mobileNumber ?? this.mobileNumber,
       address: address ?? this.address,
       email: email ?? this.email,
@@ -138,7 +138,7 @@ class Plaza {
       plazaOwner: json['plazaOwner'] as String? ?? '',
       plazaOwnerId: json['plazaOwnerId']?.toString() ?? '',
       plazaOperatorName: json['plazaOperatorName'] as String? ?? '',
-      plazaOperatorId: json['plazaOperatorId'] as String? ?? '',
+      //plazaOperatorId: json['plazaOperatorId'] as String? ?? '',
       mobileNumber: json['mobileNumber']?.toString() ?? '',
       address: json['address'] as String? ?? '',
       email: json['email'] as String? ?? '',
@@ -199,7 +199,7 @@ class Plaza {
       'plazaOwner': plazaOwner,
       'plazaOwnerId': plazaOwnerId,
       'plazaOperatorName': plazaOperatorName,
-      'plazaOperatorId': plazaOperatorId,
+      //'plazaOperatorId': plazaOperatorId,
       'mobileNumber': mobileNumber,
       'address': address,
       'email': email,
@@ -240,7 +240,7 @@ class Plaza {
         plazaOwner: '',
         plazaOwnerId: '',
         plazaOperatorName: '',
-        plazaOperatorId: '',
+        //plazaOperatorId: '',
         mobileNumber: '',
         address: '',
         email: '',

@@ -27,7 +27,7 @@ class _BankDetailsModificationScreenState
             viewModel.formState.errors.clear();
             viewModel.setBankDetailsEditable(false);
           },
-          darkBackground: true
+          darkBackground: true, context: context
       ),
       body: SingleChildScrollView(
         child: Center(
@@ -89,7 +89,7 @@ class _BankDetailsModificationScreenState
                   const SizedBox(height: 24), // Slightly more space after the card
 
                   // Bank Name
-                  CustomFormFields.primaryFormField(
+                  CustomFormFields.normalSizedTextFormField(context:context,
                     label: 'Bank Name',
                     controller: viewModel.bankNameController,
                     keyboardType: TextInputType.text,
@@ -100,7 +100,7 @@ class _BankDetailsModificationScreenState
                   const SizedBox(height: 16),
 
                   // Account Number
-                  CustomFormFields.primaryFormField(
+                  CustomFormFields.normalSizedTextFormField(context:context,
                     label: 'Account Number',
                     controller: viewModel.accountNumberController,
                     keyboardType: TextInputType.number,
@@ -111,7 +111,7 @@ class _BankDetailsModificationScreenState
                   const SizedBox(height: 16),
 
                   // Account Holder Name
-                  CustomFormFields.primaryFormField(
+                  CustomFormFields.normalSizedTextFormField(context:context,
                     label: 'Account Holder Name',
                     controller: viewModel.accountHolderController,
                     keyboardType: TextInputType.text,
@@ -122,7 +122,7 @@ class _BankDetailsModificationScreenState
                   const SizedBox(height: 16),
 
                   // IFSC Code
-                  CustomFormFields.primaryFormField(
+                  CustomFormFields.normalSizedTextFormField(context:context,
                     label: 'IFSC Code',
                     controller: viewModel.ifscCodeController,
                     keyboardType: TextInputType.text,

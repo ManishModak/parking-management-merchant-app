@@ -10,6 +10,7 @@ class MarkExitViewModel extends ChangeNotifier {
   Exception? error;
   List<Map<String, dynamic>> tickets = [];
   String? apiError;
+  Map<String, dynamic>? ticketDetails; // Store detailed ticket data
 
   MarkExitViewModel({TicketService? ticketService})
       : _ticketService = ticketService ?? TicketService();
@@ -35,7 +36,6 @@ class MarkExitViewModel extends ChangeNotifier {
         'floorId': ticket.floorId.isEmpty ? 'N/A' : ticket.floorId,
         'slotId': ticket.slotId.isEmpty ? 'N/A' : ticket.slotId,
         'ticketStatus': ticket.status.toString().split('.').last,
-        //'capturedImage': ticket.capturedImage,
         'modificationTime': ticket.modificationTime?.toIso8601String(),
       }).toList();
 
@@ -51,33 +51,32 @@ class MarkExitViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> markTicketAsExited(String ticketRefId) async {
+  Future<bool> markTicketAsExited(String ticketId) async {
     try {
       isLoading = true;
       apiError = null;
       error = null;
       notifyListeners();
 
-      // Assuming TicketService has a method to mark a ticket as exited; adjust as needed
-      final ticket = await _ticketService.getTicketDetails(ticketRefId);
-      final updatedTicket = Ticket(
-        ticketId: ticket.ticketId,
-        ticketRefId: ticket.ticketRefId,
-        plazaId: ticket.plazaId,
-        entryLaneId: ticket.entryLaneId,
-        entryLaneDirection: ticket.entryLaneDirection,
-        floorId: ticket.floorId,
-        slotId: ticket.slotId,
-        status: ticket.status,
-        vehicleNumber: ticket.vehicleNumber,
-        vehicleType: ticket.vehicleType,
-        //capturedImage: ticket.capturedImage,
-        modifiedBy: 'System',
-        modificationTime: DateTime.now(),
-      );
-
-      await _ticketService.modifyTicket(ticketRefId, updatedTicket);
-      await fetchOpenTickets(); // Refresh the list after marking exit
+      final responseData = await _ticketService.markTicketExit(ticketId);
+      ticketDetails = {
+        'ticket_ref_id': responseData['ticket_ref_id'] ?? '',
+        'status': responseData['status'] ?? 'complete',
+        'entry_lane_id': responseData['entry_lane_id'] ?? '',
+        'exit_lane_id': responseData['exit_lane_id'] ?? 'Not filled',
+        'floor_id': responseData['floor_id'].isEmpty ? 'N/A' : responseData['floor_id'],
+        'slot_id': responseData['slot_id'].isEmpty ? 'N/A' : responseData['slot_id'],
+        'vehicle_number': responseData['vehicle_number'] ?? '',
+        'vehicle_type': responseData['vehicle_type'] ?? '',
+        'entry_time': responseData['entry_time'] ?? '',
+        'exit_time': responseData['exit_time'] ?? DateTime.now().toString(),
+        'parking_duration': responseData['duration']?.toString() ?? '',
+        'fare_type': responseData['fare_type'] ?? '',
+        'fare_amount': responseData['fare_amount']?.toString() ?? '',
+        'total_charges': responseData['total_transaction']?.toString() ?? '',
+        'captured_images': responseData['captured_images'] ?? [], // Use captured_images instead of images
+      };
+      developer.log('[MarkExitViewModel] Ticket marked as exited: $ticketDetails', name: 'MarkExitViewModel');
       return true;
     } catch (e) {
       error = e as Exception;

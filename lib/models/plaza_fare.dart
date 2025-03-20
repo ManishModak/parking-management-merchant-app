@@ -125,8 +125,8 @@ class PlazaFare {
 /// Constants for vehicle types supported by the system.
 class VehicleTypes {
   static const String bike = 'Bike';
-  static const String threeWheeler = '3-wheeler';
-  static const String fourWheeler = '4-wheeler';
+  static const String threeWheeler = '3-Wheeler';
+  static const String fourWheeler = '4-Wheeler';
   static const String bus = 'Bus';
   static const String truck = 'Truck';
   static const String heavyMachineryVehicle = 'Heavy Machinery Vehicle';

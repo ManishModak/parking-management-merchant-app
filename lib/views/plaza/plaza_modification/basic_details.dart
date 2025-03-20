@@ -32,7 +32,7 @@ class _BasicDetailsModificationScreenState
           viewModel.formState.errors.clear();
           viewModel.setBasicDetailsEditable(false);
         },
-        darkBackground: true,
+        darkBackground: true, context: context,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -44,7 +44,7 @@ class _BasicDetailsModificationScreenState
               const SizedBox(height: 16),
 
               // Plaza Name
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'Plaza Name',
                 controller: viewModel.plazaNameController,
                 keyboardType: TextInputType.text,
@@ -55,7 +55,7 @@ class _BasicDetailsModificationScreenState
               const SizedBox(height: 16),
 
               // Plaza Operator Name
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'Plaza Operator Name',
                 controller: viewModel.operatorNameController,
                 keyboardType: TextInputType.text,
@@ -66,18 +66,18 @@ class _BasicDetailsModificationScreenState
               const SizedBox(height: 16),
 
               // Plaza Operator ID
-              CustomFormFields.primaryFormField(
-                label: 'Plaza Operator ID',
-                controller: viewModel.operatorIdController,
-                keyboardType: TextInputType.text,
-                isPassword: false,
-                enabled: viewModel.isBasicDetailsEditable,
-                errorText: viewModel.formState.errors['operatorId'],
-              ),
-              const SizedBox(height: 16),
+              // CustomFormFields.primaryFormField(
+              //   label: 'Plaza Operator ID',
+              //   controller: viewModel.operatorIdController,
+              //   keyboardType: TextInputType.text,
+              //   isPassword: false,
+              //   enabled: viewModel.isBasicDetailsEditable,
+              //   errorText: viewModel.formState.errors['operatorId'],
+              // ),
+              // const SizedBox(height: 16),
 
               // Mobile Number
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'Mobile Number',
                 controller: viewModel.mobileController,
                 keyboardType: TextInputType.phone,
@@ -88,7 +88,7 @@ class _BasicDetailsModificationScreenState
               const SizedBox(height: 16),
 
               // Email
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'Email',
                 controller: viewModel.emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -99,7 +99,7 @@ class _BasicDetailsModificationScreenState
               const SizedBox(height: 16),
 
               // Address
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'Address',
                 controller: viewModel.addressController,
                 keyboardType: TextInputType.text,
@@ -110,7 +110,7 @@ class _BasicDetailsModificationScreenState
               const SizedBox(height: 16),
 
               // City
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'City',
                 controller: viewModel.cityController,
                 keyboardType: TextInputType.text,
@@ -121,7 +121,7 @@ class _BasicDetailsModificationScreenState
               const SizedBox(height: 16),
 
               // District
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'District',
                 controller: viewModel.districtController,
                 keyboardType: TextInputType.text,
@@ -132,7 +132,7 @@ class _BasicDetailsModificationScreenState
               const SizedBox(height: 16),
 
               // State
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'State',
                 controller: viewModel.stateController,
                 keyboardType: TextInputType.text,
@@ -143,7 +143,7 @@ class _BasicDetailsModificationScreenState
               const SizedBox(height: 16),
 
               // Pincode
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'Pincode',
                 controller: viewModel.pincodeController,
                 keyboardType: TextInputType.number,
@@ -154,7 +154,7 @@ class _BasicDetailsModificationScreenState
               const SizedBox(height: 16),
 
               // Geo Latitude
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'Geo Latitude',
                 controller: viewModel.latitudeController,
                 keyboardType: TextInputType.number,
@@ -165,7 +165,7 @@ class _BasicDetailsModificationScreenState
               const SizedBox(height: 16),
 
               // Geo Longitude
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'Geo Longitude',
                 controller: viewModel.longitudeController,
                 keyboardType: TextInputType.number,
@@ -181,7 +181,7 @@ class _BasicDetailsModificationScreenState
                 child: Row(
                   children: [
                     Expanded(
-                      child: CustomDropDown.normalDropDown(
+                      child: CustomDropDown.normalDropDown(context:context,
                         label: "Plaza Category",
                         value:
                             viewModel.formState.basicDetails['plazaCategory'],
@@ -198,7 +198,7 @@ class _BasicDetailsModificationScreenState
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: CustomDropDown.normalDropDown(
+                      child: CustomDropDown.normalDropDown(context:context,
                         label: "Plaza Sub-Category",
                         value: viewModel
                             .formState.basicDetails['plazaSubCategory'],
@@ -223,7 +223,7 @@ class _BasicDetailsModificationScreenState
                 child: Row(
                   children: [
                     Expanded(
-                      child: CustomDropDown.normalDropDown(
+                      child: CustomDropDown.normalDropDown(context:context,
                         label: "Plaza Status",
                         value: viewModel.formState.basicDetails['plazaStatus'],
                         items: Plaza.validPlazaStatuses,
@@ -239,7 +239,7 @@ class _BasicDetailsModificationScreenState
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: CustomDropDown.normalDropDown(
+                      child: CustomDropDown.normalDropDown(context:context,
                         label: "Free Parking",
                         value:
                             viewModel.formState.basicDetails['freeParking'] ??
@@ -266,7 +266,7 @@ class _BasicDetailsModificationScreenState
                 child: Row(
                   children: [
                     Expanded(
-                      child: CustomDropDown.normalDropDown(
+                      child: CustomDropDown.normalDropDown(context:context,
                         label: "Structure Type",
                         value:
                             viewModel.formState.basicDetails['structureType'],
@@ -282,7 +282,7 @@ class _BasicDetailsModificationScreenState
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: CustomDropDown.normalDropDown(
+                      child: CustomDropDown.normalDropDown(context:context,
                         label: "Price Category",
                         value:
                             viewModel.formState.basicDetails['priceCategory'],
@@ -302,7 +302,7 @@ class _BasicDetailsModificationScreenState
               const SizedBox(height: 16),
 
               // Total Parking Slots
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'Total Parking Slots',
                 controller: viewModel.totalParkingSlotsController,
                 keyboardType: TextInputType.number,
@@ -313,7 +313,7 @@ class _BasicDetailsModificationScreenState
               const SizedBox(height: 16),
 
               // Two-Wheeler Capacity
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'Two-Wheeler Capacity',
                 controller: viewModel.twoWheelerCapacityController,
                 keyboardType: TextInputType.number,
@@ -323,7 +323,7 @@ class _BasicDetailsModificationScreenState
               ),
               const SizedBox(height: 16),
 
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'LMV Capacity',
                 controller: viewModel.lmvCapacityController,
                 keyboardType: TextInputType.number,
@@ -333,7 +333,7 @@ class _BasicDetailsModificationScreenState
                     viewModel.formState.errors['lmvCapacity'], // Correct key
               ),
               const SizedBox(height: 16),
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'LCV Capacity',
                 controller: viewModel.lcvCapacityController,
                 keyboardType: TextInputType.number,
@@ -342,7 +342,7 @@ class _BasicDetailsModificationScreenState
                 errorText: viewModel.formState.errors['lcvCapacity'],
               ),
               const SizedBox(height: 16),
-              CustomFormFields.primaryFormField(
+              CustomFormFields.normalSizedTextFormField(context:context,
                 label: 'HMV Capacity',
                 controller: viewModel.hmvCapacityController,
                 keyboardType: TextInputType.number,
@@ -368,7 +368,7 @@ class _BasicDetailsModificationScreenState
                   }
                 },
                 child: AbsorbPointer(
-                  child: CustomFormFields.primaryFormField(
+                  child: CustomFormFields.normalSizedTextFormField(context:context,
                     label: 'Opening Time',
                     controller: viewModel.openingTimeController,
                     keyboardType: TextInputType.none,
@@ -397,7 +397,7 @@ class _BasicDetailsModificationScreenState
                   }
                 },
                 child: AbsorbPointer(
-                  child: CustomFormFields.primaryFormField(
+                  child: CustomFormFields.normalSizedTextFormField(context:context,
                     label: 'Closing Time',
                     controller: viewModel.closingTimeController,
                     keyboardType: TextInputType.none,

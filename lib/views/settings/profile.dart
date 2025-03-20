@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:merchant_app/utils/components/card.dart';
-import 'package:merchant_app/utils/components/form_field.dart';
 import 'package:provider/provider.dart';
-import 'package:merchant_app/config/app_colors.dart';
-import 'package:merchant_app/utils/components/appbar.dart';
-
+import '../../config/app_colors.dart';
+import '../../config/app_theme.dart';
 import '../../services/storage/secure_storage_service.dart';
+import '../../utils/components/appbar.dart';
+import '../../utils/components/button.dart';
+import '../../utils/components/card.dart';
+import '../../utils/components/form_field.dart';
 import '../../viewmodels/user_viewmodel.dart';
+import '../../generated/l10n.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
@@ -24,7 +26,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   final TextEditingController _stateController = TextEditingController();
   bool _isEditMode = false;
 
-  // Store original values for cancellation
   Map<String, String> _originalValues = {};
 
   @override
@@ -36,9 +37,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _loadProfileData() async {
+    final strings = S.of(context);
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
     final userId = await SecureStorageService().getUserId();
-    await userViewModel.fetchUser(userId: userId!, isCurrentAppUser: true);
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(strings.errorUserIdNotFound, style: TextStyle(color: context.textPrimaryColor)),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+    await userViewModel.fetchUser(userId: userId, isCurrentAppUser: true);
     if (mounted) {
       await _loadUserProfile();
     }
@@ -56,8 +67,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _addressController.text = currentUser.address ?? '';
         _cityController.text = currentUser.city ?? '';
         _stateController.text = currentUser.state ?? '';
-
-        // Store original values
         _storeOriginalValues();
       });
     }
@@ -95,9 +104,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _confirmUpdate() async {
+    final strings = S.of(context);
     if (_nameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Username cannot be empty')),
+        SnackBar(
+          content: Text(strings.errorUsernameRequired, style: TextStyle(color: context.textPrimaryColor)),
+          backgroundColor: AppColors.error,
+        ),
       );
       return;
     }
@@ -110,12 +123,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       address: _addressController.text,
       city: _cityController.text,
       state: _stateController.text,
-      isCurrentAppUser: true
+      isCurrentAppUser: true,
     );
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully')),
+        SnackBar(
+          content: Text(strings.successProfileUpdate, style: TextStyle(color: context.textPrimaryColor)),
+          backgroundColor: AppColors.success,
+        ),
       );
       setState(() {
         _isEditMode = false;
@@ -123,7 +139,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to update profile')),
+        SnackBar(
+          content: Text(strings.errorUpdateFailed, style: TextStyle(color: context.textPrimaryColor)),
+          backgroundColor: AppColors.error,
+        ),
       );
     }
   }
@@ -141,120 +160,133 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = S.of(context);
     return Scaffold(
       appBar: CustomAppBar.appBarWithNavigation(
-        screenTitle: 'Profile',
+        screenTitle: strings.titleProfile,
         onPressed: () => Navigator.pop(context),
-        darkBackground: false,
+        darkBackground: Theme.of(context).brightness == Brightness.dark,
+        context: context,
       ),
-      backgroundColor: AppColors.lightThemeBackground,
-      floatingActionButton: _buildFloatingActionButtons(),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Consumer<UserViewModel>(
         builder: (context, userVM, _) {
           if (userVM.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor));
           }
 
           if (userVM.currentUser == null) {
-            return const Center(child: Text('Failed to load profile data'));
+            return Center(child: Text(strings.errorLoadProfileFailed));
           }
 
-          return Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Form(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          CustomCards.userProfileCard(name: userVM.currentOperator!.name, userId: userVM.currentOperator!.id),
-                          const SizedBox(height: 20),
-                          CustomFormFields.primaryFormField(
-                            label: 'Username',
-                            controller: _nameController,
-                            keyboardType: TextInputType.text,
-                            isPassword: false,
-                            enabled: _isEditMode,
-                          ),
-                          const SizedBox(height: 16),
-                          CustomFormFields.primaryFormField(
-                            label: 'Email',
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            isPassword: false,
-                            enabled: _isEditMode,
-                          ),
-                          const SizedBox(height: 16),
-                          CustomFormFields.primaryFormField(
-                            label: 'Mobile Number',
-                            controller: _mobileNumberController,
-                            keyboardType: TextInputType.phone,
-                            isPassword: false,
-                            enabled: _isEditMode,
-                          ),
-                          const SizedBox(height: 16),
-                          CustomFormFields.primaryFormField(
-                            label: 'Address',
-                            controller: _addressController,
-                            keyboardType: TextInputType.streetAddress,
-                            isPassword: false,
-                            enabled: _isEditMode,
-                          ),
-                          const SizedBox(height: 16),
-                          CustomFormFields.primaryFormField(
-                            label: 'City',
-                            controller: _cityController,
-                            keyboardType: TextInputType.text,
-                            isPassword: false,
-                            enabled: _isEditMode,
-                          ),
-                          const SizedBox(height: 16),
-                          CustomFormFields.primaryFormField(
-                            label: 'State',
-                            controller: _stateController,
-                            keyboardType: TextInputType.text,
-                            isPassword: false,
-                            enabled: _isEditMode,
-                          ),
-                          const SizedBox(height: 30),
-                        ],
-                      ),
-                    ),
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  CustomCards.userProfileCard(
+                    name: userVM.currentUser!.name,
+                    userId: userVM.currentUser!.id,
+                    context: context,
                   ),
-                ),
+                  const SizedBox(height: 20),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelUsername,
+                    controller: _nameController,
+                    keyboardType: TextInputType.text,
+                    isPassword: false,
+                    enabled: _isEditMode,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelEmail,
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    isPassword: false,
+                    enabled: _isEditMode,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelMobileNumber,
+                    controller: _mobileNumberController,
+                    keyboardType: TextInputType.phone,
+                    isPassword: false,
+                    enabled: _isEditMode,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelAddress,
+                    controller: _addressController,
+                    keyboardType: TextInputType.streetAddress,
+                    isPassword: false,
+                    enabled: _isEditMode,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelCity,
+                    controller: _cityController,
+                    keyboardType: TextInputType.text,
+                    isPassword: false,
+                    enabled: _isEditMode,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelState,
+                    controller: _stateController,
+                    keyboardType: TextInputType.text,
+                    isPassword: false,
+                    enabled: _isEditMode,
+                  ),
+                  const SizedBox(height: 30),
+                  _buildActionButtons(strings),
+                ],
               ),
-            ],
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildFloatingActionButtons() {
-    if (!_isEditMode) {
-      return FloatingActionButton(
-        onPressed: _toggleEditMode,
-        child: const Icon(Icons.edit),
-      );
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        FloatingActionButton(
-          onPressed: _toggleEditMode,
-          backgroundColor: Colors.red,
-          child: const Icon(Icons.close),
-        ),
-        const SizedBox(width: 16),
-        FloatingActionButton(
-          onPressed: _confirmUpdate,
-          backgroundColor: Colors.green,
-          child: const Icon(Icons.check),
-        ),
-      ],
+  Widget _buildActionButtons(S strings) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: _isEditMode
+            ? [
+          CustomButtons.secondaryButton(
+            text: strings.buttonCancel,
+            onPressed: _toggleEditMode,
+            height: 50,
+            width: MediaQuery.of(context).size.width * 0.4,
+            context: context,
+          ),
+          CustomButtons.primaryButton(
+            text: strings.buttonSave,
+            onPressed: _confirmUpdate,
+            height: 50,
+            width: MediaQuery.of(context).size.width * 0.4,
+            context: context,
+          ),
+        ]
+            : [
+          CustomButtons.primaryButton(
+            text: strings.buttonEdit,
+            onPressed: _toggleEditMode,
+            height: 50,
+            width: MediaQuery.of(context).size.width * 0.9,
+            context: context,
+          ),
+        ],
+      ),
     );
   }
 }
