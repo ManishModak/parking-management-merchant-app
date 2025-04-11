@@ -12,10 +12,6 @@ class PlazaFare {
   DateTime? endEffectDate;
   final bool isDeleted;
 
-  /// Creates a new [PlazaFare] instance.
-  ///
-  /// [plazaId], [vehicleType], [fareType], [fareRate], and [startEffectDate] are required.
-  /// Other parameters are optional.
   PlazaFare({
     this.fareId,
     required this.plazaId,

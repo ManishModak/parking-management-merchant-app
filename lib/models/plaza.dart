@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 class Plaza {
   static const List<String> validPlazaCategories = ['Public', 'Private'];
   static const List<String> validPlazaSubCategories = ['Apartment', 'Society', 'OPEN', 'CLOSE'];
@@ -10,7 +12,6 @@ class Plaza {
   final String plazaOwner;
   final String plazaOwnerId;
   final String plazaOperatorName;
-  //final String plazaOperatorId;
   final String mobileNumber;
   final String address;
   final String email;
@@ -27,10 +28,12 @@ class Plaza {
   final int noOfParkingSlots;
   final bool freeParking;
   final String priceCategory;
-  final int capacityTwoWheeler;
-  final int capacityFourLMV;
-  final int capacityFourLCV;
-  final int capacityHMV;
+  final int capacityBike;
+  final int capacity3Wheeler;
+  final int capacity4Wheeler;
+  final int capacityBus;
+  final int capacityTruck;
+  final int capacityHeavyMachinaryVehicle; // Kept as per backend
   final String plazaOpenTimings;
   final String plazaClosingTime;
   final bool isDeleted;
@@ -41,7 +44,6 @@ class Plaza {
     required this.plazaOwner,
     required this.plazaOwnerId,
     required this.plazaOperatorName,
-    //required this.plazaOperatorId,
     required this.mobileNumber,
     required this.address,
     required this.email,
@@ -58,10 +60,12 @@ class Plaza {
     required this.noOfParkingSlots,
     required this.freeParking,
     required this.priceCategory,
-    required this.capacityTwoWheeler,
-    required this.capacityFourLMV,
-    required this.capacityFourLCV,
-    required this.capacityHMV,
+    required this.capacityBike,
+    required this.capacity3Wheeler,
+    required this.capacity4Wheeler,
+    required this.capacityBus,
+    required this.capacityTruck,
+    required this.capacityHeavyMachinaryVehicle,
     required this.plazaOpenTimings,
     required this.plazaClosingTime,
     this.isDeleted = false,
@@ -73,7 +77,6 @@ class Plaza {
     String? plazaOwner,
     String? plazaOwnerId,
     String? plazaOperatorName,
-    String? plazaOperatorId,
     String? mobileNumber,
     String? address,
     String? email,
@@ -90,10 +93,12 @@ class Plaza {
     int? noOfParkingSlots,
     bool? freeParking,
     String? priceCategory,
-    int? capacityTwoWheeler,
-    int? capacityFourLMV,
-    int? capacityFourLCV,
-    int? capacityHMV,
+    int? capacityBike,
+    int? capacity3Wheeler,
+    int? capacity4Wheeler,
+    int? capacityBus,
+    int? capacityTruck,
+    int? capacityHeavyMachinaryVehicle,
     String? plazaOpenTimings,
     String? plazaClosingTime,
     bool? isDeleted,
@@ -104,7 +109,6 @@ class Plaza {
       plazaOwner: plazaOwner ?? this.plazaOwner,
       plazaOwnerId: plazaOwnerId ?? this.plazaOwnerId,
       plazaOperatorName: plazaOperatorName ?? this.plazaOperatorName,
-      //plazaOperatorId: plazaOperatorId ?? this.plazaOperatorId,
       mobileNumber: mobileNumber ?? this.mobileNumber,
       address: address ?? this.address,
       email: email ?? this.email,
@@ -121,10 +125,12 @@ class Plaza {
       noOfParkingSlots: noOfParkingSlots ?? this.noOfParkingSlots,
       freeParking: freeParking ?? this.freeParking,
       priceCategory: priceCategory ?? this.priceCategory,
-      capacityTwoWheeler: capacityTwoWheeler ?? this.capacityTwoWheeler,
-      capacityFourLMV: capacityFourLMV ?? this.capacityFourLMV,
-      capacityFourLCV: capacityFourLCV ?? this.capacityFourLCV,
-      capacityHMV: capacityHMV ?? this.capacityHMV,
+      capacityBike: capacityBike ?? this.capacityBike,
+      capacity3Wheeler: capacity3Wheeler ?? this.capacity3Wheeler,
+      capacity4Wheeler: capacity4Wheeler ?? this.capacity4Wheeler,
+      capacityBus: capacityBus ?? this.capacityBus,
+      capacityTruck: capacityTruck ?? this.capacityTruck,
+      capacityHeavyMachinaryVehicle: capacityHeavyMachinaryVehicle ?? this.capacityHeavyMachinaryVehicle,
       plazaOpenTimings: plazaOpenTimings ?? this.plazaOpenTimings,
       plazaClosingTime: plazaClosingTime ?? this.plazaClosingTime,
       isDeleted: isDeleted ?? this.isDeleted,
@@ -138,7 +144,6 @@ class Plaza {
       plazaOwner: json['plazaOwner'] as String? ?? '',
       plazaOwnerId: json['plazaOwnerId']?.toString() ?? '',
       plazaOperatorName: json['plazaOperatorName'] as String? ?? '',
-      //plazaOperatorId: json['plazaOperatorId'] as String? ?? '',
       mobileNumber: json['mobileNumber']?.toString() ?? '',
       address: json['address'] as String? ?? '',
       email: json['email'] as String? ?? '',
@@ -155,10 +160,12 @@ class Plaza {
       noOfParkingSlots: _parseInt(json['noOfParkingSlots']) ?? 0,
       freeParking: json['freeParking'] as bool? ?? false,
       priceCategory: json['priceCategory'] as String? ?? 'Standard',
-      capacityTwoWheeler: _parseInt(json['capacityTwoWheeler']) ?? 0,
-      capacityFourLMV: _parseInt(json['capacityFourLMV']) ?? 0,
-      capacityFourLCV: _parseInt(json['capacityFourLCV']) ?? 0,
-      capacityHMV: _parseInt(json['capacityHMV']) ?? 0,
+      capacityBike: _parseInt(json['capacityBike']) ?? 0,
+      capacity3Wheeler: _parseInt(json['capacity3Wheeler']) ?? 0,
+      capacity4Wheeler: _parseInt(json['capacity4Wheeler']) ?? 0,
+      capacityBus: _parseInt(json['capacityBus']) ?? 0,
+      capacityTruck: _parseInt(json['capacityTruck']) ?? 0,
+      capacityHeavyMachinaryVehicle: _parseInt(json['capacityHeavyMachinaryVehicle']) ?? 0,
       plazaOpenTimings: json['plazaOpenTimings'] as String? ?? '00:00',
       plazaClosingTime: json['plazaClosingTime'] as String? ?? '23:59',
       isDeleted: json['isDeleted'] as bool? ?? false,
@@ -170,7 +177,7 @@ class Plaza {
     if (value is int) return value;
     if (value is String) {
       try {
-        return int.parse(value);
+        return int.parse(value.trim());
       } catch (e) {
         return null;
       }
@@ -185,7 +192,7 @@ class Plaza {
     if (value is int) return value.toDouble();
     if (value is String) {
       try {
-        return double.parse(value);
+        return double.parse(value.trim());
       } catch (e) {
         return null;
       }
@@ -199,7 +206,6 @@ class Plaza {
       'plazaOwner': plazaOwner,
       'plazaOwnerId': plazaOwnerId,
       'plazaOperatorName': plazaOperatorName,
-      //'plazaOperatorId': plazaOperatorId,
       'mobileNumber': mobileNumber,
       'address': address,
       'email': email,
@@ -216,10 +222,12 @@ class Plaza {
       'noOfParkingSlots': noOfParkingSlots,
       'freeParking': freeParking,
       'priceCategory': priceCategory,
-      'capacityTwoWheeler': capacityTwoWheeler,
-      'capacityFourLMV': capacityFourLMV,
-      'capacityFourLCV': capacityFourLCV,
-      'capacityHMV': capacityHMV,
+      'capacityBike': capacityBike,
+      'capacity3Wheeler': capacity3Wheeler,
+      'capacity4Wheeler': capacity4Wheeler,
+      'capacityBus': capacityBus,
+      'capacityTruck': capacityTruck,
+      'capacityHeavyMachinaryVehicle': capacityHeavyMachinaryVehicle,
       'plazaOpenTimings': plazaOpenTimings,
       'plazaClosingTime': plazaClosingTime,
       'isDeleted': isDeleted,
@@ -232,40 +240,41 @@ class Plaza {
     return data;
   }
 
-  // Add this constructor to the Plaza class
   factory Plaza.empty() {
     return Plaza(
-        plazaId: '',
-        plazaName: '',
-        plazaOwner: '',
-        plazaOwnerId: '',
-        plazaOperatorName: '',
-        //plazaOperatorId: '',
-        mobileNumber: '',
-        address: '',
-        email: '',
-        city: '',
-        district: '',
-        state: '',
-        pincode: '',
-        geoLatitude: 0.0,
-        geoLongitude: 0.0,
-        plazaCategory: 'Private',
-        plazaSubCategory: 'OPEN',
-        structureType: 'Open',
-        plazaStatus: 'Active',
-        noOfParkingSlots: 0,
-        freeParking: false,
-        priceCategory: 'Standard',
-        capacityTwoWheeler: 0,
-        capacityFourLMV: 0,
-        capacityFourLCV: 0,
-        capacityHMV: 0,
-        plazaOpenTimings: '00:00',
-        plazaClosingTime: '23:59'
+      plazaId: '',
+      plazaName: '',
+      plazaOwner: '',
+      plazaOwnerId: '',
+      plazaOperatorName: '',
+      mobileNumber: '',
+      address: '',
+      email: '',
+      city: '',
+      district: '',
+      state: '',
+      pincode: '',
+      geoLatitude: 0.0,
+      geoLongitude: 0.0,
+      plazaCategory: 'Private',
+      plazaSubCategory: 'OPEN',
+      structureType: 'Open',
+      plazaStatus: 'Active',
+      noOfParkingSlots: 0,
+      freeParking: false,
+      priceCategory: 'Standard',
+      capacityBike: 0,
+      capacity3Wheeler: 0,
+      capacity4Wheeler: 0,
+      capacityBus: 0,
+      capacityTruck: 0,
+      capacityHeavyMachinaryVehicle: 0,
+      plazaOpenTimings: '00:00',
+      plazaClosingTime: '23:59',
+      isDeleted: false,
     );
   }
 
   @override
-  String toString() => plazaName; // Already implemented in your code
+  String toString() => plazaName;
 }

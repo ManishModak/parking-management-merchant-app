@@ -1,6 +1,6 @@
 class Bank {
-  final String? id;
-  final String plazaId;
+  late final String? id;
+  final String plazaId; // Kept as String internally for Dart flexibility
   final String bankName;
   final String accountNumber;
   final String accountHolderName;
@@ -23,28 +23,22 @@ class Bank {
 
   factory Bank.fromJson(Map<String, dynamic> json) {
     return Bank(
-      // Convert id to String if it's an integer
       id: json['id']?.toString(),
-      // Convert plazaId to String if it's an integer
       plazaId: json['plazaId']?.toString() ?? '',
       bankName: json['bankName'] ?? '',
       accountNumber: json['accountNumber'] ?? '',
       accountHolderName: json['accountHolderName'] ?? '',
       ifscCode: json['IFSCcode'] ?? '',
       active: json['active'] ?? true,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : null,
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
-          : null,
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {
       if (id != null) 'id': id,
-      'plazaId': plazaId,
+      'plazaId': int.parse(plazaId),
       'bankName': bankName,
       'accountNumber': accountNumber,
       'accountHolderName': accountHolderName,

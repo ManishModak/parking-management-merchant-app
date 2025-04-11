@@ -13,7 +13,6 @@ import 'package:provider/provider.dart';
 import '../../config/app_config.dart';
 import '../../generated/l10n.dart';
 import '../../utils/exceptions.dart';
-import '../../viewmodels/plaza/plaza_viewmodel.dart';
 
 class UserInfoScreen extends StatefulWidget {
   final String operatorId;
@@ -92,16 +91,16 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
 
   Future<void> _fetchPlazas(String id) async {
     final strings = S.of(context);
-    final plazaViewModel = Provider.of<PlazaViewModel>(context, listen: false);
+    final userViewModel = Provider.of<UserViewModel>(context, listen: false);
 
     setState(() {
       _plazas = [];
     });
 
     try {
-      await plazaViewModel.fetchUserPlazas(id);
+      await userViewModel.fetchUserPlazas(id);
       setState(() {
-        _plazas = plazaViewModel.userPlazas.map((plaza) => plaza.plazaName).toList();
+        _plazas = userViewModel.userPlazas.map((plaza) => plaza.plazaName).toList();
         if (_userSubEntity != null && _plazas.contains(_userSubEntity)) {
           selectedPlaza = _userSubEntity;
         } else if (_plazas.length == 1) {
@@ -112,7 +111,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       });
     } catch (e) {
       String errorMessage = strings.errorLoadPlazas;
-      final error = plazaViewModel.error;
+      final error = userViewModel.error;
       if (error != null) {
         if (error is HttpException) {
           errorMessage = error.message;
@@ -143,13 +142,13 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   Future<void> _loadOperatorData() async {
     final strings = S.of(context);
     try {
-      final operatorViewModel = context.read<UserViewModel>();
-      await operatorViewModel.fetchUser(
+      final userViewModel = context.read<UserViewModel>();
+      await userViewModel.fetchUser(
         userId: widget.operatorId,
         isCurrentAppUser: false,
       );
       await _loadUser();
-      final currentOperator = operatorViewModel.currentOperator;
+      final currentOperator = userViewModel.currentOperator;
       if (currentOperator?.entityId != null && mounted) {
         await _fetchPlazas(currentOperator!.entityId!);
       }
@@ -180,8 +179,8 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   }
 
   Future<void> _loadUser() async {
-    final operatorViewModel = context.read<UserViewModel>();
-    final currentOperator = operatorViewModel.currentOperator;
+    final userViewModel = context.read<UserViewModel>();
+    final currentOperator = userViewModel.currentOperator;
 
     if (currentOperator != null && mounted) {
       setState(() {
@@ -369,7 +368,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   @override
   Widget build(BuildContext context) {
     final strings = S.of(context);
-    final operatorVM = Provider.of<UserViewModel>(context);
 
     return Scaffold(
       appBar: CustomAppBar.appBarWithNavigation(

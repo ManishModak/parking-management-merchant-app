@@ -19,9 +19,8 @@ class CustomNavigationBar extends StatelessWidget {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     final List<({IconData icon, String label})> navItems = [
-      (icon: Icons.swap_horiz, label: strings.navTransactions),
-      (icon: Icons.menu_outlined, label: strings.navMenu),
       (icon: Icons.dashboard_outlined, label: strings.navDashboard),
+      (icon: Icons.apps_outlined, label: strings.navMenu),
       (icon: Icons.notifications_outlined, label: strings.navNotifications),
       (icon: Icons.person_outline, label: strings.navAccount),
     ];
@@ -34,7 +33,7 @@ class CustomNavigationBar extends StatelessWidget {
     final Color unselectedTextColor = isDarkMode ? AppColors.secondary.withOpacity(0.7) : Colors.white70;
 
     return Container(
-      height: 80,
+      height: 70,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
         color: barBackgroundColor,

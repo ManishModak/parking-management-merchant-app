@@ -1,6 +1,9 @@
 // API Configuration
 class ApiConfig {
   static const String baseUrl = 'http://13.201.218.178:3001/';
+  //static const String baseUrl = 'http://192.168.1.103:3001/';
+  static Duration defaultTimeout = const Duration(seconds: 15);
+  static Duration longTimeout = const Duration(seconds: 30);
 
   // Helper method to construct full URL from an endpoint
   static String getFullUrl(String endpoint) {
@@ -80,12 +83,14 @@ class PlazaApi {
 // Ticket Management
 class TicketApi {
   static const String basePath = 'plaza/api/tickets/';
-  static const String vehicleBasePath = 'plaza/api/vehicle/';
+  static const String vehicleBasePath = 'ticket/api/vehicle/';
+  static const String newTicketBasePath = 'ticket/api/tickets/'; // New base path for newTicket
 
   // Ticket operations
   static const String getOpenTickets = '${basePath}open-tickets'; // GET: List all open tickets
   static const String getAllTickets = '${basePath}all-tickets'; // GET: List all tickets
-  static const String createTicket = '${basePath}create'; // POST: Create a new ticket
+  static const String createTicket = '${basePath}create'; // POST: Create a new ticket (existing)
+  static const String newTicket = '${newTicketBasePath}newTicket'; // POST: New ticket endpoint
   static const String getTicketDetails = '${basePath}ticketDetails/'; // GET: Retrieve ticket details by ID
   static const String rejectTicket = '${basePath}reject-ticket/'; // POST: Reject a ticket
   static const String modifyTicket = '${basePath}modify-ticket/'; // PUT: Modify ticket details

@@ -1,49 +1,120 @@
 import 'dart:developer';
-
+import 'dart:developer' as developer;
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:merchant_app/models/lane.dart';
 import 'package:merchant_app/models/plaza_fare.dart';
+import '../../models/plaza.dart';
+import '../../models/lane.dart';
 import '../../models/ticket.dart';
 import '../../services/core/ticket_service.dart';
+import '../../services/core/lane_service.dart';
+import '../../services/storage/secure_storage_service.dart';
+import '../../utils/exceptions.dart';
+import '../../viewmodels/plaza/plaza_list_viewmodel.dart';
+import '../../../generated/l10n.dart';
 
 class NewTicketViewmodel extends ChangeNotifier {
   final TicketService _ticketService = TicketService();
+  final SecureStorageService _secureStorage = SecureStorageService();
+  final PlazaListViewModel _plazaListViewModel = PlazaListViewModel();
+  final LaneService _laneService = LaneService();
+  final ImagePicker _imagePicker = ImagePicker();
 
   // Controllers
   final TextEditingController vehicleNumberController = TextEditingController();
-  final TextEditingController floorIdController = TextEditingController();
-  final TextEditingController slotIdController = TextEditingController();
-  final TextEditingController plazaIdController = TextEditingController();
-  final TextEditingController entryLaneIdController = TextEditingController();
   final TextEditingController entryTimeController = TextEditingController();
-  final TextEditingController entryLaneDirectionController = TextEditingController();
+
+  // Selected values
+  String? selectedPlazaId;
+  String? selectedEntryLaneId;
+  String? selectedVehicleType;
 
   // Field-specific error states
   String? vehicleNumberError;
-  String? floorIdError;
-  String? slotIdError;
   String? vehicleTypeError;
-  String? laneDirectionError;
   String? apiError;
   String? plazaIdError;
   String? entryLaneIdError;
-  String? entryTimeError;
   String? imageCaptureError;
 
-  String? selectedVehicleType;
-  String? selectedDirection;
   bool isLoading = false;
+  bool isManualTicketExpanded = false;
 
   // Image related properties
-  final ImagePicker _imagePicker = ImagePicker();
   List<String> selectedImagePaths = [];
-  List<String> get vehicleTypes => VehicleTypes.values;
-  List<String> get laneDirections => Lane.validDirections;
+  DateTime? firstImageCaptureTime;
 
-  Future<void> showImageSourceDialog(BuildContext context) async {
-    // Directly call camera instead of showing dialog
-    await pickImageFromCamera();
+  // Vehicle types
+  List<String> get vehicleTypes => VehicleTypes.values; // Adjust as per your backend
+
+  // Plaza and Lane properties
+  List<Plaza> get userPlazas => _plazaListViewModel.userPlazas;
+  List<Lane> _lanes = [];
+  List<Lane> get lanes => _lanes;
+
+  NewTicketViewmodel() {
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    final userId = await _secureStorage.getUserId();
+    if (userId != null) {
+      await fetchUserPlazas(userId);
+    } else {
+      apiError = S.current.noUserIdError;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchUserPlazas(String userId) async {
+    try {
+      isLoading = true;
+      notifyListeners();
+      await _plazaListViewModel.fetchUserPlazas(userId);
+      if (_plazaListViewModel.error != null) {
+        apiError = S.current.plazaFetchError(_plazaListViewModel.error.toString());
+      }
+    } catch (e) {
+      apiError = S.current.plazaFetchError(e.toString());
+      log("Error fetching plazas: $e", name: "NewTicketViewmodel");
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchLanes(String plazaId) async {
+    try {
+      isLoading = true;
+      apiError = null;
+      notifyListeners();
+      _lanes = await _laneService.getLanesByPlazaId(plazaId);
+    } catch (e) {
+      apiError = S.current.laneFetchError(e.toString());
+      _lanes = [];
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> _getCameraId() async {
+    try {
+      final deviceInfo = DeviceInfoPlugin();
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        return androidInfo.id; // Unique device ID as a proxy for camera ID
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        return iosInfo.identifierForVendor;
+      }
+      return 'unknown'; // Fallback for unsupported platforms
+    } catch (e) {
+      developer.log('Error getting camera ID: $e', name: 'NewTicketViewmodel');
+      return 'unknown'; // Fallback in case of plugin failure
+    }
   }
 
   Future<void> pickImageFromCamera() async {
@@ -51,14 +122,17 @@ class NewTicketViewmodel extends ChangeNotifier {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.camera,
         preferredCameraDevice: CameraDevice.rear,
+        imageQuality: 80,
       );
-
       if (image != null) {
+        if (selectedImagePaths.isEmpty) {
+          firstImageCaptureTime = DateTime.now();
+        }
         selectedImagePaths.add(image.path);
         notifyListeners();
       }
     } catch (e) {
-      imageCaptureError = 'Error capturing image: $e';
+      imageCaptureError = S.current.imageCaptureError(e.toString());
       notifyListeners();
     }
   }
@@ -66,18 +140,16 @@ class NewTicketViewmodel extends ChangeNotifier {
   void removeImage(int index) {
     if (index >= 0 && index < selectedImagePaths.length) {
       selectedImagePaths.removeAt(index);
+      if (selectedImagePaths.isEmpty) firstImageCaptureTime = null;
       notifyListeners();
     }
   }
 
   void resetErrors() {
     vehicleNumberError = null;
-    floorIdError = null;
-    slotIdError = null;
     vehicleTypeError = null;
     plazaIdError = null;
     entryLaneIdError = null;
-    entryTimeError = null;
     imageCaptureError = null;
     apiError = null;
     notifyListeners();
@@ -85,115 +157,78 @@ class NewTicketViewmodel extends ChangeNotifier {
 
   bool validateForm() {
     bool isValid = true;
-
     resetErrors();
-    log("Form validation started, errors reset");
 
-    if (vehicleNumberController.text.isEmpty || vehicleNumberController.text.length > 20) {
-      vehicleNumberError = 'Vehicle number must be between 1 and 20 characters';
+    if (selectedPlazaId == null || selectedPlazaId!.isEmpty) {
+      plazaIdError = S.current.plazaIdRequired;
       isValid = false;
-      log("Validation error: $vehicleNumberError");
     }
-
-    if (selectedVehicleType == null) {
-      vehicleTypeError = 'Vehicle type is required';
+    if (selectedEntryLaneId == null || selectedEntryLaneId!.isEmpty) {
+      entryLaneIdError = S.current.laneIdRequired;
       isValid = false;
-      log("Validation error: $vehicleTypeError");
     }
-
-    if (selectedDirection == null) {
-      laneDirectionError = 'Lane Direction is required';
-      isValid = false;
-      log("Validation error: $laneDirectionError");
-    }
-
-    if (floorIdController.text.length > 20) {
-      floorIdError = 'Floor ID must be between 1 and 20 characters';
-      isValid = false;
-      log("Validation error: $floorIdError");
-    }
-
-    if (slotIdController.text.length > 20) {
-      slotIdError = 'Slot ID must be between 1 and 20 characters';
-      isValid = false;
-      log("Validation error: $slotIdError");
-    }
-
-    if (plazaIdController.text.isEmpty) {
-      plazaIdError = 'Plaza ID is required';
-      isValid = false;
-      log("Validation error: $plazaIdError");
-    }
-
-    if (entryLaneIdController.text.isEmpty) {
-      entryLaneIdError = 'Entry Lane ID is required';
-      isValid = false;
-      log("Validation error: $entryLaneIdError");
-    }
-
-    if (entryTimeController.text.isEmpty) {
-      entryTimeError = 'Entry Time is required';
-      isValid = false;
-      log("Validation error: $entryTimeError");
-    }
-
     if (selectedImagePaths.isEmpty) {
-      imageCaptureError = 'Please capture at least one vehicle image';
+      imageCaptureError = S.current.imageRequired;
       isValid = false;
-      log("Validation error: $imageCaptureError");
     }
-
+    if (isManualTicketExpanded) {
+      if (vehicleNumberController.text.isEmpty || vehicleNumberController.text.length > 20) {
+        vehicleNumberError = S.current.vehicleNumberError;
+        isValid = false;
+      }
+      if (selectedVehicleType == null) {
+        vehicleTypeError = S.current.vehicleTypeRequired;
+        isValid = false;
+      }
+    }
     notifyListeners();
-    log("Form validation completed, isValid: $isValid");
     return isValid;
   }
 
   Future<bool> createTicket() async {
-    entryTimeController.text = DateTime.now().toString();
+    if (!validateForm()) return false;
 
-    log("Entered CreateTicket Viewmodel Method");
-    if (!validateForm()) {
-      log("Form validation failed");
-      return false;
-    }
-
-    log("Form validated successfully, starting ticket creation process");
     isLoading = true;
     notifyListeners();
 
     try {
-      log("Creating new Ticket object");
-      Ticket newTicket = Ticket(
-        plazaId: plazaIdController.text,
-        entryLaneId: entryLaneIdController.text,
-        entryLaneDirection: selectedDirection!,
-        floorId: floorIdController.text,
-        slotId: slotIdController.text,
-        vehicleNumber: vehicleNumberController.text,
-        vehicleType: selectedVehicleType!,
-        entryTime: entryTimeController.text,
+      final cameraId = await _getCameraId() ?? 'unknown';
+      final entryTime = DateTime.now().toIso8601String();
+      final cameraReadTime = firstImageCaptureTime?.toIso8601String() ?? entryTime;
+
+      final ticket = Ticket(
+        plazaId: selectedPlazaId!, // String, matches backend
+        entryLaneId: selectedEntryLaneId!, // String, matches backend
+        entryTime: entryTime,
+        vehicleNumber: isManualTicketExpanded ? vehicleNumberController.text : null,
+        vehicleType: isManualTicketExpanded ? selectedVehicleType : null,
+        channelId: '3',
+        requestType: isManualTicketExpanded ? '1' : '0',
+        cameraId: cameraId,
+        cameraReadTime: cameraReadTime,
       );
-      log("Ticket object created successfully with vehicle number: ${newTicket.vehicleNumber}");
 
-      log("Calling ticket service to create ticket with images");
-      await _ticketService.createTicketWithImages(newTicket, selectedImagePaths);
-      log("Ticket created successfully in service layer");
+      await _ticketService.createTicketWithImages(
+        ticket,
+        selectedImagePaths,
+        channelId: '3',
+        requestType: isManualTicketExpanded ? '1' : '0',
+        cameraId: cameraId,
+        cameraReadTime: cameraReadTime,
+      );
 
       isLoading = false;
       notifyListeners();
-      log("Ticket creation completed successfully");
       return true;
-    } catch (e) {
-      log("Error occurred during ticket creation: ${e.toString()}");
-      // Refine the error message based on the exception
-      if (e.toString().contains("502")) {
-        apiError = 'Failed to create ticket: Unable to reach plaza service.';
-      } else {
-        apiError = 'Failed to create ticket: ${e.toString()}';
-      }
+    } on AnprFailureException catch (e) {
+      apiError = 'ANPR Failed';
       isLoading = false;
       notifyListeners();
-      log("Notified listeners about creation failure with apiError: $apiError");
+      return false;
+    } catch (e) {
+      apiError = e.toString();
+      isLoading = false;
+      notifyListeners();
       return false;
     }
   }
@@ -203,20 +238,34 @@ class NewTicketViewmodel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateDirection(String? direction) {
-    selectedDirection = direction;
+  void toggleManualTicketExpanded({bool? forceExpand}) {
+    if (forceExpand != null) {
+      isManualTicketExpanded = forceExpand;
+    } else {
+      isManualTicketExpanded = !isManualTicketExpanded;
+    }
+    notifyListeners();
+  }
+
+  void updatePlazaId(dynamic id) {
+    selectedPlazaId = id?.toString(); // Convert to String, handles int or String
+    if (selectedPlazaId != null) {
+      fetchLanes(selectedPlazaId!); // Already String, no conversion needed
+    } else {
+      _lanes = [];
+      notifyListeners();
+    }
+  }
+
+  void updateEntryLaneId(dynamic id) {
+    selectedEntryLaneId = id?.toString(); // Convert to String, handles int or String
     notifyListeners();
   }
 
   @override
   void dispose() {
     vehicleNumberController.dispose();
-    floorIdController.dispose();
-    slotIdController.dispose();
-    plazaIdController.dispose();
-    entryLaneIdController.dispose();
     entryTimeController.dispose();
-    entryLaneDirectionController.dispose();
     super.dispose();
   }
 }

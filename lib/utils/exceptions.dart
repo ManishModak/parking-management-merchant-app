@@ -98,3 +98,11 @@ class RequestTimeoutException implements Exception {
   @override
   String toString() => message;
 }
+
+class AnprFailureException implements Exception {
+  final String message;
+  AnprFailureException(this.message);
+
+  @override
+  String toString() => 'AnprFailureException: $message';
+}

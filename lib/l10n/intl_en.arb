@@ -16,12 +16,52 @@
   "menuProcessDispute": "Process Dispute",
   "menuResetPassword": "Reset Password",
   "menuAddPlazaFare": "Add Plaza Fare",
-  "menuModifyViewPlazaFare": "View/Edit Plaza Fare Details",
+  "menuModifyViewPlazaFare": "View/Edit Plaza\nFare Details",
+  "errorLoadingLanesFailed": "Loading Lanes Failed",
   "menuTickets": "Tickets",
   "menuNewTicket": "New Ticket",
   "menuOpenTickets": "Open Tickets",
   "menuRejectTicket": "Reject Ticket",
   "menuTicketHistory": "Ticket History",
+  "errorLoadingData": "Error Loading Data",
+  "failedToPickImages": "Failed To Pick Images: {error}",
+  "@failedToPickImages": {
+    "description": "Error message shown when image picking fails",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network error"
+      }
+    }
+  },
+  "imageRemovedSuccess": "Image Removed Successfully",
+  "imageRemoveFailed": "Image Remove Failed",
+  "titlePlazaImages": "Plaza Images",
+  "failedToRefreshImages": "Failed to refresh images: {error}",
+  "@failedToRefreshImages": {
+    "description": "Error message shown when image refresh fails",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network error"
+      }
+    }
+  },
+
+  "tooltipEditBasicDetails": "Edit Basic Details",
+
+  "labelOwner": "Owner",
+  "labelOperator": "Operator",
+
+  "labelSubCategory": "Sub Category",
+  "tooltipEditBankDetails": "Edit Bank Details",
+  "labelAccountHolder": "Account Holder",
+  "labelIFSC": "IFSC Code",
+  "messageNoBankDetails": "No bank details available",
+  "tooltipEditImages": "Edit Images",
+
+  "errorImageNotFound": "Image not found",
+
   "menuMarkExit": "Mark Exit",
   "welcomeMessage": "Welcome to the Merchant App!",
   "loginMessage": "Welcome Back\nYou've Been Missed!",
@@ -32,6 +72,8 @@
   "buttonLogin": "LOGIN",
   "buttonRegister": "REGISTER",
   "buttonContinue": "CONTINUE",
+  "noNewImagesToUpload": "No New Image To Upload",
+  "addBankDetailsAction": "Add Bank Details",
   "buttonConfirm": "CONFIRM",
   "buttonSetResetPassword": "RESET\nPASSWORD",
   "titleLogin": "Login",
@@ -58,16 +100,9 @@
   "labelPassword": "Password",
   "labelConfirmPassword": "Confirm Password",
   "labelEmailAndMobileNo": "Email ID / Mobile No.",
-  "labelMobileNumber": "Mobile Number",
-  "labelEmail": "Email ID",
   "labelFullName": "Full Name",
   "labelPlazaOwnerName": "Plaza Owner Name",
   "labelUsername": "Username",
-  "labelCity": "City",
-  "labelState": "State",
-  "labelDistrict": "District",
-  "labelAddress": "Address",
-  "labelPincode": "Pincode",
   "labelRole": "Role",
   "labelAssignRole": "Assign Role",
   "labelEntity": "Entity",
@@ -116,7 +151,7 @@
   "errorStateRequired": "State is required.",
   "errorStateLength": "State must be between 1 and 50 characters.",
   "errorRegistrationFailed": "Registration Failed",
-  "errorFetchEntities":"Error in fetching Entities",
+  "errorFetchEntities": "Error in fetching Entities",
   "errorSelectEntity": "Entity is Required",
   "errorPasswordRequired": "Password is required.",
   "errorPasswordLength": "Password must be 8 to 20 characters long.",
@@ -142,7 +177,6 @@
   "errorExistingTemporaryFare": "A temporary fare already exists for this plaza.",
   "errorExistingVehicleClass": "Vehicle class already exists for this plaza.",
   "errorFareSubmission": "Error adding fare: ",
-  "successFareSubmission": "All fares submitted successfully!",
   "warningNoFaresAdded": "Please add at least one fare before submitting.",
   "errorSubmissionFailed": "Submission failed: ",
   "navTransactions": "Transactions",
@@ -156,7 +190,6 @@
   "noOpenTickets": "No open tickets",
   "noTicketsAvailable": "There are no open tickets available",
   "noTicketsMatchSearch": "No tickets match your search criteria",
-  "clearSearch": "Clear Search",
   "errorUnableToLoadTickets": "Unable to Load Tickets",
   "errorGeneric": "Something went wrong. Please try again.",
   "buttonRetry": "Retry",
@@ -164,7 +197,6 @@
   "labelEntryTime": "Entry Time",
   "labelVehicleNumber": "Vehicle Number",
   "labelVehicleType": "Vehicle Type",
-  "labelPlazaName": "Plaza Name",
   "errorNoInternet": "No Internet Connection",
   "errorNoInternetMessage": "Please check your internet connection and try again.",
   "errorRequestTimeout": "Request Timed Out",
@@ -185,7 +217,6 @@
   "errorServiceUnavailableMessage": "Service is temporarily down.",
   "errorServiceOverloaded": "Service Overloaded",
   "errorServiceOverloadedMessage": "Server is busy.",
-  "errorUnexpected": "Unexpected Error",
   "errorUnexpectedMessage": "An unexpected issue occurred.",
   "searchTicketHistoryHint": "Search by Ticket ID, Status, Plaza, Vehicle Number...",
   "dateRangeLabel": "Date Range",
@@ -266,7 +297,6 @@
   "themeSystem": "System Default",
   "dialogTitleLogout": "Log out",
   "dialogContentLogout": "Are you sure you want to log out of your account? You'll need to sign in again to access your data.",
-  "buttonCancel": "Cancel",
   "buttonApply": "Apply",
   "buttonLogout": "Log out",
   "titleNotifications": "Notifications",
@@ -321,7 +351,6 @@
   "messagePdfSuccess": "PDF exported successfully",
   "messagePdfFailed": "Failed to export PDF",
   "buttonEdit": "Edit",
-  "buttonSave": "Save",
   "errorPasswordFieldsEmpty": "Please fill in all password fields",
   "errorPasswordsDoNotMatch": "Passwords do not match",
   "errorPasswordTooShort": "Password must be at least 6 characters",
@@ -439,6 +468,9 @@
   "messageNoPlazasFound": "No plazas found",
   "verificationFailed": "Verification failed",
   "otpVerifiedSuccess": "OTP verified successfully.",
+  "buttonMarkExit": "Mark Exit",
+  "errorMarkExitFailed": "Failed to mark exit",
+  "ticketMarkedExitSuccess": "Marked Exit",
   "resendOtpInSeconds": "Resend OTP in {seconds} s",
   "@resendOtpInSeconds": {
     "placeholders": {
@@ -487,6 +519,80 @@
   "otpResendFailed": "Failed to resend OTP",
   "otpInvalid": "Please enter a valid 4-digit OTP",
   "otpDidNotReceive": "Didn't receive the OTP?",
+  "laneDetails": "Lane Details",
+  "searchLanesHint": "Search by lane name, ID, or direction",
+  "noLanesFound": "No Lanes Found",
+  "noLanesForPlaza": "No lanes available for this plaza.",
+  "noLanesMatchSearch": "No lanes match your search criteria.",
+  "clearSearch": "Clear Search",
+  "laneName": "Lane Name",
+  "active": "Active",
+  "inactive": "Inactive",
+  "laneDirection": "Lane Direction",
+  "laneType": "Lane Type",
+  "laneStatus": "Lane Status",
+  "rfid": "RFID Reader",
+  "camera": "Camera",
+  "wim": "WIM",
+  "barrier": "Boomer Barrier",
+  "led": "LED Screen",
+  "loop": "Magnetic Loop",
+  "notApplicable": "N/A",
+  "bankDetailsFailed_action": "updated",
+  "errorTitleWithCode_code": "HTTP status code",
+  "errorTitleService": "Service Error",
+  "errorTitlePlaza": "Plaza Error",
+  "errorDetailsNoDetails": "No additional details available.",
+  "errorDetailsService": "Please check your connection or try again later.",
+  "errorMessageUnknown": "An unknown error occurred.",
+  "messageNoImagesUploaded": "No images uploaded yet.",
+  "plazaImagesTitle": "Plaza Images",
+  "messageFailedToPickImages": "Failed to pick images: {error}",
+  "messageFailedToPickImages_error": "error details",
+  "messageImageRemovedSuccess": "Image removed successfully!",
+  "messageImageRemovedFailed": "Failed to remove image.",
+  "messageFailedToRefreshImages": "Failed to refresh images: {error}",
+  "messageFailedToRefreshImages_error": "error details",
+  "messageFailedToSaveImages": "Failed to save images: {error}",
+  "messageFailedToSaveImages_error": "error details",
+  "tooltipCancelChanges": "Cancel Changes",
+  "tooltipSaveChanges": "Save Changes",
+  "tooltipAddImage": "Add Image",
+  "tooltipRemoveImage": "Remove Image",
+  "retry": "Retry",
+  "id": "ID",
+  "errorTitleWithCode": "Error {code}",
+  "@errorTitleWithCode": {
+    "description": "Error title with HTTP status code",
+    "placeholders": {
+      "code": {}
+    }
+  },
+  "unknownPlaza": "Unknown Plaza",
+  "newLane": "New Lane",
+  "laneAddedSuccess": "Lane added successfully!",
+  "laneAddFailed": "Failed to add lane",
+  "correctBasicDetailsErrors": "Please correct the errors in basic details.",
+  "basicDetailsUpdated": "Basic details updated successfully!",
+  "updatePlazaFailed": "Failed to update plaza details.",
+  "correctBankDetailsErrors": "Please correct the errors in bank details.",
+  "bankDetailsSuccess": "Bank details {operation} successfully!",
+  "bankDetailsFailed": "Failed to {operation} bank details.",
+  "updated": "updated",
+  "added": "added",
+  "imagesUploadedSuccess": "Images uploaded successfully!",
+  "imagesUploadFailed": "Failed to upload images",
+  "editLaneDetails": "Edit Lane Details",
+  "noLaneData": "No lane data available.",
+  "rfidReaderId": "RFID Reader ID",
+  "cameraId": "Camera ID",
+  "wimId": "WIM ID",
+  "boomerBarrierId": "Boomer Barrier ID",
+  "ledScreenId": "LED Screen ID",
+  "magneticLoopId": "Magnetic Loop ID",
+  "noLaneSelected": "No lane selected.",
+  "laneUpdatedSuccess": "Lane updated successfully!",
+  "laneUpdateFailed": "Failed to update lane",
   "buttonResendOtp": "Resend OTP",
   "toggleBiometricSuccess": "Biometric authentication updated",
   "toggleNotificationsSuccess": "Notification settings updated",
@@ -500,6 +606,12 @@
   "noNotificationsSubtitle": "You don’t have any notifications yet.",
   "profileRefreshSuccess": "Profile refreshed successfully",
   "profileRefreshFailed": "Failed to refresh profile",
+  "bankDetails": "Bank Details",
+  "bankName": "Bank Name",
+  "accountNumber": "Account Number",
+  "accountHolderName": "Account Holder Name",
+  "ifscCode": "IFSC Code",
+  "invalidPlazaId": "Please select a valid plaza to view bank details.",
   "dataRefreshSuccess": "Data refreshed successfully",
   "dataRefreshFailed": "Failed to refresh data",
   "errorTimeout": "Request timed out. Please try again later.",
@@ -513,5 +625,672 @@
   "errorCorrectErrors": "Please correct the errors",
   "errorServer": "Server issue. Please try again later.",
   "titleProfile": "Profile",
-  "errorLoadProfileFailed": "Failed to load profile data"
+  "basicDetails": "Basic Details",
+  "plazaName": "Plaza Name",
+  "plazaOperatorName": "Plaza Operator Name",
+  "mobileNumber": "Mobile Number",
+  "email": "Email",
+  "address": "Address",
+  "city": "City",
+  "district": "District",
+  "state": "State",
+  "pincode": "Pincode",
+  "geoLatitude": "Geo Latitude",
+  "geoLongitude": "Geo Longitude",
+  "plazaCategory": "Plaza Category",
+  "plazaSubCategory": "Plaza Sub-Category",
+  "plazaStatus": "Plaza Status",
+  "freeParking": "Free Parking",
+  "structureType": "Structure Type",
+  "priceCategory": "Price Category",
+  "totalParkingSlots": "Total Parking Slots",
+  "twoWheelerCapacity": "Two-Wheeler Capacity",
+  "lmvCapacity": "LMV Capacity",
+  "lcvCapacity": "LCV Capacity",
+  "hmvCapacity": "HMV Capacity",
+  "openingTime": "Opening Time",
+  "closingTime": "Closing Time",
+  "titlePlazaRegistration": "Plaza Registration",
+  "labelBasicDetails": "Basic\nDetails",
+  "labelLaneDetails": "Lane\nDetails",
+  "labelBankDetails": "Bank\nDetails",
+  "labelPlazaImages": "Plaza\nImages",
+  "labelNewLanes": "New Lanes",
+  "labelExistingLanes": "Existing Lanes",
+  "titleEditLane": "Edit Lane",
+  "messageEditModeActive": "Edit mode active - Tap on any lane to modify its details",
+  "messageErrorSavingLane": "Error saving lane. Please check all fields.",
+  "messageErrorUpdatingLane": "Error updating lane. Please check all fields.",
+  "errorLoadProfileFailed": "Failed to load profile data",
+  "validationRequired": "{field} is required",
+  "validationRequired_description": "Error when a field is empty or too short",
+  "validationRequired_field": "The name of the field",
+  "@validationRequired": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "validationMaxLength": "{field} must not exceed {max} characters",
+  "validationMaxLength_description": "Error when a field exceeds max length",
+  "@validationMaxLength": {
+    "placeholders": {
+      "field": {},
+      "max": {}
+    }
+  },
+  "validationMinDigits": "{field} must be at least {min} digits",
+  "validationMinDigits_description": "Error when a numeric field is too short",
+  "@validationMinDigits": {
+    "placeholders": {
+      "field": {},
+      "min": {}
+    }
+  },
+  "validationMaxDigits": "{field} must not exceed {max} digits",
+  "validationMaxDigits_description": "Error when a numeric field is too long",
+  "@validationMaxDigits": {
+    "placeholders": {
+      "field": {},
+      "max": {}
+    }
+  },
+  "validationDigitsOnly": "{field} must contain only digits",
+  "validationDigitsOnly_description": "Error when a field has non-digit characters",
+  "@validationDigitsOnly": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "validationGreaterThanZero": "{field} must be greater than 0",
+  "validationGreaterThanZero_description": "Error when a numeric field is not positive",
+  "@validationGreaterThanZero": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "validationInvalidEmail": "Please enter a valid email address",
+  "validationInvalidEmail_description": "Error when email format is invalid",
+  "validationInvalidNumber": "{field} must be a valid number",
+  "validationInvalidNumber_description": "Error when a field isn’t a valid number",
+  "@validationInvalidNumber": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "validationRange": "{field} must be between {min}° and {max}°",
+  "validationRange_description": "Error when a coordinate is out of range",
+  "@validationRange": {
+    "placeholders": {
+      "field": {},
+      "min": {},
+      "max": {}
+    }
+  },
+  "validationSelectRequired": "Please select {field}",
+  "validationSelectRequired_description": "Error when a dropdown isn’t selected",
+  "@validationSelectRequired": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "validationInvalidOption": "Invalid {field}. Must be one of: {options}",
+  "validationInvalidOption_description": "Error when a dropdown value is invalid",
+  "@validationInvalidOption": {
+    "placeholders": {
+      "field": {},
+      "options": {}
+    }
+  },
+  "validationInvalidTimeFormat": "Please enter a valid time in HH:MM format",
+  "validationInvalidTimeFormat_description": "Error when time format is invalid",
+  "validationBooleanRequired": "{field} must be a boolean value",
+  "validationBooleanRequired_description": "Error when a boolean field is invalid",
+  "@validationBooleanRequired": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "messageFeatureNotImplemented": "This feature is not yet implemented.",
+  "messageNoLanesAvailable": "No filters available at this time.",
+  "plazaInfoTitle": "Plaza Information",
+  "errorLoadingPlazaDetails": "Error loading plaza details: {error}",
+  "@errorLoadingPlazaDetails": {
+    "description": "Error message with details for loading plaza details",
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "labelIdValue": "ID: {id}",
+  "@labelIdValue": {
+    "description": "Label for displaying an ID value",
+    "placeholders": {
+      "id": {}
+    }
+  },
+  "errorLoadingPlazaDetailsFailed": "Failed to Load Plaza Details",
+  "errorMessagePleaseTryAgain": "Please try again later.",
+  "loadingEllipsis": "Loading...",
+  "labelCategory": "Category",
+  "menuBasicDetails": "Basic Details",
+  "menuLaneDetails": "Lane Details",
+  "menuBankDetails": "Bank Details",
+  "errorSavingPlaza": "Error saving plaza details",
+  "errorSavingBankDetails": "Error saving bank details",
+  "errorFetchingLanes": "Error fetching lanes",
+  "errorFetchingLane": "Error fetching lane details",
+  "errorSavingLane": "Error saving lane",
+  "errorFetchingImages": "Error fetching images",
+  "errorRemovingImage": "Error removing image",
+  "basicDetailsUpdateSuccess": "Basic details Updated successfully",
+  "updateOperation": "updated",
+  "addOperation": "added",
+  "menuPlazaImages": "Plaza Images",
+  "@loadingEllipsis": {
+    "description": "Placeholder text shown while data is loading, e.g., for names or statuses."
+  },
+
+  "loadingId": "Loading ID...",
+  "@loadingId": {
+    "description": "Placeholder text shown for an ID field while data is loading."
+  },
+
+  "errorLoadingPlazaDetailsGeneric": "Could not load plaza details at this time.",
+  "@errorLoadingPlazaDetailsGeneric": {
+    "description": "Generic error message shown when loading plaza details fails for an unspecified reason."
+  },
+  "errorTitleUnableToLoadPlazas": "Unable to Load Plazas",
+  "@errorTitleUnableToLoadPlazas": {
+    "description": "Error title shown when fetching the list of plazas fails."
+  },
+
+  "messageNoPlazasMatchFilter": "No plazas match your search or filter criteria.",
+  "@messageNoPlazasMatchFilter": {
+    "description": "Message shown when the plaza list is empty after applying search or filters."
+  },
+
+  "messageNoMorePlazas": "No more plazas found.",
+  "@messageNoMorePlazas": {
+    "description": "Message shown on a paginated list when navigating to a page beyond the last item (e.g., page 2 is empty)."
+  },
+
+  "tooltipDownloadPlazaList": "Download plaza list",
+  "@tooltipDownloadPlazaList": {
+    "description": "Tooltip text for the download icon button in the plaza list app bar."
+  },
+
+  "errorMissingPlazaId": "Cannot proceed: Plaza ID is missing.",
+  "@errorMissingPlazaId": {
+    "description": "Error message shown in a snackbar or log when trying to navigate but the plaza's ID is null."
+  },
+
+  "labelUnknownId": "Unknown ID",
+  "@labelUnknownId": {
+    "description": "Fallback text used when a Plaza ID is unexpectedly null or empty."
+  },
+  "plazaOwner": "Plaza Owner",
+  "plazaOwnerId": "Plaza Owner ID",
+
+  "yes": "Yes",
+  "no": "No",
+
+  "cancel": "Cancel",
+  "save": "Save",
+  "edit": "Edit",
+  "errorPlazaRequired": "Plaza selection is required",
+  "errorFareTypeRequired": "Fare type selection is required",
+  "errorVehicleTypeRequired": "Vehicle type selection is required",
+  "errorInvalidFareType": "Invalid fare type selected",
+  "errorIsRequired": "is required",
+  "errorMustBePositiveNumber": "must be a valid number greater than 0",
+  "fieldDailyFare": "Daily fare",
+  "fieldHourlyFare": "Hourly fare",
+  "fieldBaseHourlyFare": "Base hourly fare",
+  "fieldMonthlyFare": "Monthly fare",
+  "errorBaseHoursRequired": "Base hours is required for Hour-wise Custom fare",
+  "errorBaseHoursPositive": "Base hours must be a positive whole number",
+  "errorInvalidDateFormat": "Invalid date format (YYYY-MM-DD)",
+  "errorDiscountRange": "Discount must be a number between 0 and 100",
+  "errorDiscountNonNegative": "Discount must be a non-negative number",
+  "errorDuplicateFare": "A fare with overlapping dates for this plaza, vehicle, and fare type already exists",
+  "errorGeneralValidation": "Error during validation checks",
+  "warningSelectStartDateFirst": "Please select a start date first",
+  "errorInvalidStartDate": "Invalid start date format",
+  "errorAddingFare": "Error adding fare",
+  "successTitle": "Success",
+  "successFareSubmission": "Fares added successfully",
+  "buttonOK": "OK",
+  "successFareUpdate": "Fare updated successfully",
+  "messageNoFiltersAvailable": "No filter options are available for the current list.",
+  "@messageNoFiltersAvailable": {
+    "description": "Message shown when trying to open the filter dialog but there are no statuses (or other criteria) to filter by."
+  },
+  "validationClosingAfterOpening": "Closing time must be after opening time",
+  "validationClosingAfterOpening_description": "Error when closing time isn’t after opening time",
+  "validationParkingSlotSum": "Total slots ({total}) must be at least the sum of individual capacities ({sum})",
+  "validationParkingSlotSum_description": "Error when total slots are less than sum of capacities",
+  "@validationParkingSlotSum": {
+    "placeholders": {
+      "total": {},
+      "sum": {}
+    }
+  },
+  "dialogContentBankDetailsAdded": "Bank Details Added Successfully",
+  "dialogContentBankDetailsModified": "Bank Details Modified Successfully",
+  "dialogContentLanesAdded": "Lanes Added Successfully",
+  "validationDuplicateGeneral": "One or more fields contain duplicate values.",
+  "@validationDuplicateGeneral": {
+    "description": "General error message when duplicates are detected"
+  },
+  "newTicketTitle": "New Ticket",
+  "plazaIdLabel": "Plaza ID",
+  "laneIdLabel": "Lane ID",
+  "capturedImagesLabel": "Captured Vehicle Images",
+  "addMoreLabel": "Add More",
+  "captureImageLabel": "Capture Vehicle Image",
+  "manualTicketLabel": "Manual Ticket",
+  "creatingLabel": "Creating...",
+  "createTicketLabel": "Create Ticket",
+  "ticketSuccessMessage": "Ticket created successfully!",
+  "okLabel": "OK",
+  "failedToCreateTicket": "Failed to create ticket",
+  "errorInvalidLaneId": "Error: Cannot edit lane without a valid ID.",
+  "messageLaneRemoved": "Lane \"{laneName}\" removed.",
+  "buttonDelete": "Delete",
+  "tooltipEditNewLane": "Edit new lane",
+  "tooltipEditSavedLane": "Edit saved lane",
+  "validationExactLength": "The {fieldName} must be exactly {length} characters long.",
+  "@validationExactLength": {
+    "description": "Error message for exact length validation",
+    "placeholders": {
+      "fieldName": {
+        "type": "String",
+        "example": "IFSC code"
+      },
+      "length": {
+        "type": "int",
+        "example": "11"
+      }
+    }
+  },
+  "messageMaxImagesHint": "You can upload up to {maxImages} images.",
+  "buttonRemoveImage": "Remove Image",
+  "plazaImageUploadComplete": "Plaza Image Upload Complete",
+  "messageUploadingImages": "Uploading images...",
+  "errorUnknown": "An unknown error occurred.",
+  "messageErrorPickingImagesPlatform": "Image picking failed ({0}). Please try again.",
+  "serviceUnavailableError": "Service Unavailable: Unable to reach plaza service. Please try again later.",
+  "noInternetError": "No Internet Connection: Please check your connection and try again.",
+  "timeoutError": "Request Timed Out: Server took too long to respond. Please try again.",
+  "messageWarningImagesLimited": "Only {0} images can be added. Extra selections ignored.",
+  "imageCaptureError": "Error capturing image: {error}",
+  "plazaIdRequired": "Plaza ID is required",
+  "laneIdRequired": "Entry Lane ID is required",
+  "errorUpdatingLane": "Error updating lane. Please try again.",
+  "imageRequired": "Please capture at least one vehicle image",
+  "vehicleNumberError": "Vehicle number must be between 1 and 20 characters",
+  "vehicleTypeRequired": "Vehicle type is required",
+  "ticketCreationError": "Failed to create ticket: {error}",
+  "dialogContentLanesModified": "Lanes Modified Successfully",
+  "titleEditNewLane": "Edit New Lane",
+  "validationGeneralError": "Please complete all required fields correctly",
+  "validationGeneralError_description": "General error for basic details validation",
+  "validationAccountNumberRange": "Account number must be between 10 to 20 digits",
+  "validationAccountNumberRange_description": "Error when account number length is invalid",
+  "validationIfscLength": "IFSC code must be exactly 11 characters",
+  "validationIfscLength_description": "Error when IFSC code length is incorrect",
+  "messageNoExistingLanesSaved": "No Existing Lanes Saved",
+  "buttonDismiss": "Dismiss",
+  "messageNoNewLanesAddOne": "No New Lanes To Add",
+  "messageErrorLoadingLanes": "Error Loading Lanes",
+  "messagePlazaRegistrationComplete": "Plaza registration completed successfully!",
+  "messagePlazaModificationComplete": "Plaza modifications saved successfully!",
+  "errorAddingLane": "Failed to add lane. Please try again.",
+  "validationInvalidIfscFormat_description": "Error when IFSC code format is invalid",
+  "titleUploadImages": "Upload Images",
+  "buttonPickGallery": "Pick from Gallery",
+  "buttonTakePhoto": "Take Photo",
+  "messageNoImagesSelected": "No images selected. Please select images of your plaza to continue.",
+  "messageNoNewLanesToAdd": "No new lanes to add.",
+  "titleEditSavedLane": "Edit Saved Lane",
+  "validationGeneralBankError": "Please correct the errors in Bank Details",
+  "validationGeneralBankError_description": "General error for bank details validation",
+  "validationGeneralLaneError": "Please correct the errors in Lane Details",
+  "validationGeneralLaneError_description": "General error for lane details validation",
+  "labelTwoWheelerCapacity": "Two-Wheeler Capacity",
+  "newTicket": "New Ticket",
+  "plazaId": "Plaza ID",
+  "laneId": "Lane ID",
+  "vehicleNumber": "Vehicle Number",
+  "vehicleType": "Vehicle Type",
+  "createTicket": "Create Ticket",
+  "ticketCreatedSuccess": "Ticket created successfully!",
+  "captureVehicleImage": "Capture Vehicle Image",
+  "capturedVehicleImages": "Captured Vehicle Images",
+  "addMore": "add more",
+  "manualTicket": "Manual Ticket",
+  "labelLMVCapacity": "LMV Capacity",
+  "labelLCVCapacity": "LCV Capacity",
+  "labelHMVCapacity": "HMV Capacity",
+  "buttonAddLane": "Add Lane",
+  "dialogContentPlazaRegistered": "Plaza Registered Successfully",
+  "dialogContentPlazaUpdated": "Plaza Details Modified Successfully",
+  "noDetailsAvailable": "No Details Available",
+  "errorDateOverlap": "Date Overlap",
+  "errorDiscountNumeric": "Discount Numeric",
+  "successFareAddedToList": "Fares Added Successfully",
+  "buttonAddFare": "Add New Fare",
+  "titleFaresForPlaza": "Fares",
+  "errorLoadingFare": "Loading Fare",
+  "errorFareNotFound": "Fare Not Found",
+  "errorInvalidPlazaIdFormat": "Error: Invalid Plaza ID format.",
+  "errorMissingFareId": "Error: Fare ID is missing.",
+  "bikeCapacity": "Bike Capacity",
+  "threeWheelerCapacity": "3-Wheeler Capacity",
+  "fourWheelerCapacity": "4-Wheeler Capacity",
+  "busCapacity": "Bus Capacity",
+  "truckCapacity": "Truck Capacity",
+  "heavyMachineryCapacity": "Heavy Machinery Capacity",
+  "labelBankName": "Bank Name",
+  "labelBikeCapacity": "Bike Capacity",
+  "label3WheelerCapacity": "3-Wheeler Capacity",
+  "label4WheelerCapacity": "4-Wheeler Capacity",
+  "labelBusCapacity": "Bus Capacity",
+  "labelTruckCapacity": "Truck Capacity",
+  "labelHeavyMachineryCapacity": "Heavy Machinery Capacity",
+  "labelAccountNumber": "Account Number",
+  "labelAccountHolderName": "Account Holder Name",
+  "labelIfscCode": "IFSC Code",
+  "buttonPickImages": "Pick Images",
+  "messageNoImages": "No images added yet",
+  "messageNoLanes": "No lanes added yet",
+  "messageUseFabToAddLanes":"Use the FAB to add lanes",
+  "messageNoLanesAddedYet": "No lanes added yet",
+  "titleBankDetails": "Bank Details",
+  "validationAtLeastOneImage": "At-least One Image is required",
+  "messageErrorMaxImagesReached": "Maximum number of images reached",
+  "validationMinLength": "{fieldName} must be at least {length} characters",
+  "validationGreaterThanOrEqualTo": "{fieldName} must be greater than or equal to {value}",
+  "validationLessThanOrEqualTo": "{fieldName} must be less than or equal to {value}",
+  "validationParkingCapacitySumMismatch": "Vehicle capacities must sum to match total parking slots",
+
+  "validationInvalidIfscFormat": "Please enter a valid IFSC code format (e.g., SBIN0123456)",
+  "noUserIdError": "No user ID found. Please log in again.",
+  "plazaFetchError": "Failed to fetch plazas: {error}",
+  "laneFetchError": "Failed to fetch lanes: {error}",
+  "@noUserIdError": {
+    "description": "Error message when no user ID is found in secure storage."
+  },
+  "validationParkingSlotEqual": "Total parking slots ({total}) must equal the sum of capacities ({sum})",
+  "@validationParkingSlotEqual": {
+    "description": "Error message when total parking slots do not equal the sum of vehicle capacities",
+    "placeholders": {
+      "total": {},
+      "sum": {}
+    }
+  },
+  "errorServerConnection": "Failed to connect to the server. Please try again later.",
+  "validationAtLeastOneLane": "At least one lane must be added",
+  "buttonUpdate": "Update",
+  "dialogContentPlazaRegistrationComplete": "Plaza registration completed successfully!",
+  "locationServicesDisabledTitle": "Location Services Disabled",
+  "locationServicesDisabledMessage": "Please enable location services to fetch your current location.",
+  "locationPermissionDeniedTitle": "Location Permission Denied",
+  "locationPermissionDeniedMessage": "Location permission is required to fetch your current location. Please enable it in app settings.",
+  "buttonSettings": "Settings",
+  "locationPermissionDenied": "Location permission denied. Please enable it to fetch your location.",
+  "errorFetchingLocation": "Failed to fetch your current location. Please try again.",
+  "errorFetchingAddress": "Failed to fetch address from coordinates. Please enter manually.",
+  "errorNoAddressFound": "No address found for the given coordinates.",
+  "apiErrorGeneric": "An error occurred while communicating with the server.",
+  "buttonSaveAndNext": "Save & Next",
+  "labelBasicInfo": "Basic Information",
+  "labelContactInfo": "Contact Information",
+  "labelAddressInfo": "Address Information",
+  "labelGeoLocation": "Geolocation",
+  "labelTimings": "Timings",
+  "labelParkingDetails": "Parking Details",
+  "labelVehicleCapacity": "Vehicle Capacity",
+  "labelPlazaOwner": "Plaza Owner",
+  "labelPlazaName": "Plaza Name",
+  "labelOperatorName": "Operator Name",
+  "labelPlazaCategory": "Plaza Category",
+  "labelPlazaSubCategory": "Plaza Sub-Category",
+  "labelStructureType": "Structure Type",
+  "labelPriceCategory": "Price Category",
+  "labelPlazaStatus": "Plaza Status",
+  "labelFreeParking": "Free Parking",
+  "labelMobileNumber": "Mobile Number",
+  "labelEmail": "Email",
+  "labelAddress": "Address",
+  "labelCity": "City",
+  "labelDistrict": "District",
+  "labelState": "State",
+  "labelPincode": "Pincode",
+  "labelLatitude": "Latitude",
+  "labelLongitude": "Longitude",
+  "labelOpeningTime": "Opening Time",
+  "labelClosingTime": "Closing Time",
+  "labelTotalParkingSlots": "Total Parking Slots",
+  "labelCapacityBike": "Bike Capacity",
+  "labelCapacity3Wheeler": "3-Wheeler Capacity",
+  "labelCapacity4Wheeler": "4-Wheeler Capacity",
+  "labelCapacityBus": "Bus Capacity",
+  "labelCapacityTruck": "Truck Capacity",
+  "labelCapacityHeavyMachinery": "Heavy Machinery Capacity",
+  "buttonGetLocation": "Get Location",
+  "labelUserDataNotAvailable": "User data not available",
+  "buttonFinish": "Finish",
+  "messageErrorPlazaIdNotSetForLane": "Plaza ID is not set. Please complete the basic details first.",
+  "searchPlazaFareHint": "Search by Vehicle or Fare Type...",
+  "@searchPlazaFareHint": {
+    "description": "Hint text for the search field in the plaza fares list screen"
+  },
+  "noFaresFoundLabel": "No Fares Found",
+  "@noFaresFoundLabel": {
+    "description": "Label displayed when no fares are found for the plaza"
+  },
+  "noFaresForPlazaMessage": "There are no fares for this plaza",
+  "@noFaresForPlazaMessage": {
+    "description": "Message displayed when no fares are found for the plaza and no search query is active"
+  },
+  "noFaresMatchSearchMessage": "No fares match your search criteria",
+  "@noFaresMatchSearchMessage": {
+    "description": "Message displayed when no fares match the search query"
+  },
+  "messageErrorUserDataNotFound": "User data not found",
+  "messageErrorSavingPlaza": "Error Saving Plaza",
+  "messageErrorSavingBankDetails": "Error Saving Bank Details",
+  "messageErrorPickingImages": "Error Picking Images",
+  "messageErrorSavingImages": "Error Saving Images",
+  "markPending": "Mark Pending",
+  "refreshLabel": "Refresh",
+  "labelModificationTime": "Modification Time",
+  "markExitLabel": "Mark Exit",
+  "noOpenTicketsLabel": "No Open Tickets",
+  "errorUnableToLoadTicketDetails": "Error Unable to Load Ticket Details",
+  "messageErrorPlazaIdNotSet": "Error Plaza Id Not Set",
+  "filterByDate": "Filter by Date",
+  "resetAllLabel": "Reset All",
+  "clearFilterLabel": "Clear Filter",
+  "@plazaFetchError": {
+    "description": "Error message when fetching plazas fails.",
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@laneFetchError": {
+    "description": "Error message when fetching lanes fails.",
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@validationInvalidEmail": {
+    "description": "Error message for invalid email format"
+  },
+  "validationNonNegative": "{fieldName} must not be negative",
+  "@validationNonNegative": {
+    "description": "Error message when a numeric field is negative",
+    "placeholders": {
+      "fieldName": {}
+    }
+  },
+  "validationNonZero": "{fieldName} must not be zero",
+  "@validationNonZero": {
+    "description": "Error message when a numeric field is zero but should not be",
+    "placeholders": {
+      "fieldName": {}
+    }
+  },
+  "@validationInvalidTimeFormat": {
+    "description": "Error message for invalid time format"
+  },
+  "@validationClosingAfterOpening": {
+    "description": "Error message when closing time is not after opening time"
+  },
+  "validationAtLeastOneCapacity": "At least one vehicle capacity must be greater than zero",
+  "@validationAtLeastOneCapacity": {
+    "description": "Error message when all vehicle capacities are zero but total slots are not"
+  },
+  "@validationGeneralError": {
+    "description": "General error message when validation fails"
+  },
+  "anprFailedTitle": "ANPR Processing Failed",
+  "validationNumberInvalid": "{fieldName} must be a valid number.",
+  "@validationNumberInvalid": {
+    "description": "Error message template for invalid number input, with placeholder for field name",
+    "placeholders": {
+      "fieldName": {}
+    }
+  },
+  "validationNumberPositive": "{fieldName} must be a positive number.",
+  "@validationNumberPositive": {
+    "description": "Error message template for requiring a positive number, with placeholder for field name",
+    "placeholders": {
+      "fieldName": {}
+    }
+  },
+  "validationDuplicate": "{fieldName} is already in use.",
+  "@validationDuplicate": {
+    "description": "Error message template for duplicate values, with placeholder for field name",
+    "placeholders": {
+      "fieldName": {}
+    }
+  },
+  "search": "Search",
+  "@search": {
+    "description": "Hint text for search input fields"
+  },
+
+  "noResultsFound": "No results found",
+  "@noResultsFound": {
+    "description": "Text displayed when a search yields no results"
+  },
+
+  "errorLoadOperatorDataFirst": "Please wait for operator data to load first.",
+  "@errorLoadOperatorDataFirst": {
+    "description": "Error message shown when trying an action before necessary data is loaded"
+  },
+
+  "errorMissingOwnerIdForPlaza": "Cannot load plazas: Operator owner information is missing.",
+  "@errorMissingOwnerIdForPlaza": {
+    "description": "Error shown when trying to fetch plazas but the required owner ID is not available"
+  },
+  "errorInvalidLaneIndex": "Invalid lane index provided.",
+  "@errorInvalidLaneIndex": {
+    "description": "Error message when an invalid index is used to update a saved lane."
+  },
+  "errorInvalidLaneData": "Cannot update lane: Missing or invalid lane data.",
+  "@errorInvalidLaneData": {
+    "description": "Error message when the original lane data is missing a valid ID."
+  },
+  "errorInvalidRecordStatus": "Cannot update lane: Invalid record status.",
+  "@errorInvalidRecordStatus": {
+    "description": "Error message when the original lane’s record status is missing or invalid."
+  },
+  "errorEditingDisabled": "Editing is currently disabled.",
+  "@errorEditingDisabled": {
+    "description": "Error message when attempting to update a lane while editing is disabled."
+  },
+  "validationFailed": "Validation failed. Please check your input.",
+  "@validationFailed": {
+    "description": "Generic error message when lane validation fails during an update."
+  },
+  "messageErrorUpdatingLaneServer": "Server failed to update the lane.",
+  "@messageErrorUpdatingLaneServer": {
+    "description": "Error message when the server indicates a failure to update a lane."
+  },
+  "errorLoadingLaneDetails": "Loading Lane Details",
+  "errorUnexpected": "An unexpected error occurred. Please try again.",
+  "@errorUnexpected": {
+    "description": "Generic error message for unexpected errors"
+  },
+  "errorNoLaneToUpdate": "No lane selected for update. Please try again.",
+  "@errorNoLaneToUpdate": {
+    "description": "Error message shown when attempting to save without a valid lane selected."
+  },
+  "errorUnableToLoadLaneDetails": "Unable to Load Lane Details",
+  "@errorUnableToLoadLaneDetails": {
+    "description": "Error title shown when lane details fail to load."
+  },
+  "errorTitleUnexpected": "Unexpected Error",
+  "@errorTitleUnexpected": {
+    "description": "Generic error title for unexpected errors"
+  },
+
+  "tooltipAddLane": "Add a new lane",
+  "@tooltipAddLane": {
+    "description": "Tooltip for the floating action button to add a new lane."
+  },
+
+  "tryDifferentSearch": "Try a different search term.",
+  "@tryDifferentSearch": {
+    "description": "Suggestion to try a different search when no results are found."
+  },
+
+  "noLanesForPlazaAddOne": "This plaza has no lanes yet. Add one to get started!",
+  "@noLanesForPlazaAddOne": {
+    "description": "Message encouraging the user to add a lane when none exist for the plaza."
+  },
+
+  "errorInvalidLaneIdNavigate": "Cannot navigate: Lane ID is missing.",
+  "@errorInvalidLaneIdNavigate": {
+    "description": "Error message when attempting to navigate to edit a lane with a missing ID."
+  },
+
+  "selectDirectionHint": "Select a direction",
+  "@selectDirectionHint": {
+    "description": "Hint text for the lane direction dropdown."
+  },
+  "selectTypeHint": "Select a type",
+  "@selectTypeHint": {
+    "description": "Hint text for the lane type dropdown."
+  },
+
+  "modifyDetails": "Modify Details",
+  "viewDetails": "View Details",
+  "titleAddLane": "Add New Lane",
+  "buttonSave": "Save",
+  "labelLaneName": "Lane Name",
+  "labelPlazaLaneId": "Plaza Lane ID",
+  "labelDirection": "Direction",
+  "labelType": "Type",
+  "labelStatus": "Status",
+  "labelRfidReaderId": "RFID Reader ID",
+  "labelCameraId": "Camera ID",
+  "labelWimId": "WIM ID",
+  "labelBoomerBarrierId": "Boomer Barrier ID",
+  "labelLedScreenId": "LED Screen ID",
+  "labelMagneticLoopId": "Magnetic Loop ID",
+  "buttonCancel": "Cancel",
+  "buttonAdd": "Add",
+  "errorInvalidPlazaId": "Invalid Plaza ID provided. Please contact support.",
+  "errorMissingPlazaData": "Cannot save lane: Plaza data is missing.",
+  "validationFieldRequired": "{fieldName} is required.",
+  "@validationFieldRequired": {
+    "description": "Error message template for required fields, with placeholder for field name",
+    "placeholders": {
+      "fieldName": {}
+    }
+  },
+  "anprFailedMessage": "Automatic Number Plate Recognition failed to identify vehicle details. Please try again or use manual entry."
 }

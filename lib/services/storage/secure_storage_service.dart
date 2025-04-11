@@ -1,6 +1,11 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 
+/*
+* stored updated user data in SecureStorageService: {id: 3, username: Manish, email: manishmodak88874@gmail.com, role: Plaza Owner, mobileNumber: 9356344112, address: Hinjewadi, Pune1, state: Maharashtra, city: Pune, subEntity: [], entityName: Manish Modak, entityId: 3}
+*
+* */
+
 class SecureStorageService {
   final _storage = const FlutterSecureStorage();
 
@@ -75,4 +80,3 @@ class SecureStorageService {
     await _storage.delete(key: key);
   }
 }
-

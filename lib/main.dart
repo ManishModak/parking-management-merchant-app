@@ -3,9 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:merchant_app/providers/locale_provider.dart';
 import 'package:merchant_app/providers/theme_provider.dart';
+import 'package:merchant_app/services/utils/navigation_service.dart';
 import 'package:merchant_app/viewmodels/dispute/process_dispute_viewmodel.dart';
 import 'package:merchant_app/viewmodels/dispute/view_dispute_viewmodel.dart';
+import 'package:merchant_app/viewmodels/plaza/lane_details_viewmodel.dart';
+import 'package:merchant_app/viewmodels/plaza/plaza_list_viewmodel.dart';
+import 'package:merchant_app/viewmodels/plaza/plaza_modification_viewmodel.dart';
+import 'package:merchant_app/viewmodels/ticket/open_ticket_viewmodel.dart';
+import 'package:merchant_app/viewmodels/ticket/reject_ticket_viewmodel.dart';
+import 'package:merchant_app/viewmodels/ticket/ticket_history_viewmodel.dart';
 import 'package:merchant_app/views/home.dart';
+import 'package:merchant_app/views/tickets/ticket_history/ticket_history_list.dart';
 import 'package:merchant_app/views/welcome.dart';
 import 'package:provider/provider.dart';
 import 'config/app_config.dart';
@@ -13,7 +21,6 @@ import 'config/app_routes.dart';
 import 'config/app_theme.dart';
 import 'generated/l10n.dart';
 import 'services/core/auth_service.dart';
-import 'services/core/user_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'viewmodels/auth_viewmodel.dart';
 import 'viewmodels/notification_viewmodel.dart';
@@ -28,24 +35,27 @@ void main() async {
   await AppConfig.initializeSettings();
 
   final authService = AuthService();
-  final userService = UserService();
   final routeObserver = RouteObserver<ModalRoute>();
 
   runApp(
     MultiProvider(
       providers: [
         Provider<AuthService>.value(value: authService),
-        Provider<UserService>.value(value: userService),
         Provider<RouteObserver<ModalRoute>>.value(value: routeObserver),
         ChangeNotifierProvider(create: (_) => AuthViewModel(authService)),
-        ChangeNotifierProvider(create: (_) => UserViewModel(userService)),
+        ChangeNotifierProvider(create: (_) => UserViewModel()),
         ChangeNotifierProvider(create: (_) => NotificationsViewModel()),
         ChangeNotifierProvider(create: (_) => PlazaViewModel()),
+        ChangeNotifierProvider(create: (_) => PlazaListViewModel()),
+        ChangeNotifierProvider(create: (_) => PlazaModificationViewModel()),
         ChangeNotifierProvider(create: (_) => PlazaFareViewModel()),
         ChangeNotifierProvider(create: (_) => ViewDisputeViewModel()),
         ChangeNotifierProvider(create: (_) => ProcessDisputeViewModel()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
+        ChangeNotifierProvider(create: (_) => TicketHistoryViewModel()),
+        ChangeNotifierProvider(create: (_) => OpenTicketViewModel()),
+        ChangeNotifierProvider(create: (_) => RejectTicketViewModel ()),
       ],
       child: MyApp(routeObserver: routeObserver),
     ),
@@ -107,7 +117,10 @@ class MyAppState extends State<MyApp> {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
+          navigatorKey: NavigationService.navigatorKey,
           theme: AppTheme.lightTheme,
+          themeAnimationDuration: const Duration(milliseconds: 300),
+          themeAnimationCurve: Curves.easeInOut,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.themeMode,
           initialRoute: '/',

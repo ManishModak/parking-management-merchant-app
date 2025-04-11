@@ -146,11 +146,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               physics: const AlwaysScrollableScrollPhysics(), // Ensure scrollable for RefreshIndicator
               padding: EdgeInsets.symmetric(
                 horizontal: MediaQuery.of(context).size.width > 600 ? 16 : 4,
-                vertical: 8.0,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  SizedBox(height: 12,),
                   _buildFilterDropdown(),
                   const SizedBox(height: 16),
                   _buildSummaryCards(strings),

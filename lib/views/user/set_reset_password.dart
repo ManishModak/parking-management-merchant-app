@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/config/app_theme.dart';
@@ -19,16 +21,19 @@ class UserSetResetPasswordScreen extends StatefulWidget {
   });
 
   @override
-  State<UserSetResetPasswordScreen> createState() => _UserSetResetPasswordScreenState();
+  State<UserSetResetPasswordScreen> createState() =>
+      _UserSetResetPasswordScreenState();
 }
 
-class _UserSetResetPasswordScreenState extends State<UserSetResetPasswordScreen> {
+class _UserSetResetPasswordScreenState
+    extends State<UserSetResetPasswordScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _mobileNumberController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   String? selectedRole;
   String? currentUserRole;
@@ -91,21 +96,6 @@ class _UserSetResetPasswordScreenState extends State<UserSetResetPasswordScreen>
     }
   }
 
-  Future<void> _loadUser() async {
-    final operatorViewModel = Provider.of<UserViewModel>(context, listen: false);
-    final currentOperator = operatorViewModel.currentOperator;
-
-    if (currentOperator != null && mounted) {
-      setState(() {
-        _nameController.text = currentOperator.name;
-        _emailController.text = currentOperator.email;
-        _idController.text = currentOperator.id;
-        _mobileNumberController.text = currentOperator.mobileNumber;
-        selectedRole = currentOperator.role;
-      });
-    }
-  }
-
   Future<void> _handleResetPassword() async {
     final strings = S.of(context);
     final operatorVM = Provider.of<UserViewModel>(context, listen: false);
@@ -130,7 +120,8 @@ class _UserSetResetPasswordScreenState extends State<UserSetResetPasswordScreen>
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(strings.successPasswordReset, style: TextStyle(color: context.textPrimaryColor)),
+              content: Text(strings.successPasswordReset,
+                  style: TextStyle(color: context.textPrimaryColor)),
               backgroundColor: AppColors.success,
             ),
           );
@@ -138,7 +129,8 @@ class _UserSetResetPasswordScreenState extends State<UserSetResetPasswordScreen>
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(strings.errorPasswordResetFailed, style: TextStyle(color: context.textPrimaryColor)),
+              content: Text(strings.errorPasswordResetFailed,
+                  style: TextStyle(color: context.textPrimaryColor)),
               backgroundColor: AppColors.error,
             ),
           );
@@ -148,7 +140,8 @@ class _UserSetResetPasswordScreenState extends State<UserSetResetPasswordScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${strings.errorGeneric}: ${e.toString()}', style: TextStyle(color: context.textPrimaryColor)),
+            content: Text('${strings.errorGeneric}: ${e.toString()}',
+                style: TextStyle(color: context.textPrimaryColor)),
             backgroundColor: AppColors.error,
           ),
         );
@@ -156,7 +149,19 @@ class _UserSetResetPasswordScreenState extends State<UserSetResetPasswordScreen>
     }
   }
 
-  List<String> getAvailableRoles() => roleHierarchy[currentUserRole] ?? [];
+  List<String> getAvailableRoles() {
+    final roles = roleHierarchy[currentUserRole] ?? [];
+    final uniqueRoles = roles.toSet().toList(); // Remove duplicates
+    developer.log('Unique available roles: $uniqueRoles', name: 'UserSetResetPasswordScreen');
+
+    // Ensure selectedRole is valid; if not, set it to null or a default value
+    if (selectedRole != null && !uniqueRoles.contains(selectedRole)) {
+      developer.log('Selected role $selectedRole not in available roles, resetting to null', name: 'UserSetResetPasswordScreen');
+      selectedRole = null; // Or set to a default role if appropriate
+    }
+
+    return uniqueRoles;
+  }
 
   @override
   void dispose() {
@@ -169,10 +174,38 @@ class _UserSetResetPasswordScreenState extends State<UserSetResetPasswordScreen>
     super.dispose();
   }
 
+  Future<void> _loadUser() async {
+    final operatorViewModel = Provider.of<UserViewModel>(context, listen: false);
+    final currentOperator = operatorViewModel.currentOperator;
+
+    if (currentOperator != null && mounted) {
+      setState(() {
+        _nameController.text = currentOperator.name;
+        _emailController.text = currentOperator.email;
+        _idController.text = currentOperator.id;
+        _mobileNumberController.text = currentOperator.mobileNumber;
+        selectedRole = currentOperator.role;
+        final availableRoles = getAvailableRoles();
+        if (!availableRoles.contains(selectedRole)) {
+          developer.log('Role $selectedRole not in $availableRoles, setting to null', name: 'UserSetResetPasswordScreen');
+          selectedRole = null; // Reset if invalid
+        }
+        developer.log('Loaded operator role: $selectedRole', name: 'UserSetResetPasswordScreen');
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = S.of(context);
     final operatorVM = Provider.of<UserViewModel>(context);
+
+    // Log available roles and selected role before rendering the dropdown
+    final availableRoles = getAvailableRoles();
+    developer.log('Available roles: $availableRoles',
+        name: 'UserSetResetPasswordScreen');
+    developer.log('Selected role: $selectedRole',
+        name: 'UserSetResetPasswordScreen');
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -184,96 +217,97 @@ class _UserSetResetPasswordScreenState extends State<UserSetResetPasswordScreen>
       ),
       body: operatorVM.isLoading
           ? Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
-        ),
-      )
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).primaryColor),
+              ),
+            )
           : SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 8),
-            CustomFormFields.normalSizedTextFormField(
-              context: context,
-              label: strings.labelUsername,
-              controller: _nameController,
-              keyboardType: TextInputType.text,
-              isPassword: false,
-              enabled: false,
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 8),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelUsername,
+                    controller: _nameController,
+                    keyboardType: TextInputType.text,
+                    isPassword: false,
+                    enabled: false,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelUserId,
+                    controller: _idController,
+                    keyboardType: TextInputType.text,
+                    isPassword: false,
+                    enabled: false,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelEmail,
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    isPassword: false,
+                    enabled: false,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelMobileNumber,
+                    controller: _mobileNumberController,
+                    keyboardType: TextInputType.phone,
+                    isPassword: false,
+                    enabled: false,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomDropDown.normalDropDown(
+                    label: strings.labelRole,
+                    value: selectedRole,
+                    enabled: false,
+                    items: availableRoles,
+                    onChanged: null,
+                    context: context,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelNewPassword,
+                    controller: _newPasswordController,
+                    keyboardType: TextInputType.visiblePassword,
+                    isPassword: true,
+                    enabled: true,
+                    errorText: operatorVM.getError('newPassword'),
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelConfirmPassword,
+                    controller: _confirmPasswordController,
+                    keyboardType: TextInputType.visiblePassword,
+                    isPassword: true,
+                    enabled: true,
+                    errorText: operatorVM.getError('confirmPassword'),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            CustomFormFields.normalSizedTextFormField(
-              context: context,
-              label: strings.labelUserId,
-              controller: _idController,
-              keyboardType: TextInputType.text,
-              isPassword: false,
-              enabled: false,
-            ),
-            const SizedBox(height: 16),
-            CustomFormFields.normalSizedTextFormField(
-              context: context,
-              label: strings.labelEmail,
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              isPassword: false,
-              enabled: false,
-            ),
-            const SizedBox(height: 16),
-            CustomFormFields.normalSizedTextFormField(
-              context: context,
-              label: strings.labelMobileNumber,
-              controller: _mobileNumberController,
-              keyboardType: TextInputType.phone,
-              isPassword: false,
-              enabled: false,
-            ),
-            const SizedBox(height: 16),
-            CustomDropDown.normalDropDown(
-              label: strings.labelRole,
-              value: selectedRole,
-              enabled: false,
-              items: getAvailableRoles(),
-              onChanged: null,
-              context: context,
-            ),
-            const SizedBox(height: 16),
-            CustomFormFields.normalSizedTextFormField(
-              context: context,
-              label: strings.labelNewPassword,
-              controller: _newPasswordController,
-              keyboardType: TextInputType.visiblePassword,
-              isPassword: true,
-              enabled: true,
-              errorText: operatorVM.getError('newPassword'),
-            ),
-            const SizedBox(height: 16),
-            CustomFormFields.normalSizedTextFormField(
-              context: context,
-              label: strings.labelConfirmPassword,
-              controller: _confirmPasswordController,
-              keyboardType: TextInputType.visiblePassword,
-              isPassword: true,
-              enabled: true,
-              errorText: operatorVM.getError('confirmPassword'),
-            ),
-          ],
-        ),
-      ),
       bottomNavigationBar: operatorVM.isLoading
           ? null
           : Container(
-        padding: const EdgeInsets.all(16.0),
-        color: Theme.of(context).scaffoldBackgroundColor,
-        child: CustomButtons.primaryButton(
-          height: 50,
-          text: strings.buttonConfirm,
-          onPressed: operatorVM.isLoading ? null : _handleResetPassword,
-          isEnabled: !operatorVM.isLoading,
-          context: context,
-        ),
-      ),
+              padding: const EdgeInsets.all(16.0),
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: CustomButtons.primaryButton(
+                height: 50,
+                text: strings.buttonConfirm,
+                onPressed: operatorVM.isLoading ? null : _handleResetPassword,
+                isEnabled: !operatorVM.isLoading,
+                context: context,
+              ),
+            ),
     );
   }
 }

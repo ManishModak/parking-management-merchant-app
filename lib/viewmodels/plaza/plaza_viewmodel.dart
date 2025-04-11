@@ -1,1362 +1,490 @@
-import 'dart:async';
-import 'dart:developer';
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
-import 'package:merchant_app/services/payment/bank_service.dart';
-import 'package:merchant_app/services/utils/image_service.dart';
-import 'package:merchant_app/services/core/lane_service.dart';
-import 'package:merchant_app/viewmodels/plaza/plaza_form_validation.dart';
-import 'package:merchant_app/viewmodels/plaza/restoration_helper.dart';
-import '../../models/bank.dart';
-import '../../models/lane.dart';
-import '../../models/plaza.dart';
-import '../../models/user_model.dart';
-import '../../services/core/plaza_service.dart';
-import '../../services/storage/secure_storage_service.dart';
-import '../../utils/exceptions.dart';
-
-class PlazaFormState {
-  final PlazaFormValidation formValidation = PlazaFormValidation();
-  final Map<String, String?> errors = {};
-
-  Map<String, dynamic> basicDetails = {};
-  Map<String, dynamic> laneDetails = {};
-  Map<String, dynamic> bankDetails = {};
-  List<String> fetchedImages = [];
-  List<String> plazaImages = [];
-  Map<String, String> imageIds = {};
-
-  bool validateStep(int step) {
-    errors.clear();
-    switch (step) {
-      case 0:
-        formValidation.validateBasicDetails(basicDetails, errors);
-        break;
-      case 1:
-        break;
-      case 2:
-        formValidation.validateBankDetails(bankDetails, errors);
-        break;
-      case 3:
-        break;
-    }
-    return errors.isEmpty;
-  }
-
-  void clearStep(int step) {
-    switch (step) {
-      case 0:
-        basicDetails = {};
-        errors.remove('basicDetails');
-        break;
-      case 1:
-        laneDetails = {};
-        errors.remove('laneDetails');
-        break;
-      case 2:
-        bankDetails = {};
-        errors.remove('bankDetails');
-        break;
-      case 3:
-        plazaImages = [];
-        errors.remove('plazaImages');
-        break;
-    }
-  }
-}
-
-class PlazaViewModel extends ChangeNotifier {
-  final PlazaService _plazaService = PlazaService();
-  final LaneService _laneService = LaneService();
-  final ImageService _imageService = ImageService();
-  final BankService _bankService = BankService();
-  final PlazaFormState formState = PlazaFormState();
-  final SecureStorageService _secureStorageService = SecureStorageService();
-
-  int _currentStep = 0;
-  int _completeTillStep = -1;
-
-  List<Plaza> _userPlazas = [];
-  final Map<String, String> plazaImages = {};
-  bool _isLoading = false;
-  Exception? _error; // Changed to Exception?
-  String? _plazaId;
-  final List<Lane> _temporaryLanes = [];
-  late List<Lane> _existingLanes = [];
-  List<Lane> lanes = [];
-
-  List<Lane> get temporaryLanes => List.unmodifiable(_temporaryLanes);
-  List<Lane> get existingLanes => List.unmodifiable(_existingLanes);
-  List<Plaza> get userPlazas => _userPlazas;
-  bool get isLoading => _isLoading;
-  Exception? get error => _error;
-  String? get plazaId => _plazaId;
-  int get currentStep => _currentStep;
-  int get completeTillStep => _completeTillStep;
-
-  bool _isBasicDetailsEditable = false;
-  bool get isBasicDetailsEditable => _isBasicDetailsEditable;
-  bool _isBasicDetailsFirstTime = true;
-  bool get isBasicDetailsFirstTime => _isBasicDetailsFirstTime;
-
-  bool _isLaneEditable = false;
-  bool get isLaneEditable => _isLaneEditable;
-  bool _isLaneDetailsFirstTime = true;
-  bool get isLaneDetailsFirstTime => _isLaneDetailsFirstTime;
-
-  bool _isBankEditable = false;
-  bool get isBankEditable => _isBankEditable;
-  bool _isBankDetailsFirstTime = true;
-  bool get isBankDetailsFirstTime => _isBankDetailsFirstTime;
-
-  final Map<String, dynamic> _laneDetails = {};
-  Map<String, dynamic> get laneDetails => _laneDetails;
-
-  bool _isBasicDetailsCompleted = false;
-  bool _isLaneDetailsCompleted = false;
-  bool _isBankDetailsCompleted = false;
-  bool _isPlazaImagesCompleted = false;
-
-  bool get isBasicDetailsCompleted => _isBasicDetailsCompleted;
-  bool get isLaneDetailsCompleted => _isLaneDetailsCompleted;
-  bool get isBankDetailsCompleted => _isBankDetailsCompleted;
-  bool get isPlazaImagesCompleted => _isPlazaImagesCompleted;
-
-  TextEditingController plazaNameController = TextEditingController();
-  TextEditingController plazaOwnerController = TextEditingController();
-  TextEditingController operatorNameController = TextEditingController();
-  //TextEditingController operatorIdController = TextEditingController();
-  TextEditingController mobileController = TextEditingController();
-  TextEditingController emailController = TextEditingController();
-  TextEditingController addressController = TextEditingController();
-  TextEditingController cityController = TextEditingController();
-  TextEditingController districtController = TextEditingController();
-  TextEditingController stateController = TextEditingController();
-  TextEditingController pincodeController = TextEditingController();
-  TextEditingController latitudeController = TextEditingController();
-  TextEditingController longitudeController = TextEditingController();
-  TextEditingController totalParkingSlotsController = TextEditingController();
-  TextEditingController twoWheelerCapacityController = TextEditingController();
-  TextEditingController lmvCapacityController = TextEditingController();
-  TextEditingController lcvCapacityController = TextEditingController();
-  TextEditingController hmvCapacityController = TextEditingController();
-  TextEditingController openingTimeController = TextEditingController();
-  TextEditingController closingTimeController = TextEditingController();
-  TextEditingController bankNameController = TextEditingController();
-  TextEditingController accountNumberController = TextEditingController();
-  TextEditingController accountHolderController = TextEditingController();
-  TextEditingController ifscCodeController = TextEditingController();
-
-  bool isStepValid(int step) {
-    switch (step) {
-      case 0:
-        return isBasicDetailsCompleted;
-      case 1:
-        return isLaneDetailsCompleted;
-      case 2:
-        return isBankDetailsCompleted;
-      case 3:
-        return isPlazaImagesCompleted;
-      default:
-        return false;
-    }
-  }
-
-  String getStepName(int step) {
-    switch (step) {
-      case 0:
-        return 'Basic Details';
-      case 1:
-        return 'Lane Details';
-      case 2:
-        return 'Bank Details';
-      case 3:
-        return 'Plaza Images';
-      default:
-        return 'Unknown';
-    }
-  }
-
-  PlazaViewModel() {
-    initControllers();
-  }
-
-  bool isInEdit() {
-    return (isLaneEditable && !isLaneDetailsFirstTime) ||
-        (isBankEditable && !isBankDetailsFirstTime) ||
-        (isBasicDetailsEditable && !isBasicDetailsFirstTime);
-  }
-
-  void initControllers() async {
-    final cachedUserData = await _secureStorageService.getUserData();
-    if (cachedUserData == null) {
-      return;
-    }
-
-    var currentUser = User.fromJson(cachedUserData);
-    log('Current user: $currentUser');
-
-    if (currentUser.role == "Plaza Owner") {
-      formState.basicDetails['plazaOwner'] = currentUser.entityName?.trim() ?? '';
-      formState.basicDetails['ownerId'] = currentUser.id.trim();
-      plazaOwnerController.text = '${currentUser.entityName?.trim()} ID:${currentUser.id.trim()}';
-    } else {
-      formState.basicDetails['plazaOwner'] = plazaOwnerController.text = currentUser.entityName?.trim() ?? '';
-      formState.basicDetails['ownerId'] = currentUser.entityId?.trim() ?? '';
-      plazaOwnerController.text = '${currentUser.entityName?.trim()} ID:${currentUser.entityId?.trim()}';
-    }
-
-    _completeTillStep = -1;
-    addListeners();
-  }
-
-  void addListeners() {
-    plazaNameController.addListener(() {
-      formState.basicDetails['plazaName'] = plazaNameController.text.trim();
-    });
-    operatorNameController.addListener(() {
-      formState.basicDetails['operatorName'] = operatorNameController.text.trim();
-    });
-    // operatorIdController.addListener(() {
-    //   formState.basicDetails['operatorId'] = operatorIdController.text.trim();
-    // });
-    mobileController.addListener(() {
-      formState.basicDetails['mobileNumber'] = mobileController.text.trim();
-    });
-    emailController.addListener(() {
-      formState.basicDetails['email'] = emailController.text.trim();
-    });
-    addressController.addListener(() {
-      formState.basicDetails['address'] = addressController.text.trim();
-    });
-    cityController.addListener(() {
-      formState.basicDetails['city'] = cityController.text.trim();
-    });
-    districtController.addListener(() {
-      formState.basicDetails['district'] = districtController.text.trim();
-    });
-    stateController.addListener(() {
-      formState.basicDetails['state'] = stateController.text.trim();
-    });
-    pincodeController.addListener(() {
-      formState.basicDetails['pincode'] = pincodeController.text.trim();
-    });
-    latitudeController.addListener(() {
-      formState.basicDetails['latitude'] = latitudeController.text.trim();
-    });
-    longitudeController.addListener(() {
-      formState.basicDetails['longitude'] = longitudeController.text.trim();
-    });
-    totalParkingSlotsController.addListener(() {
-      formState.basicDetails['totalParkingSlots'] = totalParkingSlotsController.text.trim();
-    });
-    twoWheelerCapacityController.addListener(() {
-      formState.basicDetails['twoWheelerCapacity'] = twoWheelerCapacityController.text.trim();
-    });
-    lmvCapacityController.addListener(() {
-      formState.basicDetails['lmvCapacity'] = lmvCapacityController.text.trim();
-    });
-    lcvCapacityController.addListener(() {
-      formState.basicDetails['lcvCapacity'] = lcvCapacityController.text.trim();
-    });
-    hmvCapacityController.addListener(() {
-      formState.basicDetails['hmvCapacity'] = hmvCapacityController.text.trim();
-    });
-    openingTimeController.addListener(() {
-      formState.basicDetails['openingTime'] = openingTimeController.text.trim();
-    });
-    closingTimeController.addListener(() {
-      formState.basicDetails['closingTime'] = closingTimeController.text.trim();
-    });
-    bankNameController.addListener(() {
-      formState.bankDetails['bankName'] = bankNameController.text.trim();
-    });
-    accountNumberController.addListener(() {
-      formState.bankDetails['accountNumber'] = accountNumberController.text.trim();
-    });
-    accountHolderController.addListener(() {
-      formState.bankDetails['accountHolderName'] = accountHolderController.text.trim();
-    });
-    ifscCodeController.addListener(() {
-      formState.bankDetails['ifscCode'] = ifscCodeController.text.trim();
-    });
-  }
-
-  void validateBasicDetailsStep() {
-    log('Basic Details Before Validation: ${formState.basicDetails}');
-    formState.errors.clear();
-
-    final validationError = formState.formValidation.validateBasicDetails(
-      formState.basicDetails,
-      formState.errors,
-    );
-
-    _isBasicDetailsCompleted = validationError == null;
-
-    log('Validation Errors: ${formState.errors}');
-    notifyListeners();
-  }
-
-  void validateBankDetailsStep() {
-    log('Bank Details Before Validation: ${formState.bankDetails}');
-    formState.errors.clear();
-
-    formState.formValidation.validateBankDetails(formState.bankDetails, formState.errors);
-
-    _isBankDetailsCompleted = formState.errors.isEmpty;
-
-    log('Validation Errors: ${formState.errors}');
-    notifyListeners();
-  }
-
-  String? validateLaneDetailsStep() {
-    log('Lane Details Before Validation: $_laneDetails');
-    formState.errors.clear();
-
-    final validationResult = formState.formValidation.validateLaneDetails(_laneDetails, formState.errors);
-    _isLaneDetailsCompleted = formState.errors.isEmpty;
-
-    log('Validation Errors: ${formState.errors}');
-    notifyListeners();
-    return validationResult;
-  }
-
-  void validateStepCompletion() {
-    switch (_currentStep) {
-      case 0:
-        validateBasicDetailsStep();
-        break;
-      case 1:
-        break;
-      case 2:
-        validateBankDetailsStep();
-        break;
-      case 3:
-        break;
-    }
-    notifyListeners();
-  }
-
-  void goToStep(int step) {
-    if (step <= _completeTillStep + 1) {
-      _currentStep = step;
-      if (step == 1 && plazaId != null) {
-        log('Fetching lanes for plaza: $plazaId');
-        fetchExistingLanes(plazaId!);
-      }
-      notifyListeners();
-    }
-  }
-
-  void completeBasicDetails() {
-    _isBasicDetailsFirstTime = false;
-    _isBasicDetailsEditable = false;
-    if (_completeTillStep < 0) _completeTillStep = 0;
-    notifyListeners();
-  }
-
-  void completeLaneDetails() {
-    _isLaneDetailsFirstTime = false;
-    _isLaneEditable = false;
-    if (_completeTillStep < 1) _completeTillStep = 1;
-    notifyListeners();
-  }
-
-  void nextStep() {
-    if (_currentStep < 3) {
-      _currentStep++;
-      if (_currentStep > _completeTillStep) {
-        _completeTillStep = _currentStep;
-      }
-      notifyListeners();
-    }
-  }
-
-  void previousStep() {
-    if (_currentStep > 0) {
-      _currentStep--;
-      notifyListeners();
-    }
-  }
-
-  void setPlazaId(String id) {
-    _plazaId = id;
-    notifyListeners();
-  }
-
-  void setCompleteTillStep(int step) {
-    _completeTillStep = step;
-    notifyListeners();
-  }
-
-  Future<void> fetchLanes(String plazaId) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      log('ViewModel: Fetching lanes for Plaza ID: $plazaId');
-      final newLanes = await _laneService.getLanesByPlazaId(plazaId);
-      log('Fetched lanes: $newLanes');
-
-      lanes = newLanes;
-      _error = null;
-    } catch (e) {
-      _error = e is Exception ? e : Exception('Error fetching lanes: $e');
-      log('Error in fetchLanes: $e');
-      lanes = [];
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> addLane(List<Lane> lanes) async {
-    try {
-      final newLaneId = await _laneService.addLane(lanes);
-      for (var lane in lanes) {
-        lane.laneId = newLaneId;
-      }
-      notifyListeners();
-    } catch (e) {
-      _error = Exception('Error adding lanes: $e');
-      log('Error adding lanes: $e');
-      notifyListeners();
-    }
-  }
-
-  Future<void> updateLane(String laneId, Lane updatedLane) async {
-    try {
-      final success = await _laneService.updateLane(updatedLane);
-      if (success) {
-        notifyListeners();
-      } else {
-        _error = Exception('Failed to update lane');
-      }
-    } catch (e) {
-      _error = Exception('Error updating lane: $e');
-      notifyListeners();
-    }
-  }
-
-  void setBasicDetailsEditable(bool setValue) {
-    _isBasicDetailsEditable = setValue;
-  }
-
-  void setBankDetailsEditable(bool setValue) {
-    _isBankEditable = setValue;
-  }
-
-  void toggleBasicDetailsEditable() {
-    if (!isBasicDetailsEditable) {
-      RestorationHelper.saveOriginalBasicDetails(formState.basicDetails);
-    }
-    _isBasicDetailsEditable = !_isBasicDetailsEditable;
-    notifyListeners();
-  }
-
-  void cancelBasicDetailsEdit() {
-    RestorationHelper.restoreBasicDetails(formState.basicDetails);
-    _populateBasicDetailsControllers();
-    _isBasicDetailsEditable = false;
-    notifyListeners();
-  }
-
-  void toggleLaneEditable() {
-    _isLaneEditable = !_isLaneEditable;
-    notifyListeners();
-  }
-
-  void toggleBankEditable() {
-    if (!isBankEditable) {
-      RestorationHelper.saveOriginalBankDetails(formState.bankDetails);
-    }
-    _isBankEditable = !_isBankEditable;
-    notifyListeners();
-  }
-
-  void cancelBankDetailsEdit() {
-    RestorationHelper.restoreBankDetails(formState.bankDetails);
-    _populateBankDetailsControllers();
-    _isBankEditable = false;
-    notifyListeners();
-  }
-
-  void setLaneDetailsCompleted() {
-    _isLaneDetailsFirstTime = false;
-    notifyListeners();
-  }
-
-  Future<void> saveBankDetails(BuildContext context, {bool? modify}) async {
-    log("Bank Details before validation: ${formState.bankDetails}");
-    validateBankDetailsStep();
-
-    if (!_isBankDetailsCompleted) {
-      log("Validation failed: ${formState.errors}");
-      showSnackBar(context, 'Please correct the errors in Bank Details.');
-      return;
-    }
-
-    final bankDetails = {
-      'bankName': bankNameController.text.trim(),
-      'accountNumber': accountNumberController.text.trim(),
-      'accountHolderName': accountHolderController.text.trim(),
-      'ifscCode': ifscCodeController.text.trim(),
-      'plazaId': plazaId,
-    };
-
-    log("Prepared Bank Details: $bankDetails");
-
-    try {
-      String operation = "added";
-      bool isOperationSuccessful = false;
-
-      if (modify == true) {
-        log("Updating existing Bank Details...");
-        isOperationSuccessful = await updateBankDetails();
-        if (isOperationSuccessful) {
-          toggleBankEditable();
-          operation = "updated";
-        }
-      } else if (_isBankDetailsFirstTime) {
-        log("Adding new Bank Details...");
-        isOperationSuccessful = await addBankDetails();
-        if (isOperationSuccessful) {
-          completeBankDetails();
-        }
-      } else if (_isBankEditable) {
-        log("Updating existing Bank Details...");
-        isOperationSuccessful = await updateBankDetails();
-        if (isOperationSuccessful) {
-          toggleBankEditable();
-          operation = "updated";
-        }
-      } else {
-        log("Toggling edit mode...");
-        toggleBankEditable();
-        return;
-      }
-
-      if (isOperationSuccessful) {
-        await showSuccessDialog(
-          context,
-          title: "Success",
-          message: "Bank details have been successfully $operation.",
-          onConfirmed: () {
-            nextStep();
-          },
-        );
-      } else {
-        showSnackBar(context, 'Failed to $operation bank details. Please try again.');
-      }
-    } catch (e) {
-      log("Error in saveBankDetails: $e");
-      showSnackBar(context, 'Error: Failed to save Bank Details: $e');
-    }
-  }
-
-  Future<void> saveLanes(String plazaId) async {
-    try {
-      if (_isLaneDetailsFirstTime) {
-        if (_temporaryLanes.isNotEmpty) {
-          await _laneService.addLane(_temporaryLanes);
-          _temporaryLanes.clear();
-        }
-        _isLaneDetailsFirstTime = false;
-        await fetchExistingLanes(plazaId);
-        nextStep();
-      } else if (_isLaneEditable) {
-        if (_temporaryLanes.isNotEmpty) {
-          await _laneService.addLane(_temporaryLanes);
-          _temporaryLanes.clear();
-        }
-        await fetchExistingLanes(plazaId);
-        toggleLaneEditable();
-        nextStep();
-      } else {
-        toggleLaneEditable();
-      }
-      notifyListeners();
-    } catch (e) {
-      log('Error saving lanes: $e');
-    }
-  }
-
-  Future<void> saveBasicDetails(BuildContext context) async {
-    validateStepCompletion();
-    if (!isBasicDetailsCompleted) {
-      log("Validation failed: ${formState.errors}");
-      showSnackBar(context, 'Please correct the errors in Basic Details.');
-      return;
-    }
-
-    try {
-      String operation = "added";
-      bool isOperationSuccessful = false;
-
-      if (_isBasicDetailsFirstTime) {
-        log("Adding new Basic Details...");
-        isOperationSuccessful = await registerPlaza();
-        if (!isOperationSuccessful) {
-          showSnackBar(context, 'API Error: Failed to register plaza. Please try again.');
-          return;
-        }
-        completeBasicDetails();
-        operation = "added";
-      } else if (_isBasicDetailsEditable) {
-        log("Updating existing Basic Details...");
-        isOperationSuccessful = await updatePlaza();
-        if (!isOperationSuccessful) {
-          showSnackBar(context, 'API Error: Failed to update plaza. Please try again.');
-          return;
-        }
-        completeBasicDetails();
-        operation = "updated";
-      } else {
-        log("Toggling edit mode...");
-        toggleBasicDetailsEditable();
-        return;
-      }
-
-      await showSuccessDialog(
-        context,
-        title: "Success",
-        message: "Basic details have been successfully $operation.",
-        onConfirmed: () {
-          nextStep();
-        },
-      );
-    } catch (e) {
-      log("Error in saveBasicDetails: $e");
-      showSnackBar(context, 'API Error: Failed to save Basic Details: $e');
-    }
-  }
-
-  Future<void> updateBasicDetails(BuildContext context) async {
-    validateStepCompletion();
-    if (!isBasicDetailsCompleted) {
-      showSnackBar(context, 'Please correct the errors in Basic Details.');
-      return;
-    }
-
-    try {
-      log("Updating existing plaza with ID: $_plazaId...");
-      final isUpdated = await updatePlaza();
-      if (isUpdated) {
-        await showSuccessDialog(
-          context,
-          title: "Success",
-          message: "Basic details have been successfully Updated.",
-          onConfirmed: () {},
-        );
-        _isBasicDetailsEditable = false;
-        notifyListeners();
-      } else {
-        showSnackBar(context, 'Failed to update plaza. Please try again.');
-      }
-    } catch (e) {
-      showSnackBar(context, 'Error: $e');
-    }
-  }
-
-  Future<void> pickImages() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final List<XFile> images = await picker.pickMultiImage();
-
-      if (images.isNotEmpty) {
-        formState.plazaImages.addAll(images.map((image) => image.path));
-        notifyListeners();
-      }
-    } catch (e) {
-      log("Error picking images: $e");
-      throw Exception('Failed to pick images. Please try again.');
-    }
-  }
-
-  Future<void> saveImages(BuildContext context, {bool wantPop = true}) async {
-    try {
-      final newImages = formState.plazaImages
-          .where((image) => !formState.fetchedImages.contains(image))
-          .toList();
-
-      if (newImages.isEmpty) {
-        throw Exception('No new images to upload.');
-      }
-
-      await _imageService.uploadMultipleImages(
-        _plazaId!,
-        newImages.map((path) => File(path)).toList(),
-      );
-
-      formState.fetchedImages.addAll(newImages);
-
-      await showSuccessDialog(
-        context,
-        title: "Success",
-        message: "New images uploaded successfully!",
-        onConfirmed: wantPop ? () => Navigator.pop(context) : null,
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to upload images: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> fetchPlazaImages(List<String?> plazaIds) async {
-    try {
-      log('Starting fetchPlazaImages with plazaIds: $plazaIds');
-      log('Current formState.plazaImages before fetch: ${formState.plazaImages}');
-
-      final validIds = plazaIds.whereType<String>().toList();
-      if (validIds.isEmpty) {
-        log('No valid plaza IDs provided');
-        return;
-      }
-
-      final fetchTasks = validIds.map((plazaId) async {
-        if (plazaImages.containsKey(plazaId) && plazaImages[plazaId] != null) {
-          log('Skipping fetch for plazaId $plazaId - already in cache');
-          return;
-        }
-
+    import 'dart:developer' as developer;
+    import 'package:flutter/material.dart';
+  import 'package:merchant_app/config/app_routes.dart';
+    import 'package:merchant_app/generated/l10n.dart';
+    import 'package:merchant_app/models/lane.dart';
+    import 'package:merchant_app/models/plaza.dart';
+    import 'package:merchant_app/models/bank.dart';
+    import 'package:merchant_app/services/storage/secure_storage_service.dart';
+    import 'package:merchant_app/viewmodels/plaza/basic_details_viewmodel.dart';
+    import 'package:merchant_app/viewmodels/plaza/lane_details_viewmodel.dart';
+    import 'package:merchant_app/viewmodels/plaza/bank_details_viewmodel.dart';
+    import 'package:merchant_app/viewmodels/plaza/plaza_images_viewmodel.dart';
+    import 'package:merchant_app/services/core/plaza_service.dart';
+    import 'package:merchant_app/services/core/lane_service.dart';
+    import 'package:merchant_app/services/payment/bank_service.dart';
+    import 'package:merchant_app/utils/exceptions.dart';
+    import 'package:merchant_app/utils/components/snackbar.dart';
+    
+    class PlazaViewModel extends ChangeNotifier {
+      final SecureStorageService _secureStorage = SecureStorageService();
+      final PlazaService _plazaService = PlazaService();
+      final LaneService _laneService = LaneService();
+      final BankService _bankService = BankService();
+    
+      final BasicDetailsViewModel basicDetails;
+      final LaneDetailsViewModel laneDetails;
+      final BankDetailsViewModel bankDetails;
+      final PlazaImagesViewModel plazaImages;
+    
+      int _currentStep = 0;
+      int _completeTillStep = -1;
+      String? _plazaId;
+      bool _isModificationMode = false;
+      bool _isDataInitialized = false;
+      String? _generalError;
+    
+      TabController? _laneTabController;
+      bool _isLaneTabControllerInitialized = false;
+    
+      int get currentStep => _currentStep;
+      int get completeTillStep => _completeTillStep;
+      String? get plazaId => _plazaId;
+      bool get isModificationMode => _isModificationMode;
+      TabController? get laneTabController => _laneTabController;
+      bool get isLaneTabControllerInitialized => _isLaneTabControllerInitialized;
+      String? get generalError => _generalError;
+    
+      bool get isLoading {
         try {
-          final imageDataList = await _imageService.getImagesByPlazaId(plazaId);
-          log('Fetched image data for plazaId $plazaId: $imageDataList');
-
-          formState.fetchedImages.clear();
-          formState.imageIds.clear();
-          formState.plazaImages.clear();
-
-          if (imageDataList.isNotEmpty) {
-            for (var imageData in imageDataList) {
-              final url = imageData['imageUrl'] as String;
-              final imageId = imageData['imageId'] as String;
-
-              formState.fetchedImages.add(url);
-              formState.imageIds[url] = imageId;
-              formState.plazaImages.add(url);
-              log('Added image URL: $url with ID: $imageId');
-            }
-
-            plazaImages[plazaId] = imageDataList.first['imageUrl'] as String;
+          switch (_currentStep) {
+            case 0: return basicDetails.isLoading;
+            case 1: return laneDetails.isLoading;
+            case 2: return bankDetails.isLoading;
+            case 3: return plazaImages.isLoading;
+            default: return false;
+          }
+        } catch (e, s) {
+          developer.log("[PlazaViewModel] Error accessing isLoading for step $_currentStep: $e", name: "PlazaViewModel", error: e, stackTrace: s, level: 1000);
+          return false;
+        }
+      }
+    
+      PlazaViewModel({String? plazaIdForModification})
+          : basicDetails = BasicDetailsViewModel(),
+            laneDetails = LaneDetailsViewModel(),
+            bankDetails = BankDetailsViewModel(),
+            plazaImages = PlazaImagesViewModel() {
+    
+        developer.log('[PlazaViewModel] ########## CONSTRUCTOR CALLED ########## Instance: ${hashCode}', name: 'PlazaViewModel');
+    
+        basicDetails.addListener(_notifySubViewModelChange);
+        laneDetails.addListener(_notifySubViewModelChange);
+        bankDetails.addListener(_notifySubViewModelChange);
+        plazaImages.addListener(_notifySubViewModelChange);
+    
+        if (plazaIdForModification != null && plazaIdForModification.isNotEmpty) {
+          _isModificationMode = true;
+          _plazaId = plazaIdForModification;
+          _completeTillStep = 3;
+          developer.log("[PlazaViewModel] Initialized in MODIFICATION mode for Plaza ID: $_plazaId.", name: "PlazaViewModel");
+        } else {
+          _isModificationMode = false;
+          _completeTillStep = -1;
+          developer.log("[PlazaViewModel] Initialized in REGISTRATION mode.", name: "PlazaViewModel");
+        }
+      }
+    
+      void _notifySubViewModelChange() {
+        if (!_disposed) {
+          developer.log('[PlazaViewModel] Sub-viewmodel change detected. Current Step: $_currentStep, isLoading: $isLoading', name: 'PlazaViewModel');
+          notifyListeners();
+        }
+      }
+    
+      void initializeTabController(TickerProvider vsync) {
+        if (_laneTabController == null) {
+          _laneTabController?.dispose();
+          _laneTabController = TabController(length: 2, vsync: vsync);
+          _isLaneTabControllerInitialized = true;
+          developer.log("[PlazaViewModel] Lane TabController initialized.", name: "PlazaViewModel.initializeTabController");
+          notifyListeners();
+        }
+      }
+    
+      Future<void> initializeData(BuildContext context) async {
+        if (_isDataInitialized) return;
+        _isDataInitialized = true;
+        _generalError = null;
+    
+        developer.log('[PlazaViewModel] Initializing data... Mode: ${_isModificationMode ? 'Modification' : 'Registration'}', name: 'PlazaViewModel.initializeData');
+    
+        try {
+          if (_isModificationMode && _plazaId != null) {
+            await _loadExistingPlazaData(context, _plazaId!);
           } else {
-            plazaImages[plazaId] = '';
-            log('No images found for plazaId $plazaId');
+            await _loadOwnerData();
+            basicDetails.resetToEditableState();
+            developer.log('[PlazaViewModel] Registration mode: Owner data loaded, Basic Details set to editable.', name: 'PlazaViewModel.initializeData');
           }
-
-          log('Updated formState.plazaImages: ${formState.plazaImages}');
-        } catch (e) {
-          plazaImages[plazaId] = '';
-          log('Error fetching images for plazaId $plazaId: $e');
-          _error = e is Exception ? e : Exception('Image fetch error: $e');
+        } catch (e, stackTrace) {
+          developer.log('[PlazaViewModel] CRITICAL ERROR during initializeData: $e', name: 'PlazaViewModel.initializeData', error: e, stackTrace: stackTrace, level: 1200);
+          _generalError = "Failed to initialize registration: ${e.toString()}";
+        } finally {
+          if (!_disposed) notifyListeners();
         }
-      });
-
-      await Future.wait(fetchTasks);
-      log('Completed fetchPlazaImages - final formState.plazaImages: ${formState.plazaImages}');
-      notifyListeners();
-    } catch (e) {
-      _error = e is Exception ? e : Exception('Image load failed: $e');
-      log('fetchPlazaImages failed: $_error');
-      notifyListeners();
-    }
-  }
-
-  Future<bool> removeImage(String imageUrl) async {
-    final index = formState.plazaImages.indexOf(imageUrl);
-    if (index == -1) {
-      log('[REMOVE IMAGE] Image not found in the list.');
-      return false;
-    }
-
-    String? imageId = formState.fetchedImages.contains(imageUrl)
-        ? formState.imageIds[imageUrl]
-        : null;
-
-    bool success = true;
-
-    if (imageId != null) {
-      success = await _imageService.deleteImage(imageId);
-    }
-
-    if (success) {
-      formState.plazaImages.removeAt(index);
-      notifyListeners();
-      log('[REMOVE IMAGE] Image removed successfully.');
-    } else {
-      log('[REMOVE IMAGE] Failed to delete image from the server.');
-    }
-
-    return success;
-  }
-
-  void removeImageAt(int index) {
-    formState.plazaImages.removeAt(index);
-    notifyListeners();
-  }
-
-  void addNewLane(Lane lane) {
-    _temporaryLanes.add(lane);
-    notifyListeners();
-  }
-
-  void modifyTemporaryLane(int index, Lane updatedLane) {
-    _temporaryLanes[index] = updatedLane;
-    notifyListeners();
-  }
-
-  void completeBankDetails() {
-    _isBankDetailsFirstTime = false;
-    _isBankEditable = false;
-    notifyListeners();
-  }
-
-  void clearCurrentStep() {
-    switch (_currentStep) {
-      case 0:
-        plazaNameController.clear();
-        plazaOwnerController.clear();
-        operatorNameController.clear();
-        //operatorIdController.clear();
-        mobileController.clear();
-        emailController.clear();
-        addressController.clear();
-        cityController.clear();
-        districtController.clear();
-        stateController.clear();
-        pincodeController.clear();
-        latitudeController.clear();
-        longitudeController.clear();
-        _isBasicDetailsCompleted = false;
-        break;
-      case 1:
-        _isLaneDetailsCompleted = false;
-        break;
-      case 2:
-        _isBankDetailsCompleted = false;
-        break;
-      case 3:
-        _isPlazaImagesCompleted = false;
-        break;
-    }
-    notifyListeners();
-  }
-
-  void showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-  Future<void> showSuccessDialog(
-      BuildContext context, {
-        required String title,
-        required String message,
-        VoidCallback? onConfirmed,
-      }) async {
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                onConfirmed?.call();
-              },
-              child: const Text('OK'),
+      }
+    
+      Future<void> _loadExistingPlazaData(BuildContext context, String plazaId) async {
+        developer.log('[PlazaViewModel] Loading existing data for Plaza ID: $plazaId', name: 'PlazaViewModel._loadExistingPlazaData');
+        try {
+          final Plaza existingPlaza = await _plazaService.getPlazaById(plazaId);
+          await _loadOwnerData();
+          basicDetails.populateForModification(existingPlaza);
+    
+          final List<Lane> existingLanes = await _laneService.getLanesByPlazaId(plazaId);
+          laneDetails.populateForModification(existingLanes);
+    
+          try {
+            final Bank existingBank = await _bankService.getBankDetailsByPlazaId(plazaId);
+            bankDetails.populateForModification(existingBank);
+          } on HttpException catch (e) {
+            if (e.statusCode == 404) {
+              bankDetails.resetToEditableState();
+            } else {
+              rethrow;
+            }
+          }
+    
+          plazaImages.resetToInitialState();
+          _completeTillStep = 3;
+        } catch (e, stackTrace) {
+          developer.log('[PlazaViewModel] Error loading existing plaza data: $e', name: 'PlazaViewModel._loadExistingPlazaData', error: e, stackTrace: stackTrace, level: 1000);
+          _generalError = "Failed to load existing plaza data. Please try again.";
+          _completeTillStep = 3;
+          if (!_disposed) notifyListeners();
+        }
+      }
+    
+      Future<void> _loadOwnerData() async {
+        try {
+          final userData = await _secureStorage.getUserData();
+          if (userData != null && userData['entityId'] != null) {
+            final entityId = userData['entityId'].toString();
+            final entityName = userData['entityName'] as String?;
+            basicDetails.setOwnerDetails(ownerId: entityId, ownerName: entityName);
+          } else {
+            _generalError = "Critical error: User data not found. Cannot proceed.";
+            if (!_disposed) notifyListeners();
+          }
+        } catch (e, stackTrace) {
+          developer.log('[PlazaViewModel] Error loading owner data: $e', name: 'PlazaViewModel._loadOwnerData', error: e, stackTrace: stackTrace, level: 1000);
+          _generalError = "Failed to load user data.";
+          if (!_disposed) notifyListeners();
+        }
+      }
+    
+      void goToStep(int step) {
+        final int maxAllowedStep = _isModificationMode ? 3 : (_completeTillStep + 1).clamp(0, 3);
+        if (step >= 0 && step <= 3 && step <= maxAllowedStep) {
+          if (_currentStep != step) {
+            _currentStep = step;
+            if (!_disposed) notifyListeners();
+          }
+        }
+      }
+    
+      Future<bool> saveBasicDetails(BuildContext context) async {
+        _generalError = null;
+        bool success = await basicDetails.saveBasicDetails(context);
+        if (success) {
+          if (basicDetails.plazaId != null && basicDetails.plazaId!.isNotEmpty) {
+            _plazaId = basicDetails.plazaId;
+            developer.log(
+                "[PlazaViewModel] Basic Details Save SUCCESS. Plaza ID set/confirmed: $_plazaId.",
+                name: "PlazaViewModel.saveBasicDetails");
+    
+            bool wasFirstSave = _completeTillStep <
+                0; // Check if this was the initial save
+            if (wasFirstSave) {
+              _completeTillStep = 0;
+              developer.log(
+                  "[PlazaViewModel] Updated completeTillStep to: $_completeTillStep",
+                  name: "PlazaViewModel.saveBasicDetails");
+            }
+    
+            final strings = S.of(context);
+            final String dialogTitle = strings.dialogTitleSuccess; // "Success"
+            final String dialogContent = wasFirstSave
+                ? strings
+                .dialogContentPlazaRegistered // "Plaza Registered Successfully"
+                : strings
+                .dialogContentPlazaUpdated; // "Plaza Details Updated Successfully"
+    
+            onOkAction() {
+              developer.log(
+                  '[PlazaViewModel.saveBasicDetails] Dialog OK action triggered.',
+                  name: 'PlazaViewModel.saveBasicDetails');
+              // Navigate only in registration mode after OK
+              if (!_isModificationMode) {
+                goToStep(1); // Proceed to Lane Details
+              } else {
+                // In modification mode, just ensure UI reflects non-editable state
+                if (!_disposed) notifyListeners();
+              }
+            }
+    
+            _showSuccessDialog(context, dialogTitle, dialogContent, onOkAction);
+    
+            return true; // Report success
+    
+          }
+        }
+        return false;
+      }
+    
+      Future<bool> saveLaneDetails(BuildContext context) async {
+        _generalError = null;
+        if (_plazaId == null || _plazaId!.isEmpty) {
+          AppSnackbar.showSnackbar(context: context, message: S.of(context).messageErrorPlazaIdNotSet, type: SnackbarType.error);
+          return false;
+        }
+        bool success = await laneDetails.saveNewlyAddedLanes(context, _plazaId!);
+        if (success) {
+          developer.log(
+              "[PlazaViewModel] Lane Details Step Save SUCCESS (New lanes processed or none to process).",
+              name: "PlazaViewModel.saveLaneDetails");
+    
+          bool wasFirstSave = _completeTillStep <
+              1; // Check if this step was completed before
+          if (wasFirstSave) {
+            _completeTillStep = 1;
+            developer.log(
+                "[PlazaViewModel] Updated completeTillStep to: $_completeTillStep",
+                name: "PlazaViewModel.saveLaneDetails");
+          }
+    
+          final strings = S.of(context);
+          final String dialogTitle = strings.dialogTitleSuccess;
+    
+          final String dialogContent = wasFirstSave
+              ? strings.dialogContentLanesAdded // "Lane Details Added Successfully"
+              : strings
+              .dialogContentLanesModified; // "Lane Details Updated Successfully" (Covers adding more later or just reviewing)
+    
+          onOkAction() {
+            developer.log(
+                '[PlazaViewModel.saveLaneDetails] Dialog OK action triggered.',
+                name: 'PlazaViewModel.saveLaneDetails');
+            if (!_isModificationMode) {
+              goToStep(2); // Proceed to Bank Details
+            } else {
+              if (!_disposed) notifyListeners();
+            }
+          }
+    
+          _showSuccessDialog(context, dialogTitle, dialogContent, onOkAction);
+    
+          return true;
+        }
+        return false;
+      }
+    
+      Future<bool> saveBankDetails(BuildContext context) async {
+        _generalError = null;
+        if (_plazaId == null || _plazaId!.isEmpty) {
+          AppSnackbar.showSnackbar(context: context, message: S.of(context).messageErrorPlazaIdNotSet, type: SnackbarType.error);
+          return false;
+        }
+        bool success = await bankDetails.saveBankDetails(context, _plazaId!);
+        if (success) {
+          developer.log("[PlazaViewModel] Bank Details Save SUCCESS.",
+              name: "PlazaViewModel.saveBankDetails");
+    
+          bool wasFirstSave = _completeTillStep < 2;
+          if (wasFirstSave) {
+            _completeTillStep = 2;
+            developer.log(
+                "[PlazaViewModel] Updated completeTillStep to: $_completeTillStep",
+                name: "PlazaViewModel.saveBankDetails");
+          }
+    
+          // --- ADD DIALOG LOGIC HERE ---
+          final strings = S.of(context);
+          final String dialogTitle = strings.dialogTitleSuccess;
+          final String dialogContent = wasFirstSave
+              ? strings
+              .dialogContentBankDetailsAdded // "Bank Details Added Successfully"
+              : strings
+              .dialogContentBankDetailsModified; // "Bank Details Updated Successfully"
+    
+          onOkAction() {
+            developer.log(
+                '[PlazaViewModel.saveBankDetails] Dialog OK action triggered.',
+                name: 'PlazaViewModel.saveBankDetails');
+            if (!_isModificationMode) {
+              goToStep(3); // Proceed to Plaza Images
+            } else {
+              if (!_disposed) notifyListeners();
+            }
+          }
+    
+          _showSuccessDialog(context, dialogTitle, dialogContent, onOkAction);
+          // --- END DIALOG LOGIC ---
+    
+          return true;
+        }
+        return false;
+      }
+    
+      Future<bool> savePlazaImages(BuildContext context) async {
+        _generalError = null;
+        if (_plazaId == null || _plazaId!.isEmpty) {
+          AppSnackbar.showSnackbar(context: context, message: S.of(context).messageErrorPlazaIdNotSet, type: SnackbarType.error);
+          return false;
+        }
+        bool success = await plazaImages.savePlazaImages(context, _plazaId!);
+        if (success) {
+          developer.log("[PlazaViewModel] Plaza Images Save SUCCESS.",
+              name: "PlazaViewModel.savePlazaImages");
+    
+          bool wasFirstCompletion = _completeTillStep <
+              3; // Check if flow completed before
+          if (wasFirstCompletion) {
+            _completeTillStep = 3;
+            developer.log(
+                "[PlazaViewModel] Updated completeTillStep to: $_completeTillStep. Registration/Modification Complete.",
+                name: "PlazaViewModel.savePlazaImages");
+          }
+    
+          // --- ADD DIALOG LOGIC HERE ---
+          final strings = S.of(context);
+          final String dialogTitle = strings.dialogTitleSuccess;
+          // Different message based on overall flow mode (Registration vs Modification)
+          final String dialogContent = strings.plazaImageUploadComplete; // "Plaza Registration Complete"
+    
+          // Action after OK: Pop the screen
+          onOkAction() {
+            developer.log(
+                "[PlazaViewModel.savePlazaImages] Dialog OK action triggered. Popping screen.",
+                name: "PlazaViewModel.savePlazaImages");
+            // Ensure context is still valid before popping
+            if (context.mounted) {
+              Navigator.pushReplacementNamed(context, AppRoutes.plazaList); // Pop this registration/modification screen
+            }
+          }
+    
+          _showSuccessDialog(context, dialogTitle, dialogContent, onOkAction);
+          // --- END DIALOG LOGIC ---
+    
+          return true;
+        }
+        return false;
+      }
+    
+      void toggleEditForCurrentStep() {
+        _generalError = null;
+        try {
+          switch (_currentStep) {
+            case 0: basicDetails.toggleEditable(); break;
+            case 1: laneDetails.toggleEditable(); break;
+            case 2: bankDetails.toggleEditable(); break;
+          }
+        } catch (e, stackTrace) {
+          developer.log('[PlazaViewModel] Error toggling edit for step $_currentStep: $e', name: 'PlazaViewModel.toggleEditForCurrentStep', error: e, stackTrace: stackTrace, level: 1000);
+          _generalError = "Error enabling editing for this step.";
+          if (!_disposed) notifyListeners();
+        }
+      }
+    
+      /// Helper method to show a standardized success dialog.
+      void _showSuccessDialog(BuildContext context, String title, String content, VoidCallback onOkPressed) {
+        // Ensure context is still valid before showing dialog
+        if (!context.mounted) {
+          developer.log('[PlazaViewModel._showSuccessDialog] Context is not mounted. Skipping dialog.', name: 'PlazaViewModel._showSuccessDialog', level: 900);
+          // Directly call onOkPressed if context is lost? Or just return?
+          // Let's just return for safety. The state is already updated.
+          return;
+        }
+    
+        final strings = S.of(context); // For OK button text
+        final theme = Theme.of(context); // For dialog styling
+    
+        developer.log('[PlazaViewModel._showSuccessDialog] Showing dialog: Title="$title", Content="$content"', name: 'PlazaViewModel._showSuccessDialog');
+    
+        showDialog(
+          context: context,
+          barrierDismissible: false, // Prevent closing by tapping outside
+          builder: (dialogContext) => AlertDialog(
+            // Use theme defaults for consistency
+            backgroundColor: theme.dialogTheme.backgroundColor,
+            shape: theme.dialogTheme.shape ?? RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+            content: Text(
+                content,
+                style: theme.dialogTheme.contentTextStyle ?? theme.textTheme.bodyMedium
             ),
-          ],
+            actions: <Widget>[
+              TextButton(
+                child: Text(strings.buttonOk),
+                onPressed: () {
+                  developer.log('[PlazaViewModel._showSuccessDialog] OK button pressed.', name: 'PlazaViewModel._showSuccessDialog');
+                  Navigator.of(dialogContext).pop(); // Close the dialog first
+                  // Use Future.microtask to ensure dialog is closed before executing the action
+                  Future.microtask(onOkPressed);
+                },
+              ),
+            ],
+          ),
         );
-      },
-    );
-  }
-
-  void clearPlazaImages() {
-    plazaImages.clear();
-    notifyListeners();
-  }
-
-  String formatTime(String? time) {
-    log("Formatting time: $time");
-    if (time == null || time.isEmpty) return '';
-    try {
-      final parsedTime = DateFormat('HH:mm:ss').parse(time);
-      final formattedTime = DateFormat('HH:mm').format(parsedTime);
-      log("Formatted Time: $formattedTime");
-      return formattedTime;
-    } catch (e) {
-      log("Error formatting time: $e");
-      return '';
-    }
-  }
-
-  void resetState() {
-    formState.basicDetails.clear();
-    formState.bankDetails.clear();
-    formState.plazaImages.clear();
-    formState.fetchedImages.clear();
-    formState.imageIds.clear();
-    _plazaId = null;
-    _isLoading = false;
-    _error = null;
-    notifyListeners();
-  }
-
-  Future<void> fetchPlazaDetailsById(String plazaId) async {
-    log('Starting fetchPlazaDetailsById for plaza: $plazaId');
-    resetState();
-    log('State reset completed');
-
-    try {
-      _isLoading = true;
-      notifyListeners();
-      log('Loading state set to true');
-
-      Plaza? plaza;
-      try {
-        log('Attempting to fetch plaza details...');
-        plaza = await _plazaService.getPlazaById(plazaId);
-        log('Successfully fetched plaza details');
-      } catch (e) {
-        log('Error fetching plaza details: $e');
-        throw Exception('Failed to fetch plaza details: $e');
       }
-
-      List<dynamic> images = [];
-      try {
-        log('Attempting to fetch plaza images...');
-        images = await _imageService.getImagesByPlazaId(plazaId);
-        log('Successfully fetched ${images.length} images');
-      } catch (e) {
-        log("Error fetching images: $e");
-      }
-
-      log('Clearing previous image data');
-      formState.fetchedImages.clear();
-      formState.imageIds.clear();
-      formState.plazaImages.clear();
-
-      log('Processing fetched images...');
-      for (var image in images) {
+    
+      void addNewLane(BuildContext context, Lane lane) {
         try {
-          String imageUrl = image['imageUrl']?.toString() ?? '';
-          String imageId = image['imageId']?.toString() ?? '';
-
-          if (imageUrl.isNotEmpty && imageId.isNotEmpty) {
-            formState.fetchedImages.add(imageUrl);
-            formState.imageIds[imageUrl] = imageId;
-            formState.plazaImages.add(imageUrl);
-            log('Added image URL: $imageUrl with ID: $imageId');
+          laneDetails.addNewLaneToList(lane);
+          if (_isLaneTabControllerInitialized && _laneTabController != null && _laneTabController!.index != 0) {
+            _laneTabController!.animateTo(0);
           }
-        } catch (e) {
-          log("Error processing image data: $e");
+        } on PlazaException catch (e) {
+          if (context.mounted) {
+            AppSnackbar.showSnackbar(context: context, message: e.serverMessage ?? e.message ?? S.of(context).errorAddingLane, type: SnackbarType.error);
+          }
+        } catch (e, stackTrace) {
+          developer.log("[PlazaViewModel] Unexpected error adding lane: $e", name: "PlazaViewModel.addNewLane", error: e, stackTrace: stackTrace, level: 1000);
+          if (context.mounted) AppSnackbar.showSnackbar(context: context, message: S.of(context).errorUnexpected, type: SnackbarType.error);
         }
       }
-      log('Finished processing ${formState.fetchedImages.length} valid images');
-
-      _plazaId = plazaId;
-      log('Setting plaza basic details...');
-
-      String convertTimeFormat(String? time) {
-        if (time == null || time.isEmpty) return '';
-        try {
-          final parts = time.split(':');
-          if (parts.length >= 2) {
-            return '${parts[0]}:${parts[1]}';
-          }
-          return time;
-        } catch (e) {
-          log('Error converting time format: $e');
-          return time;
+    
+      void reset() {
+        _currentStep = 0;
+        _completeTillStep = -1;
+        _plazaId = null;
+        _isModificationMode = false;
+        _isDataInitialized = false;
+        _generalError = null;
+    
+        basicDetails.clearFieldsAndNotify();
+        laneDetails.clearFieldsAndNotify();
+        bankDetails.clearFieldsAndNotify();
+        plazaImages.clearFieldsAndNotify();
+    
+        if (_isLaneTabControllerInitialized && _laneTabController != null && !_laneTabController!.indexIsChanging && _laneTabController!.index != 0) {
+          _laneTabController!.animateTo(0);
         }
+        if (!_disposed) notifyListeners();
       }
-
-      String formattedOpeningTime = convertTimeFormat(plaza.plazaOpenTimings);
-      String formattedClosingTime = convertTimeFormat(plaza.plazaClosingTime);
-
-      formState.basicDetails.addAll({
-        'plazaName': plaza.plazaName,
-        'plazaId': plaza.plazaId,
-        'operatorName': plaza.plazaOperatorName,
-        //'operatorId': plaza.plazaOperatorId,
-        'plazaOwner': plaza.plazaOwner,
-        'ownerId': plaza.plazaOwnerId,
-        'mobileNumber': plaza.mobileNumber,
-        'email': plaza.email,
-        'address': plaza.address,
-        'city': plaza.city,
-        'district': plaza.district,
-        'state': plaza.state,
-        'pincode': plaza.pincode,
-        'latitude': plaza.geoLatitude.toString(),
-        'longitude': plaza.geoLongitude.toString(),
-        'totalParkingSlots': plaza.noOfParkingSlots.toString(),
-        'twoWheelerCapacity': plaza.capacityTwoWheeler.toString(),
-        'lmvCapacity': plaza.capacityFourLMV.toString(),
-        'lcvCapacity': plaza.capacityFourLCV.toString(),
-        'hmvCapacity': plaza.capacityHMV.toString(),
-        'plazaCategory': plaza.plazaCategory,
-        'plazaSubCategory': plaza.plazaSubCategory,
-        'structureType': plaza.structureType,
-        'priceCategory': plaza.priceCategory,
-        'plazaStatus': plaza.plazaStatus,
-        'openingTime': formattedOpeningTime,
-        'closingTime': formattedClosingTime,
-      });
-      log('Basic details set successfully');
-
-      log('Attempting to fetch bank details...');
-      await _fetchBankDetails(plazaId);
-      log('Bank details fetched successfully');
-
-      log('Updating UI controllers...');
-      _populateBasicDetailsControllers();
-      _populateBankDetailsControllers();
-      log('UI controllers updated successfully');
-    } catch (e) {
-      log('Error in fetchPlazaDetailsById: $e');
-      _error = Exception('Failed to fetch plaza details: $e');
-      resetState();
-      rethrow;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-      log('fetchPlazaDetailsById completed. Loading state set to false');
-    }
-  }
-
-  Future<void> _fetchBankDetails(String plazaId) async {
-    try {
-      final bank = await _bankService.getBankDetailsByPlazaId(plazaId);
-      formState.bankDetails.addAll({
-        'bankName': bank.bankName,
-        'accountNumber': bank.accountNumber,
-        'accountHolderName': bank.accountHolderName,
-        'ifscCode': bank.ifscCode
-      });
-    } on HttpException catch (e) {
-      if (e.statusCode == 404) {
-        formState.bankDetails.addAll({
-          'bankName': '',
-          'accountNumber': '',
-          'accountHolderName': '',
-          'ifscCode': ''
-        });
-        _error = null;
-      } else {
-        _error = e;
+    
+      bool _disposed = false;
+    
+      @override
+      void dispose() {
+        developer.log('[PlazaViewModel] ########## DISPOSE CALLED ########## Instance: $hashCode', name: 'PlazaViewModel.dispose');
+        if (_disposed) return;
+        _disposed = true;
+        developer.log("[PlazaViewModel] Disposing...", name: "PlazaViewModel.dispose");
+    
+        basicDetails.removeListener(_notifySubViewModelChange);
+        laneDetails.removeListener(_notifySubViewModelChange);
+        bankDetails.removeListener(_notifySubViewModelChange);
+        plazaImages.removeListener(_notifySubViewModelChange);
+    
+        basicDetails.dispose();
+        laneDetails.dispose();
+        bankDetails.dispose();
+        plazaImages.dispose();
+    
+        _laneTabController?.dispose();
+        _isLaneTabControllerInitialized = false;
+    
+        super.dispose();
       }
-    } catch (e) {
-      _error = Exception('Unexpected error: $e');
-      formState.bankDetails.addAll({
-        'bankName': '',
-        'accountNumber': '',
-        'accountHolderName': '',
-        'ifscCode': ''
-      });
     }
-  }
-
-  void _populateBasicDetailsControllers() {
-    plazaNameController.text = formState.basicDetails['plazaName'] ?? '';
-    operatorNameController.text = formState.basicDetails['operatorName'] ?? '';
-    //operatorIdController.text = formState.basicDetails['operatorId'] ?? '';
-    mobileController.text = formState.basicDetails['mobileNumber'] ?? '';
-    emailController.text = formState.basicDetails['email'] ?? '';
-    addressController.text = formState.basicDetails['address'] ?? '';
-    cityController.text = formState.basicDetails['city'] ?? '';
-    districtController.text = formState.basicDetails['district'] ?? '';
-    stateController.text = formState.basicDetails['state'] ?? '';
-    pincodeController.text = formState.basicDetails['pincode'] ?? '';
-    latitudeController.text = formState.basicDetails['latitude'] ?? '';
-    longitudeController.text = formState.basicDetails['longitude'] ?? '';
-    totalParkingSlotsController.text = formState.basicDetails['totalParkingSlots'] ?? '';
-    twoWheelerCapacityController.text = formState.basicDetails['twoWheelerCapacity'] ?? '';
-    lmvCapacityController.text = formState.basicDetails['lmvCapacity'] ?? '';
-    lcvCapacityController.text = formState.basicDetails['lcvCapacity'] ?? '';
-    hmvCapacityController.text = formState.basicDetails['hmvCapacity'] ?? '';
-    openingTimeController.text = formState.basicDetails['openingTime'] ?? '';
-    closingTimeController.text = formState.basicDetails['closingTime'] ?? '';
-    notifyListeners();
-  }
-
-  void _populateBankDetailsControllers() {
-    bankNameController.text = formState.bankDetails['bankName'] ?? '';
-    accountNumberController.text = formState.bankDetails['accountNumber'] ?? '';
-    accountHolderController.text = formState.bankDetails['accountHolderName'] ?? '';
-    ifscCodeController.text = formState.bankDetails['ifscCode'] ?? '';
-    notifyListeners();
-  }
-
-  Future<void> fetchExistingLanes(String plazaId) async {
-    try {
-      log('Starting fetchExistingLanes for plaza: $plazaId');
-      final lanes = await _laneService.getLanesByPlazaId(plazaId);
-      log('Received lanes: ${lanes.length}');
-
-      _existingLanes = List<Lane>.from(lanes);
-      log('Updated existingLanes length: ${_existingLanes.length}');
-
-      notifyListeners();
-    } catch (e) {
-      log('Error fetching lanes: $e');
-      throw PlazaException('Failed to fetch lanes: $e');
-    }
-  }
-
-  Future<void> updateExistingLane(Lane lane) async {
-    try {
-      await _laneService.updateLane(lane);
-      notifyListeners();
-    } catch (e) {
-      log('Error updating lane: $e');
-    }
-  }
-
-  Future<void> fetchUserPlazas(String userId) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      _userPlazas = await _plazaService.fetchUserPlazas(userId);
-    } catch (e) {
-      log('Error in fetchUserPlazas: $e');
-      _error = e is Exception ? e : Exception('Unknown error: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<bool> registerPlaza() async {
-    try {
-      _isLoading = true;
-      notifyListeners();
-      log('Plaza details: ${formState.basicDetails}');
-
-      String formatCoordinate(String? value) {
-        if (value == null || value.isEmpty) return "0.00000000";
-        double coord = double.tryParse(value) ?? 0.0;
-        return coord.toStringAsFixed(8);
-      }
-
-      final plaza = Plaza(
-        plazaName: formState.basicDetails['plazaName'] ?? '',
-        plazaOwner: formState.basicDetails['plazaOwner'] ?? '',
-        plazaOwnerId: formState.basicDetails['ownerId'] ?? '',
-        plazaOperatorName: formState.basicDetails['operatorName'] ?? '',
-        //plazaOperatorId: formState.basicDetails['operatorId'] ?? '',
-        mobileNumber: formState.basicDetails['mobileNumber'] ?? '',
-        email: formState.basicDetails['email'] ?? '',
-        address: formState.basicDetails['address'] ?? '',
-        city: formState.basicDetails['city'] ?? '',
-        district: formState.basicDetails['district'] ?? '',
-        state: formState.basicDetails['state'] ?? '',
-        pincode: formState.basicDetails['pincode'] ?? '',
-        geoLatitude: double.parse(formatCoordinate(formState.basicDetails['latitude'])),
-        geoLongitude: double.parse(formatCoordinate(formState.basicDetails['longitude'])),
-        noOfParkingSlots: int.tryParse(formState.basicDetails['totalParkingSlots'] ?? '') ?? 0,
-        capacityTwoWheeler: int.tryParse(formState.basicDetails['twoWheelerCapacity'] ?? '') ?? 0,
-        capacityFourLMV: int.tryParse(formState.basicDetails['lmvCapacity'] ?? '') ?? 0,
-        capacityFourLCV: int.tryParse(formState.basicDetails['lcvCapacity'] ?? '') ?? 0,
-        capacityHMV: int.tryParse(formState.basicDetails['hmvCapacity'] ?? '') ?? 0,
-        plazaOpenTimings: formState.basicDetails['openingTime'] ?? '',
-        plazaClosingTime: formState.basicDetails['closingTime'] ?? '',
-        plazaCategory: formState.basicDetails['plazaCategory'] ?? '',
-        plazaSubCategory: formState.basicDetails['plazaSubCategory'] ?? '',
-        structureType: formState.basicDetails['structureType'] ?? '',
-        plazaStatus: formState.basicDetails['plazaStatus'] ?? '',
-        freeParking: formState.basicDetails['freeParking'] ?? false,
-        priceCategory: formState.basicDetails['priceCategory'] ?? '',
-      );
-
-      final plazaId = await _plazaService.addPlaza(plaza);
-      log('Plaza ID: $plazaId');
-      _plazaId = plazaId;
-      notifyListeners();
-
-      return true;
-    } catch (e) {
-      _error = e is Exception ? e : Exception('Error registering plaza: $e');
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<bool> updatePlaza() async {
-    try {
-      _isLoading = true;
-      notifyListeners();
-
-      String formatCoordinate(String? value) {
-        if (value == null || value.isEmpty) return "0.00000000";
-        double coord = double.tryParse(value) ?? 0.0;
-        return coord.toStringAsFixed(8);
-      }
-
-      final updatedPlaza = Plaza(
-        plazaName: formState.basicDetails['plazaName'] ?? '',
-        plazaOwner: formState.basicDetails['plazaOwner'] ?? '',
-        plazaOwnerId: formState.basicDetails['ownerId'] ?? '',
-        plazaOperatorName: formState.basicDetails['operatorName'] ?? '',
-        //plazaOperatorId: formState.basicDetails['operatorId'] ?? '',
-        mobileNumber: formState.basicDetails['mobileNumber'] ?? '',
-        email: formState.basicDetails['email'] ?? '',
-        address: formState.basicDetails['address'] ?? '',
-        city: formState.basicDetails['city'] ?? '',
-        district: formState.basicDetails['district'] ?? '',
-        state: formState.basicDetails['state'] ?? '',
-        pincode: formState.basicDetails['pincode'] ?? '',
-        geoLatitude: double.parse(formatCoordinate(formState.basicDetails['latitude'])),
-        geoLongitude: double.parse(formatCoordinate(formState.basicDetails['longitude'])),
-        noOfParkingSlots: int.tryParse(formState.basicDetails['totalParkingSlots'] ?? '') ?? 0,
-        capacityTwoWheeler: int.tryParse(formState.basicDetails['twoWheelerCapacity'] ?? '') ?? 0,
-        capacityFourLMV: int.tryParse(formState.basicDetails['lmvCapacity'] ?? '') ?? 0,
-        capacityFourLCV: int.tryParse(formState.basicDetails['lcvCapacity'] ?? '') ?? 0,
-        capacityHMV: int.tryParse(formState.basicDetails['hmvCapacity'] ?? '') ?? 0,
-        plazaOpenTimings: formState.basicDetails['openingTime'] ?? '',
-        plazaClosingTime: formState.basicDetails['closingTime'] ?? '',
-        plazaCategory: formState.basicDetails['plazaCategory'] ?? '',
-        plazaSubCategory: formState.basicDetails['plazaSubCategory'] ?? '',
-        structureType: formState.basicDetails['structureType'] ?? '',
-        plazaStatus: formState.basicDetails['plazaStatus'] ?? '',
-        freeParking: formState.basicDetails['freeParking'] ?? false,
-        priceCategory: formState.basicDetails['priceCategory'] ?? '',
-      );
-
-      final success = await _plazaService.updatePlaza(updatedPlaza, _plazaId!);
-
-      return success;
-    } catch (e) {
-      _error = e is Exception ? e : Exception('Error updating plaza: $e');
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<bool> deletePlaza(String plazaId) async {
-    try {
-      _isLoading = true;
-      notifyListeners();
-
-      await _plazaService.deletePlaza(plazaId);
-      _userPlazas.removeWhere((plaza) => plaza.plazaId == plazaId);
-      return true;
-    } catch (e) {
-      _error = e is Exception ? e : Exception('Failed to delete plaza: $e');
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<bool> addBankDetails() async {
-    try {
-      final bank = Bank(
-        plazaId: _plazaId!,
-        bankName: formState.bankDetails['bankName'],
-        accountNumber: formState.bankDetails['accountNumber'],
-        accountHolderName: formState.bankDetails['accountHolderName'],
-        ifscCode: formState.bankDetails['ifscCode'],
-      );
-      final success = await _bankService.addBankDetails(bank);
-
-      if (success) {
-        log("Bank Details Added Successfully");
-        notifyListeners();
-      }
-      return success;
-    } catch (e) {
-      _error = Exception('Error adding bank details: $e');
-      log("Error adding bank details: $e");
-      notifyListeners();
-      return false;
-    }
-  }
-
-  Future<bool> updateBankDetails() async {
-    try {
-      final bank = Bank(
-        id: formState.bankDetails['id'],
-        plazaId: _plazaId!,
-        bankName: formState.bankDetails['bankName'],
-        accountNumber: formState.bankDetails['accountNumber'],
-        accountHolderName: formState.bankDetails['accountHolderName'],
-        ifscCode: formState.bankDetails['ifscCode'],
-      );
-      final success = await _bankService.updateBankDetails(bank);
-
-      return success;
-    } catch (e) {
-      _error = Exception('Error updating bank details: $e');
-      log("Error updating bank details: $e");
-      notifyListeners();
-      return false;
-    }
-  }
-
-  Future<void> deleteBankDetails(String id) async {
-    try {
-      log("Deleting Bank Details with ID: $id");
-      final success = await _bankService.deleteBankDetails(id);
-      if (success) {
-        log("Bank Details Deleted Successfully");
-        formState.bankDetails.clear();
-        notifyListeners();
-      } else {
-        throw Exception("Failed to delete bank details");
-      }
-    } catch (e) {
-      _error = Exception('Error deleting bank details: $e');
-      log("Error deleting bank details: $e");
-      notifyListeners();
-    }
-  }
-
-  void clearErrors() {
-    _error = null;
-    notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    plazaNameController.dispose();
-    plazaOwnerController.dispose();
-    operatorNameController.dispose();
-    //operatorIdController.dispose();
-    mobileController.dispose();
-    emailController.dispose();
-    addressController.dispose();
-    cityController.dispose();
-    districtController.dispose();
-    stateController.dispose();
-    pincodeController.dispose();
-    latitudeController.dispose();
-    longitudeController.dispose();
-    totalParkingSlotsController.dispose();
-    twoWheelerCapacityController.dispose();
-    lmvCapacityController.dispose();
-    lcvCapacityController.dispose();
-    hmvCapacityController.dispose();
-    openingTimeController.dispose();
-    closingTimeController.dispose();
-    formState.basicDetails.clear();
-    super.dispose();
-  }
-}

@@ -5,10 +5,13 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../../config/app_colors.dart';
+import '../../../../config/app_theme.dart';
 import '../../../../utils/components/appbar.dart';
+import '../../../../utils/components/button.dart';
 import '../../../../utils/components/form_field.dart';
 import '../../../../utils/components/pagination_controls.dart';
 import '../../../generated/l10n.dart';
+import '../../../utils/components/pagination_mixin.dart';
 import '../../../utils/exceptions.dart';
 import 'view_ticket.dart';
 import '../../../viewmodels/ticket/ticket_history_viewmodel.dart';
@@ -20,15 +23,14 @@ class TicketHistoryScreen extends StatefulWidget {
   State<TicketHistoryScreen> createState() => _TicketHistoryScreenState();
 }
 
-class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAware {
+class _TicketHistoryScreenState extends State<TicketHistoryScreen>
+    with RouteAware, PaginatedListMixin<Map<String, dynamic>> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   late TicketHistoryViewModel _viewModel;
   late RouteObserver<ModalRoute> _routeObserver;
   String _searchQuery = '';
   int _currentPage = 1;
-  static const int _itemsPerPage = 10;
-  bool _isLoading = false;
   Timer? _debounce;
 
   Set<String> _selectedStatuses = {};
@@ -39,7 +41,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
   @override
   void initState() {
     super.initState();
-    _viewModel = TicketHistoryViewModel();
+    _viewModel = Provider.of<TicketHistoryViewModel>(context, listen: false);
     _setDefaultDateRange();
     _loadInitialData();
     _searchController.addListener(() {
@@ -62,9 +64,11 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
   }
 
   Future<void> _loadInitialData() async {
-    setState(() => _isLoading = true);
-    await _viewModel.fetchTicketHistory();
-    setState(() => _isLoading = false);
+    if (!mounted) return;
+    // Defer fetch until after the first frame to avoid build-time state changes
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _viewModel.fetchTicketHistory();
+    });
   }
 
   @override
@@ -80,17 +84,15 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
     _routeObserver.unsubscribe(this);
     _scrollController.dispose();
     _searchController.dispose();
-    _viewModel.dispose();
-    super.dispose();
+    super.dispose(); // ViewModel disposal handled by Provider
   }
 
   @override
   void didPopNext() => _refreshData();
 
   Future<void> _refreshData() async {
-    setState(() => _isLoading = true);
+    if (!mounted) return;
     await _viewModel.fetchTicketHistory();
-    setState(() => _isLoading = false);
   }
 
   List<Map<String, dynamic>> _getFilteredTickets(List<Map<String, dynamic>> tickets) {
@@ -103,14 +105,14 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
           (ticket['plazaName']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
           (ticket['ticketStatus']?.toString().toLowerCase().contains(_searchQuery) ?? false);
 
-      final matchesStatus = _selectedStatuses.isEmpty ||
-          _selectedStatuses.contains(ticket['ticketStatus']?.toString().toLowerCase());
+      final matchesStatus =
+          _selectedStatuses.isEmpty || _selectedStatuses.contains(ticket['ticketStatus']?.toString().toLowerCase());
 
       final matchesVehicleType = _selectedVehicleTypes.isEmpty ||
           _selectedVehicleTypes.contains(ticket['vehicleType']?.toString().toLowerCase());
 
-      final matchesPlazaName = _selectedPlazaNames.isEmpty ||
-          _selectedPlazaNames.contains(ticket['plazaName']?.toString().toLowerCase());
+      final matchesPlazaName =
+          _selectedPlazaNames.isEmpty || _selectedPlazaNames.contains(ticket['plazaName']?.toString().toLowerCase());
 
       final entryTime = DateTime.tryParse(ticket['entryTime'] ?? '');
       final matchesDate = _selectedDateRange == null ||
@@ -122,17 +124,13 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
     }).toList();
   }
 
-  List<Map<String, dynamic>> _getPaginatedTickets(List<Map<String, dynamic>> filteredTickets) {
-    final startIndex = (_currentPage - 1) * _itemsPerPage;
-    final endIndex = startIndex + _itemsPerPage;
-    return endIndex > filteredTickets.length ? filteredTickets.sublist(startIndex) : filteredTickets.sublist(startIndex, endIndex);
-  }
 
   void _updatePage(int newPage) {
     final filteredTickets = _getFilteredTickets(_viewModel.tickets);
-    final totalPages = (filteredTickets.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
-    if (newPage < 1 || newPage > totalPages) return;
-    setState(() => _currentPage = newPage);
+    updatePage(newPage, filteredTickets, (page) {
+      setState(() => _currentPage = page);
+      developer.log('Page updated to: $_currentPage', name: 'TicketHistory');
+    });
   }
 
   Widget _buildDateFilterChip(S strings) {
@@ -148,8 +146,11 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
     } else if (_isLast30DaysRange(_selectedDateRange!)) {
       displayText = strings.last30DaysLabel;
     } else {
-      displayText = '${DateFormat('dd MMM').format(_selectedDateRange!.start)} - ${DateFormat('dd MMM').format(_selectedDateRange!.end)}';
+      displayText =
+      '${DateFormat('dd MMM').format(_selectedDateRange!.start)} - ${DateFormat('dd MMM').format(_selectedDateRange!.end)}';
     }
+
+    final textColor = context.textPrimaryColor;
 
     return GestureDetector(
       onTap: _showDateFilterDialog,
@@ -157,7 +158,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: _selectedDateRange != null ? AppColors.primary.withOpacity(0.1) : Colors.grey[200],
+          color: context.secondaryCardColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -165,14 +166,14 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
           children: [
             Icon(
               Icons.calendar_today,
-              color: _selectedDateRange != null ? AppColors.primary : Colors.grey,
+              color: textColor,
               size: 16,
             ),
             const SizedBox(width: 6),
             Text(
               displayText,
               style: TextStyle(
-                color: _selectedDateRange != null ? AppColors.primary : Colors.black87,
+                color: textColor,
                 fontWeight: _selectedDateRange != null ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
@@ -183,14 +184,16 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
   }
 
   Widget _buildMoreFiltersChip(S strings) {
-    final hasActiveFilters = _selectedStatuses.isNotEmpty || _selectedVehicleTypes.isNotEmpty || _selectedPlazaNames.isNotEmpty;
+    final hasActiveFilters =
+        _selectedStatuses.isNotEmpty || _selectedVehicleTypes.isNotEmpty || _selectedPlazaNames.isNotEmpty;
+    final textColor = context.textPrimaryColor;
 
     return GestureDetector(
       onTap: _showAllFiltersDialog,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: hasActiveFilters ? AppColors.primary.withOpacity(0.1) : Colors.grey[200],
+          color: context.secondaryCardColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -198,14 +201,14 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
           children: [
             Icon(
               Icons.filter_list,
-              color: hasActiveFilters ? AppColors.primary : Colors.grey,
+              color: textColor,
               size: 16,
             ),
             const SizedBox(width: 6),
             Text(
               strings.filtersLabel,
               style: TextStyle(
-                color: hasActiveFilters ? AppColors.primary : Colors.black87,
+                color: textColor,
                 fontWeight: hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
@@ -221,41 +224,75 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
       ..._selectedVehicleTypes.map((v) => '${strings.vehicleLabel}: ${v.capitalize()}'),
       ..._selectedPlazaNames.map((p) => '${strings.plazaLabel}: $p'),
     ];
+    final textColor = context.textPrimaryColor;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-        child: Row(
-          children: [
-            _buildDateFilterChip(strings),
-            const SizedBox(width: 8),
-            _buildMoreFiltersChip(strings),
-            if (selectedFilters.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              ...selectedFilters.map((filter) => Container(
-                margin: const EdgeInsets.only(right: 8),
-                child: Chip(
-                  label: Text(filter),
-                  onDeleted: () {
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+          child: Row(
+            children: [
+              if (selectedFilters.isNotEmpty || _selectedDateRange != null) ...[
+                GestureDetector(
+                  onTap: () {
                     setState(() {
-                      if (filter.startsWith('${strings.statusLabel}:')) {
-                        _selectedStatuses.remove(filter.split(': ')[1].toLowerCase());
-                      } else if (filter.startsWith('${strings.vehicleLabel}:')) {
-                        _selectedVehicleTypes.remove(filter.split(': ')[1].toLowerCase());
-                      } else if (filter.startsWith('${strings.plazaLabel}:')) {
-                        _selectedPlazaNames.remove(filter.split(': ')[1]);
-                      }
+                      _selectedStatuses.clear();
+                      _selectedVehicleTypes.clear();
+                      _selectedPlazaNames.clear();
+                      _selectedDateRange = null;
+                      _currentPage = 1;
                     });
                   },
-                  deleteIcon: const Icon(Icons.close, size: 16),
-                  backgroundColor: AppColors.primary.withOpacity(0.1),
-                  labelStyle: TextStyle(color: AppColors.primary),
-                  deleteIconColor: AppColors.primary,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: context.secondaryCardColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      strings.resetAllLabel,
+                      style: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+                  ),
                 ),
-              )),
+                const SizedBox(width: 8),
+              ],
+              _buildDateFilterChip(strings),
+              const SizedBox(width: 8),
+              _buildMoreFiltersChip(strings),
+              if (selectedFilters.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                ...selectedFilters.map(
+                      (filter) => Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    child: Chip(
+                      label: Text(filter),
+                      onDeleted: () {
+                        setState(() {
+                          if (filter.startsWith('${strings.statusLabel}:')) {
+                            _selectedStatuses.remove(filter.split(': ')[1].toLowerCase());
+                          } else if (filter.startsWith('${strings.vehicleLabel}:')) {
+                            _selectedVehicleTypes.remove(filter.split(': ')[1].toLowerCase());
+                          } else if (filter.startsWith('${strings.plazaLabel}:')) {
+                            _selectedPlazaNames.remove(filter.split(': ')[1]);
+                          }
+                        });
+                      },
+                      deleteIcon: const Icon(Icons.close, size: 16),
+                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                      labelStyle: TextStyle(color: textColor),
+                      deleteIconColor: textColor,
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -273,15 +310,15 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: context.cardColor,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              decoration: BoxDecoration(
+                color: context.cardColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               height: MediaQuery.of(context).size.height * 0.8,
               child: Column(
@@ -291,14 +328,23 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
                     child: Container(
                       width: 50,
                       height: 5,
-                      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.light
+                            ? Colors.grey[300]
+                            : Colors.grey[600],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       strings.advancedFiltersLabel,
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: context.textPrimaryColor,
+                      ),
                     ),
                   ),
                   Expanded(
@@ -366,12 +412,9 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
                     child: Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.primary,
-                              side: BorderSide(color: AppColors.primary),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
+                          child: CustomButtons.secondaryButton(
+                            height: 40,
+                            text: strings.clearAllLabel,
                             onPressed: () {
                               setDialogState(() {
                                 _selectedStatuses.clear();
@@ -379,23 +422,21 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
                                 _selectedPlazaNames.clear();
                               });
                             },
-                            child: Text(strings.clearAllLabel),
+                            context: context,
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
+                          child: CustomButtons.primaryButton(
+                            height: 40,
+                            text: strings.applyLabel,
                             onPressed: () {
                               setState(() {
                                 _currentPage = 1;
                               });
                               Navigator.pop(context);
                             },
-                            child: Text(strings.applyLabel, style: const TextStyle(color: Colors.white)),
+                            context: context,
                           ),
                         ),
                       ],
@@ -416,6 +457,8 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
     required Set<String> selectedItems,
     required Function(String, bool) onChanged,
   }) {
+    final textColor = context.textPrimaryColor;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -423,7 +466,11 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           child: Text(
             title,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
           ),
         ),
         Padding(
@@ -440,10 +487,10 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
                   onChanged(option['key']!, value);
                 },
                 selectedColor: AppColors.primary.withOpacity(0.2),
-                checkmarkColor: AppColors.primary,
-                backgroundColor: Colors.grey[200],
+                checkmarkColor: textColor,
+                backgroundColor: context.secondaryCardColor,
                 labelStyle: TextStyle(
-                  color: isSelected ? AppColors.primary : Colors.black87,
+                  color: isSelected ? textColor : Colors.grey[400],
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),
               );
@@ -451,7 +498,9 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
           ),
         ),
         const SizedBox(height: 16),
-        const Divider(),
+        Divider(
+          color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600],
+        ),
       ],
     );
   }
@@ -465,6 +514,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
     final strings = S.of(context);
     final TextEditingController searchController = TextEditingController();
     List<String> filteredOptions = options;
+    final textColor = context.textPrimaryColor;
 
     return StatefulBuilder(
       builder: (context, setLocalState) {
@@ -475,7 +525,11 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
               child: Text(
                 title,
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
               ),
             ),
             Padding(
@@ -484,13 +538,27 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
                 controller: searchController,
                 decoration: InputDecoration(
                   hintText: strings.searchPlazaHint,
-                  prefixIcon: const Icon(Icons.search),
+                  hintStyle: TextStyle(color: Colors.grey[400]),
+                  prefixIcon: Icon(Icons.search, color: textColor),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Colors.grey[400]!),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Colors.grey[400]!),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.primary),
+                  ),
                 ),
+                style: TextStyle(color: textColor),
                 onChanged: (value) {
                   setLocalState(() {
-                    filteredOptions = options.where((option) => option.toLowerCase().contains(value.toLowerCase())).toList();
+                    filteredOptions =
+                        options.where((option) => option.toLowerCase().contains(value.toLowerCase())).toList();
                   });
                 },
               ),
@@ -512,10 +580,10 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
                           onChanged(option, value);
                         },
                         selectedColor: AppColors.primary.withOpacity(0.2),
-                        checkmarkColor: AppColors.primary,
-                        backgroundColor: Colors.grey[200],
+                        checkmarkColor: textColor,
+                        backgroundColor: context.secondaryCardColor,
                         labelStyle: TextStyle(
-                          color: isSelected ? AppColors.primary : Colors.black87,
+                          color: isSelected ? textColor : Colors.grey[400],
                           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                         ),
                       );
@@ -525,7 +593,9 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
               ),
             ),
             const SizedBox(height: 16),
-            const Divider(),
+            Divider(
+              color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600],
+            ),
           ],
         );
       },
@@ -533,26 +603,33 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
   }
 
   Widget _buildSearchField(S strings) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        _buildFilterChipsRow(strings),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-          child: CustomFormFields.searchFormField(
-            controller: _searchController,
-            hintText: strings.searchTicketHistoryHint, context: context,
+    return SizedBox(
+      width: MediaQuery.of(context).size.width * 0.95,
+      child: Card(
+        margin: EdgeInsets.zero,
+        elevation: Theme.of(context).cardTheme.elevation,
+        color: context.secondaryCardColor,
+        shape: Theme.of(context).cardTheme.shape,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              CustomFormFields.searchFormField(
+                controller: _searchController,
+                hintText: strings.searchTicketHistoryHint,
+                context: context,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${strings.lastUpdated}: ${DateTime.now().toString().substring(0, 16)}. ${strings.swipeToRefresh}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(
-            '${strings.lastUpdated}: ${DateTime.now().toString().substring(0, 16)}. ${strings.swipeToRefresh}',
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -567,14 +644,25 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
       initialDateRange: initialRange,
       builder: (context, child) {
         return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: ColorScheme.light(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme(
+              brightness: Theme.of(context).brightness,
               primary: AppColors.primary,
               onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
+              secondary: AppColors.primary.withOpacity(0.2),
+              onSecondary: context.textPrimaryColor,
+              surface: context.cardColor,
+              onSurface: context.textPrimaryColor,
+              background: context.cardColor,
+              onBackground: context.textPrimaryColor,
+              error: Colors.red,
+              onError: Colors.white,
             ),
-            dialogBackgroundColor: Colors.white,
+            dialogBackgroundColor: context.cardColor,
+            textTheme: TextTheme(
+              bodyMedium: TextStyle(color: context.textPrimaryColor),
+              titleLarge: TextStyle(color: context.textPrimaryColor),
+            ),
           ),
           child: child!,
         );
@@ -590,7 +678,10 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
     if (end.difference(start) > maxAllowedRange) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(strings.dateRangeTooLongWarning),
+          content: Text(
+            strings.dateRangeTooLongWarning,
+            style: TextStyle(color: context.textPrimaryColor),
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -605,18 +696,19 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: context.cardColor,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         DateTimeRange? tempDateRange = _selectedDateRange;
         String? selectedOption = _getSelectedOption(tempDateRange);
+        final textColor = context.textPrimaryColor;
 
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              decoration: BoxDecoration(
+                color: context.cardColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               height: MediaQuery.of(context).size.height * 0.4,
               child: Column(
@@ -626,14 +718,23 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
                     child: Container(
                       width: 50,
                       height: 5,
-                      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.light
+                            ? Colors.grey[300]
+                            : Colors.grey[600],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       strings.selectDateRangeLabel,
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
                     ),
                   ),
                   Padding(
@@ -692,7 +793,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
                               const SizedBox(width: 8),
                             ],
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Row(
                             children: [
                               _buildQuickDateChip(
@@ -734,38 +835,33 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
                       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                       child: Text(
                         '${strings.selectedRangeLabel}: ${DateFormat('dd MMM yyyy').format(tempDateRange!.start)} - ${DateFormat('dd MMM yyyy').format(tempDateRange!.end)}',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.primary),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor),
                       ),
                     ),
                   ],
-                  Spacer(),
+                  const Spacer(),
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.primary,
-                              side: BorderSide(color: AppColors.primary),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
+                          child: CustomButtons.secondaryButton(
+                            height: 40,
+                            text: strings.clearLabel,
                             onPressed: () {
                               setDialogState(() {
                                 tempDateRange = null;
                                 selectedOption = null;
                               });
                             },
-                            child: Text(strings.clearLabel),
+                            context: context,
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
+                          child: CustomButtons.primaryButton(
+                            height: 40,
+                            text: strings.applyLabel,
                             onPressed: () {
                               setState(() {
                                 _selectedDateRange = tempDateRange;
@@ -773,7 +869,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
                               });
                               Navigator.pop(context);
                             },
-                            child: Text(strings.applyLabel, style: const TextStyle(color: Colors.white)),
+                            context: context,
                           ),
                         ),
                       ],
@@ -802,19 +898,21 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
     required bool isSelected,
     required VoidCallback onTap,
   }) {
+    final textColor = context.textPrimaryColor;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.2) : Colors.grey[200],
+          color: isSelected ? AppColors.primary.withOpacity(0.2) : context.secondaryCardColor,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: isSelected ? AppColors.primary : Colors.transparent, width: 1),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? AppColors.primary : Colors.black87,
+            color: isSelected ? textColor : Colors.grey[400],
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
@@ -851,7 +949,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
   }
 
   Widget _buildTicketCard(Map<String, dynamic> ticket, S strings) {
-    DateTime createdTime = DateTime.parse(ticket['ticketCreationTime'] ?? "N/A");
+    DateTime createdTime = DateTime.parse(ticket['ticketCreationTime'] ?? DateTime.now().toIso8601String());
     String formattedCreatedTime = DateFormat('dd MMM, hh:mm a').format(createdTime);
     Color statusColor;
     switch (ticket['ticketStatus'].toString().toLowerCase()) {
@@ -871,132 +969,94 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-      elevation: 2,
+      elevation: Theme.of(context).cardTheme.elevation,
+      color: context.secondaryCardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
         side: BorderSide(color: statusColor.withOpacity(0.2), width: 1),
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
+      child: ListTile(
+        title: Text(
+          '${ticket['plazaName']?.toString() ?? strings.naLabel} | ${ticket['entryLaneId']?.toString() ?? strings.naLabel}',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textPrimaryColor),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              ticket['ticketRefId']?.toString() ?? strings.naLabel,
+              style: TextStyle(color: context.textPrimaryColor),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${ticket['vehicleNumber']?.toString() ?? strings.naLabel} | ${ticket['vehicleType']?.toString() ?? strings.naLabel} | $formattedCreatedTime',
+              style: TextStyle(color: context.textPrimaryColor),
+            ),
+            if (ticket['remarks']?.isNotEmpty ?? false)
+              Text(
+                ticket['remarks'],
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: context.textPrimaryColor),
+              ),
+          ],
+        ),
+        trailing: Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color),
         onTap: () {
-          developer.log('Ticket card tapped: ${ticket['ticketId']}');
+          developer.log('Ticket card tapped: ${ticket['ticketId']}', name: 'TicketHistory');
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ChangeNotifierProvider<TicketHistoryViewModel>(
-                create: (_) => TicketHistoryViewModel(),
+              builder: (context) => ChangeNotifierProvider<TicketHistoryViewModel>.value(
+                value: _viewModel,
                 child: ViewTicketScreen(ticketId: ticket['ticketId'].toString()),
               ),
             ),
           ).then((_) => _refreshData());
         },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${ticket['plazaName']?.toString() ?? strings.naLabel} | ${ticket['entryLaneId']?.toString() ?? strings.naLabel}',
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.normal, color: Colors.black),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            ticket['ticketStatus'].toString(),
-                            style: TextStyle(color: statusColor, fontWeight: FontWeight.w600, fontSize: 11),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      ticket['ticketRefId']?.toString() ?? strings.naLabel,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.normal, color: Colors.black),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          ticket['vehicleNumber']?.toString() ?? strings.naLabel,
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.normal, color: Colors.black),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 6.0),
-                          child: Text('|', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                        ),
-                        Text(
-                          ticket['vehicleType']?.toString() ?? strings.naLabel,
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.normal, color: Colors.black),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 6.0),
-                          child: Text('|', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                        ),
-                        Text(
-                          formattedCreatedTime,
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.normal, color: Colors.black),
-                        ),
-                      ],
-                    ),
-                    if (ticket['remarks']?.isNotEmpty ?? false) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        ticket['remarks'],
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.normal, color: Colors.black),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: AppColors.primary,
-                size: 20,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
 
   Widget _buildShimmerList() {
     return ListView.builder(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
       itemCount: 10,
-      itemBuilder: (context, index) => Shimmer.fromColors(
-        baseColor: Colors.grey[300]!,
-        highlightColor: Colors.grey[100]!,
-        child: Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: ListTile(
-            title: Container(width: 100, height: 16, color: Colors.white),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(width: 150, height: 12, color: Colors.white),
-                Container(width: 120, height: 12, color: Colors.white),
-              ],
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: Theme.of(context).brightness == Brightness.light
+              ? AppColors.shimmerBaseLight
+              : AppColors.shimmerBaseDark,
+          highlightColor: Theme.of(context).brightness == Brightness.light
+              ? AppColors.shimmerHighlightLight
+              : AppColors.shimmerHighlightDark,
+          child: Card(
+            elevation: Theme.of(context).cardTheme.elevation,
+            shape: Theme.of(context).cardTheme.shape,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(width: 150, height: 18, color: context.backgroundColor),
+                        const SizedBox(height: 4),
+                        Container(width: 100, height: 14, color: context.backgroundColor),
+                        const SizedBox(height: 4),
+                        Container(width: 120, height: 14, color: context.backgroundColor),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -1006,53 +1066,37 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
 
     final error = _viewModel.error;
     if (error != null) {
-      developer.log('Error occurred: $error');
-      if (error is NoInternetException) {
-        errorTitle = strings.errorNoInternet;
-        errorMessage = strings.errorNoInternetMessage;
-      } else if (error is RequestTimeoutException) {
-        errorTitle = strings.errorRequestTimeout;
-        errorMessage = strings.errorRequestTimeoutMessage;
-      } else if (error is HttpException) {
-        errorTitle = strings.errorServerError;
-        errorMessage = strings.errorServerErrorMessage;
-        switch (error.statusCode) {
-          case 400:
-            errorTitle = strings.errorInvalidRequest;
-            errorMessage = strings.errorInvalidRequestMessage;
-            break;
-          case 401:
-            errorTitle = strings.errorUnauthorized;
-            errorMessage = strings.errorUnauthorizedMessage;
-            break;
-          case 403:
-            errorTitle = strings.errorAccessDenied;
-            errorMessage = strings.errorAccessDeniedMessage;
-            break;
-          case 404:
-            errorTitle = strings.errorNotFound;
-            errorMessage = strings.errorNotFoundMessage;
-            break;
-          case 500:
-            errorTitle = strings.errorServerIssue;
-            errorMessage = strings.errorServerIssueMessage;
-            break;
-          case 502:
-            errorTitle = strings.errorServiceUnavailable;
-            errorMessage = strings.errorServiceUnavailableMessage;
-            break;
-          case 503:
-            errorTitle = strings.errorServiceOverloaded;
-            errorMessage = strings.errorServiceOverloadedMessage;
-            break;
-          default:
-            errorTitle = strings.errorServerError;
-            errorMessage = strings.errorServerErrorMessage;
-            break;
-        }
-      } else if (error is ServiceException) {
-        errorTitle = strings.errorUnexpected;
-        errorMessage = strings.errorUnexpectedMessage;
+      developer.log('Error occurred: $error', name: 'TicketHistory');
+      switch (error.runtimeType) {
+        case NoInternetException _:
+          errorTitle = strings.errorNoInternet;
+          errorMessage = strings.errorNoInternetMessage;
+          break;
+        case RequestTimeoutException _:
+          errorTitle = strings.errorRequestTimeout;
+          errorMessage = strings.errorRequestTimeoutMessage;
+          break;
+        case HttpException _:
+          final httpError = error as HttpException;
+          errorTitle = strings.errorServerError;
+          errorMessage = strings.errorServerErrorMessage;
+          switch (httpError.statusCode) {
+            case 400: errorTitle = strings.errorInvalidRequest; errorMessage = strings.errorInvalidRequestMessage; break;
+            case 401: errorTitle = strings.errorUnauthorized; errorMessage = strings.errorUnauthorizedMessage; break;
+            case 403: errorTitle = strings.errorAccessDenied; errorMessage = strings.errorAccessDeniedMessage; break;
+            case 404: errorTitle = strings.errorNotFound; errorMessage = strings.errorNotFoundMessage; break;
+            case 500: errorTitle = strings.errorServerIssue; errorMessage = strings.errorServerIssueMessage; break;
+            case 502: errorTitle = strings.errorServiceUnavailable; errorMessage = strings.errorServiceUnavailableMessage; break;
+            case 503: errorTitle = strings.errorServiceOverloaded; errorMessage = strings.errorServiceOverloadedMessage; break;
+          }
+          break;
+        case ServiceException _:
+          errorTitle = strings.errorUnexpected;
+          errorMessage = strings.errorUnexpectedMessage;
+          break;
+        default:
+          errorTitle = strings.errorUnexpected;
+          errorMessage = error.toString();
       }
     }
 
@@ -1060,22 +1104,21 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 50, color: Colors.red),
-          SizedBox(height: 16),
-          Text(
-            errorTitle,
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
+          const SizedBox(height: 16),
+          Text(errorTitle, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.textPrimaryColor)),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(errorMessage, style: TextStyle(fontSize: 16, color: context.textPrimaryColor), textAlign: TextAlign.center),
           ),
-          SizedBox(height: 8),
-          Text(
-            errorMessage,
-            style: TextStyle(fontSize: 14),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 16),
-          ElevatedButton(
+          const SizedBox(height: 24),
+          CustomButtons.primaryButton(
+            height: 40,
+            width: 150,
+            text: strings.buttonRetry,
             onPressed: _refreshData,
-            child: Text(strings.buttonRetry),
+            context: context,
           ),
         ],
       ),
@@ -1087,17 +1130,24 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.history_toggle_off, size: 50, color: Colors.grey),
-          SizedBox(height: 16),
+          Icon(
+            Icons.history_toggle_off,
+            size: 50,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
           Text(
             strings.noTicketsFoundLabel,
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textPrimaryColor),
           ),
-          SizedBox(height: 8),
-          Text(
-            strings.adjustFiltersMessage,
-            style: TextStyle(fontSize: 14, color: Colors.grey),
-            textAlign: TextAlign.center,
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(
+              strings.adjustFiltersMessage,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
+              textAlign: TextAlign.center,
+            ),
           ),
         ],
       ),
@@ -1107,56 +1157,82 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen> with RouteAwa
   @override
   Widget build(BuildContext context) {
     final strings = S.of(context);
-    final filteredTickets = _getFilteredTickets(_viewModel.tickets);
-    final totalPages = (filteredTickets.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
-    final paginatedTickets = _getPaginatedTickets(filteredTickets);
+    return Consumer<TicketHistoryViewModel>(
+      builder: (context, viewModel, _) {
+        final filteredTickets = _getFilteredTickets(viewModel.tickets);
+        final totalPages = getTotalPages(filteredTickets);
+        final paginatedTickets = getPaginatedItems(filteredTickets, _currentPage);
 
-    return Scaffold(
-      backgroundColor: AppColors.lightThemeBackground,
-      appBar: CustomAppBar.appBarWithNavigation(
-        screenTitle: strings.titleTicketHistory,
-        onPressed: () => Navigator.pop(context),
-        darkBackground: true, context: context,
-      ),
-      body: Column(
-        children: [
-          _buildSearchField(strings),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _refreshData,
-              child: Stack(
-                children: [
-                  ListView(
-                    controller: _scrollController,
-                    physics: const AlwaysScrollableScrollPhysics(),
+        return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: CustomAppBar.appBarWithNavigationAndActions(
+            screenTitle: strings.titleTicketHistory,
+            onPressed: () => Navigator.pop(context),
+            darkBackground: Theme.of(context).brightness == Brightness.dark,
+            actions: [],
+            context: context,
+          ),
+          body: Column(
+            children: [
+              const SizedBox(height: 4),
+              _buildFilterChipsRow(strings),
+              _buildSearchField(strings),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _refreshData,
+                  child: Stack(
                     children: [
-                      if (_viewModel.error != null)
-                        SizedBox(height: MediaQuery.of(context).size.height * 0.6, child: _buildErrorState(strings))
-                      else if (filteredTickets.isEmpty && !_isLoading)
-                        SizedBox(height: MediaQuery.of(context).size.height * 0.6, child: _buildEmptyState(strings))
-                      else if (!_isLoading)
-                          ...paginatedTickets.map((ticket) => _buildTicketCard(ticket, strings)),
+                      ListView(
+                        controller: _scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          const SizedBox(height: 8),
+                          if (viewModel.error != null && !viewModel.isLoading)
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.6,
+                              child: _buildErrorState(strings),
+                            )
+                          else if (filteredTickets.isEmpty && !viewModel.isLoading)
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.6,
+                              child: _buildEmptyState(strings),
+                            )
+                          else if (!viewModel.isLoading)
+                              ...paginatedTickets.map((ticket) => _buildTicketCard(ticket, strings)),
+                        ],
+                      ),
+                      if (viewModel.isLoading)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: _buildShimmerList(),
+                        ),
                     ],
                   ),
-                  if (_isLoading) _buildShimmerList(),
-                ],
+                ),
+              ),
+            ],
+          ),
+          bottomNavigationBar: filteredTickets.isNotEmpty && !viewModel.isLoading
+              ? Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            padding: const EdgeInsets.all(4.0),
+            child: SafeArea(
+              child: PaginationControls(
+                currentPage: _currentPage,
+                totalPages: totalPages,
+                onPageChange: _updatePage,
               ),
             ),
-          ),
-          if (!_isLoading && filteredTickets.isNotEmpty)
-            PaginationControls(
-              currentPage: _currentPage,
-              totalPages: totalPages,
-              onPageChange: _updatePage,
-            ),
-        ],
-      ),
+          )
+              : null,
+        );
+      },
     );
   }
 }
 
 extension StringExtension on String {
   String capitalize() {
-    return "${this[0].toUpperCase}${substring(1).toLowerCase()}";
+    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
   }
 }

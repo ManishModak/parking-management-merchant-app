@@ -33,8 +33,8 @@ class MarkExitViewModel extends ChangeNotifier {
         'entryLaneId': ticket.entryLaneId,
         'entryLaneDirection': ticket.entryLaneDirection,
         'ticketCreationTime': ticket.createdTime.toIso8601String(),
-        'floorId': ticket.floorId.isEmpty ? 'N/A' : ticket.floorId,
-        'slotId': ticket.slotId.isEmpty ? 'N/A' : ticket.slotId,
+        'floorId': ticket.floorId != null ? 'N/A' : ticket.floorId,
+        'slotId': ticket.slotId != null ? 'N/A' : ticket.slotId,
         'ticketStatus': ticket.status.toString().split('.').last,
         'modificationTime': ticket.modificationTime?.toIso8601String(),
       }).toList();
@@ -64,8 +64,8 @@ class MarkExitViewModel extends ChangeNotifier {
         'status': responseData['status'] ?? 'complete',
         'entry_lane_id': responseData['entry_lane_id'] ?? '',
         'exit_lane_id': responseData['exit_lane_id'] ?? 'Not filled',
-        'floor_id': responseData['floor_id'].isEmpty ? 'N/A' : responseData['floor_id'],
-        'slot_id': responseData['slot_id'].isEmpty ? 'N/A' : responseData['slot_id'],
+        'floor_id': responseData['floor_id']?.isEmpty ?? true ? 'N/A' : responseData['floor_id'],
+        'slot_id': responseData['slot_id']?.isEmpty ?? true ? 'N/A' : responseData['slot_id'],
         'vehicle_number': responseData['vehicle_number'] ?? '',
         'vehicle_type': responseData['vehicle_type'] ?? '',
         'entry_time': responseData['entry_time'] ?? '',
@@ -74,7 +74,7 @@ class MarkExitViewModel extends ChangeNotifier {
         'fare_type': responseData['fare_type'] ?? '',
         'fare_amount': responseData['fare_amount']?.toString() ?? '',
         'total_charges': responseData['total_transaction']?.toString() ?? '',
-        'captured_images': responseData['captured_images'] ?? [], // Use captured_images instead of images
+        'captured_images': responseData['captured_images'] ?? [], // Use pre-mapped full URLs
       };
       developer.log('[MarkExitViewModel] Ticket marked as exited: $ticketDetails', name: 'MarkExitViewModel');
       return true;
@@ -86,6 +86,16 @@ class MarkExitViewModel extends ChangeNotifier {
     } finally {
       isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> markTicketAsCashPending(String ticketId) async {
+    try {
+      // Update your backend API to mark the ticket as "Cash Payment Pending"
+      // Example: await apiService.updateTicketStatus(ticketId, 'cash_pending');
+      notifyListeners();
+    } catch (e) {
+      // Handle error
     }
   }
 

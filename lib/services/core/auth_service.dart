@@ -47,7 +47,7 @@ class AuthService {
           Uri.parse(url),
           headers: {'Content-Type': 'application/json'},
           body: body,
-        ).timeout(const Duration(seconds: 10));
+        ).timeout(const Duration(seconds: 20));
 
         developer.log('[AUTH] Response: ${response.statusCode} - ${response.body}', name: 'AuthService');
 

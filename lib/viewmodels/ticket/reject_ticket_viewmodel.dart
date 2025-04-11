@@ -14,6 +14,7 @@ class RejectTicketViewModel extends ChangeNotifier {
   String? apiError;
   String? remarksError;
   String? currentTicketId;
+  Ticket? ticket; // Added to store the current ticket object
 
   final TextEditingController ticketIdController = TextEditingController();
   final TextEditingController ticketRefIdController = TextEditingController();
@@ -67,28 +68,27 @@ class RejectTicketViewModel extends ChangeNotifier {
 
       final fetchedTickets = await _ticketService.getOpenTickets();
       tickets = fetchedTickets.map((ticket) => {
-        'ticketID': ticket.ticketId,
-        'ticketRefID': ticket.ticketRefId,
-        'plazaID': ticket.plazaId,
+        'ticketId': ticket.ticketId,
+        'ticketRefId': ticket.ticketRefId,
+        'plazaId': ticket.plazaId,
         'vehicleNumber': ticket.vehicleNumber,
         'vehicleType': ticket.vehicleType,
-        'plazaName': "Plaza: ${ticket.plazaId}", // Fixed plazaName mapping
+        'plazaName': "Plaza: ${ticket.plazaId}", // Consider fetching actual plaza name if available
         'entryTime': ticket.entryTime ?? DateTime.now().toIso8601String(),
-        'status': ticket.status.toString().split('.').last,
+        'ticketStatus': ticket.status.toString().split('.').last,
         'entryLaneId': ticket.entryLaneId,
         'entryLaneDirection': ticket.entryLaneDirection,
         'ticketCreationTime': ticket.createdTime.toIso8601String(),
-        'floorId': ticket.floorId.isEmpty ? 'N/A' : ticket.floorId,
-        'slotId': ticket.slotId.isEmpty ? 'N/A' : ticket.slotId,
+        'floorId': ticket.floorId ?? 'N/A',
+        'slotId': ticket.slotId ?? 'N/A',
         'capturedImages': ticket.capturedImages ?? [],
       }).toList();
 
-      if (tickets.isEmpty) {
-        developer.log('[RejectTicketViewModel] No rejectable tickets found.');
-      }
+      developer.log('[RejectTicketViewModel] Fetched ${tickets.length} tickets', name: 'RejectTicketViewModel');
     } catch (e) {
       error = e as Exception;
-      developer.log('[RejectTicketViewModel] Error fetching tickets: $e');
+      apiError = _getErrorMessage(e);
+      developer.log('[RejectTicketViewModel] Error fetching tickets: $e', name: 'RejectTicketViewModel');
     } finally {
       isLoading = false;
       notifyListeners();
@@ -99,13 +99,16 @@ class RejectTicketViewModel extends ChangeNotifier {
     try {
       isLoading = true;
       error = null;
+      ticket = null; // Reset ticket
       notifyListeners();
 
-      final ticket = await _ticketService.getTicketDetails(ticketId);
-      initializeTicketDataFromTicket(ticket);
-      developer.log('[RejectTicketViewModel] Fetched ticket details for $ticketId: ${ticket.ticketId}');
+      final fetchedTicket = await _ticketService.getTicketDetails(ticketId);
+      ticket = fetchedTicket; // Store the ticket object
+      initializeTicketDataFromTicket(fetchedTicket);
+      developer.log('[RejectTicketViewModel] Fetched ticket details for $ticketId: ${fetchedTicket.ticketId}');
     } catch (e) {
       error = e as Exception;
+      apiError = _getErrorMessage(e);
       developer.log('[RejectTicketViewModel] Error fetching ticket details: $e');
     } finally {
       isLoading = false;
@@ -115,24 +118,21 @@ class RejectTicketViewModel extends ChangeNotifier {
 
   void initializeTicketDataFromTicket(Ticket ticket) {
     currentTicketId = ticket.ticketId;
-    ticketIdController.text = ticket.ticketId ?? '';
-    ticketRefIdController.text = ticket.ticketRefId ?? '';
-    plazaIdController.text = ticket.plazaId ?? '';
-    entryLaneIdController.text = ticket.entryLaneId;
-    entryLaneDirectionController.text = ticket.entryLaneDirection;
-    floorIdController.text = ticket.floorId.isEmpty ? 'N/A' : ticket.floorId;
-    slotIdController.text = ticket.slotId.isEmpty ? 'N/A' : ticket.slotId;
-    vehicleNumberController.text = ticket.vehicleNumber ?? '';
-    vehicleTypeController.text = ticket.vehicleType;
+    ticketIdController.text = ticket.ticketId ?? 'N/A';
+    ticketRefIdController.text = ticket.ticketRefId ?? 'N/A';
+    plazaIdController.text = ticket.plazaId ?? 'N/A';
+    entryLaneIdController.text = ticket.entryLaneId ?? 'N/A';
+    entryLaneDirectionController.text = ticket.entryLaneDirection ?? 'N/A';
+    floorIdController.text = ticket.floorId ?? 'N/A';
+    slotIdController.text = ticket.slotId ?? 'N/A';
+    vehicleNumberController.text = ticket.vehicleNumber ?? 'N/A';
+    vehicleTypeController.text = ticket.vehicleType ?? 'N/A';
     ticketStatusController.text = ticket.status.toString().split('.').last;
     capturedImageUrls = ticket.capturedImages ?? [];
 
-    if (ticket.entryTime != null) {
-      entryTimeController.text = DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(ticket.entryTime!));
-    } else {
-      entryTimeController.text = 'N/A';
-    }
-
+    entryTimeController.text = ticket.entryTime != null
+        ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(ticket.entryTime!))
+        : 'N/A';
     ticketCreationTimeController.text = DateFormat('dd MMM yyyy, hh:mm a').format(ticket.createdTime);
     remarksController.text = ticket.remarks ?? '';
 
@@ -141,7 +141,7 @@ class RejectTicketViewModel extends ChangeNotifier {
   }
 
   Future<bool> rejectTicket() async {
-    if (!validateForm()) return false;
+    if (!validateForm() || currentTicketId == null) return false;
 
     try {
       isLoading = true;
@@ -150,17 +150,37 @@ class RejectTicketViewModel extends ChangeNotifier {
       notifyListeners();
 
       await _ticketService.rejectTicket(currentTicketId!, remarksController.text);
-      await fetchOpenTickets();
+      developer.log('[RejectTicketViewModel] Ticket $currentTicketId rejected successfully');
       return true;
     } catch (e) {
       error = e as Exception;
-      apiError = e.toString();
+      apiError = _getErrorMessage(e);
       developer.log('[RejectTicketViewModel] Error rejecting ticket: $e');
       return false;
     } finally {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  String _getErrorMessage(Exception e) {
+    if (e is HttpException) {
+      switch (e.statusCode) {
+        case 400:
+          return 'Invalid request. Please check your input.';
+        case 401:
+          return 'Unauthorized. Please log in again.';
+        case 403:
+          return 'Access denied. You lack permission.';
+        case 404:
+          return 'Ticket not found. It may have been deleted.';
+        case 500:
+          return 'Server error. Please try again later.';
+        default:
+          return e.serverMessage ?? 'An unexpected error occurred.';
+      }
+    }
+    return e.toString();
   }
 
   @override
@@ -178,7 +198,7 @@ class RejectTicketViewModel extends ChangeNotifier {
     ticketCreationTimeController.dispose();
     ticketStatusController.dispose();
     remarksController.dispose();
-    capturedImageUrls = null; // Clear capturedImageUrls to prevent memory leaks
+    capturedImageUrls = null;
     super.dispose();
   }
 }

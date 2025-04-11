@@ -25,7 +25,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _secureStorage = SecureStorageService();
-  int _selectedIndex = 2;
+  int _selectedIndex = 0;
   bool _isLoadingProfile = false;
 
   late final List<Widget> _screens;
@@ -35,11 +35,9 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     developer.log('Initializing HomeScreen', name: 'HomeScreen');
 
-    // Initialize screens with keys to maintain their state
     _screens = [
-      const TransactionScreenWrapper(key: PageStorageKey('transactions')),
-      const MenuScreen(key: PageStorageKey('menu')),
       const DashboardScreen(key: PageStorageKey('dashboard')),
+      const MenuScreen(key: PageStorageKey('menu')),
       const NotificationsScreenWrapper(key: PageStorageKey('notifications')),
       const AccountSettingsScreen(key: PageStorageKey('settings')),
     ];
@@ -100,8 +98,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadProfileData() async {
     final strings = S.of(context);
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
-
-    setState(() => _isLoadingProfile = true);
     developer.log('Loading profile data', name: 'HomeScreen');
 
     try {
@@ -119,8 +115,24 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      await userViewModel.fetchUser(userId: userId, isCurrentAppUser: true);
-      developer.log('User profile loaded successfully for ID: $userId', name: 'HomeScreen');
+      // Use the new method to fetch and store the logged-in user's data
+      await userViewModel.fetchAndStoreCurrentUser(
+        userId: userId,
+        forceApiCall: true, // Force API call to get the latest data
+      );
+      developer.log('User profile fetched and stored successfully for ID: $userId', name: 'HomeScreen');
+
+      if (userViewModel.currentUser == null) {
+        developer.log('No user data returned from fetchAndStoreCurrentUser', name: 'HomeScreen', level: 900);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(strings.errorLoadingUserProfile),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
     } catch (e) {
       developer.log("Error fetching user data: $e", name: 'HomeScreen', level: 1000);
       if (mounted) {

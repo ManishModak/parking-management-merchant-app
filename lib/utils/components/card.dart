@@ -670,7 +670,7 @@ class CustomCards {
   }) {
     final strings = S.of(context);
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      margin: EdgeInsets.zero,
       elevation: 3,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
@@ -695,20 +695,15 @@ class CustomCards {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Stack(
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.only(right: 65),
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                strings.labelPlazaName,
-                                style: TextStyle(fontSize: 16, color: context.textPrimaryColor),
-                              ),
-                              Text(
-                                plazaName,
+                                '${strings.labelPlazaName}: $plazaName',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -718,24 +713,21 @@ class CustomCards {
                             ],
                           ),
                         ),
-                        Positioned(
-                          right: 0,
-                          child: Container(
-                            width: 60,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: fare.isDeleted ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
+                        Container(
+                          width: 60,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: fare.isDeleted ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            fare.isDeleted ? strings.labelInactive : strings.labelActive,
+                            style: TextStyle(
+                              color: fare.isDeleted ? AppColors.error : AppColors.success,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
                             ),
-                            child: Text(
-                              fare.isDeleted ? strings.labelInactive : strings.labelActive,
-                              style: TextStyle(
-                                color: fare.isDeleted ? AppColors.error : AppColors.success,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ],
@@ -750,7 +742,7 @@ class CustomCards {
                             children: [
                               Text(
                                 strings.labelVehicleType,
-                                style: TextStyle(color: context.textPrimaryColor, fontSize: 12),
+                                style: TextStyle(color: context.textPrimaryColor, fontWeight: FontWeight.w600, fontSize: 12),
                               ),
                               Text(
                                 fare.vehicleType,
@@ -765,7 +757,7 @@ class CustomCards {
                             children: [
                               Text(
                                 strings.labelFareType,
-                                style: TextStyle(color: context.textPrimaryColor, fontSize: 12),
+                                style: TextStyle(color: context.textPrimaryColor, fontWeight: FontWeight.w600, fontSize: 12),
                               ),
                               Text(
                                 fare.fareType,
@@ -786,7 +778,7 @@ class CustomCards {
                             children: [
                               Text(
                                 strings.labelAmount,
-                                style: TextStyle(color: context.textPrimaryColor, fontSize: 12),
+                                style: TextStyle(color: context.textPrimaryColor, fontWeight: FontWeight.w600, fontSize: 12),
                               ),
                               Text(
                                 '₹${fare.fareRate}',
@@ -801,7 +793,7 @@ class CustomCards {
                             children: [
                               Text(
                                 strings.labelEffectivePeriod,
-                                style: TextStyle(color: context.textPrimaryColor, fontSize: 12),
+                                style: TextStyle(color: context.textPrimaryColor, fontWeight: FontWeight.w600, fontSize: 12),
                               ),
                               Text(
                                 '${DateFormat('dd MMM yyyy').format(fare.startEffectDate)} - ${fare.endEffectDate != null ? DateFormat('dd MMM yyyy').format(fare.endEffectDate!) : strings.labelOngoing}',

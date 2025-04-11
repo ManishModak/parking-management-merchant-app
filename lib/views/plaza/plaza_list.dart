@@ -14,9 +14,11 @@ import 'package:merchant_app/services/storage/secure_storage_service.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../config/app_config.dart';
 import '../../generated/l10n.dart';
+import '../../models/plaza.dart';
 import '../../utils/components/card.dart';
-import '../../viewmodels/plaza/plaza_viewmodel.dart';
+import '../../utils/components/pagination_mixin.dart';
 import '../../utils/exceptions.dart';
+import '../../viewmodels/plaza/plaza_list_viewmodel.dart';
 
 class PlazaListScreen extends StatefulWidget {
   final bool modifyPlazaInfo;
@@ -27,17 +29,16 @@ class PlazaListScreen extends StatefulWidget {
   State<PlazaListScreen> createState() => _PlazaListScreenState();
 }
 
-class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
+class _PlazaListScreenState extends State<PlazaListScreen>
+    with RouteAware, PaginatedListMixin<Plaza> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   final SecureStorageService _secureStorage = SecureStorageService();
-  late PlazaViewModel _viewModel;
+  late PlazaListViewModel _viewModel;
   late RouteObserver<ModalRoute> _routeObserver;
   String _searchQuery = '';
   int _currentPage = 1;
   Timer? _debounce;
-  static const int _itemsPerPage = 10;
-  bool _isLoading = false;
   final customCacheManager = CacheManager(
     Config(
       'plazaImageCache',
@@ -46,35 +47,46 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
     ),
   );
 
+  // Filter-related state
+  final Set<String> _selectedStatuses = {};
+
   @override
   void initState() {
     super.initState();
-    _viewModel = Provider.of<PlazaViewModel>(context, listen: false);
+    _viewModel = Provider.of<PlazaListViewModel>(context, listen: false);
     developer.log('PlazaListScreen initialized', name: 'PlazaList');
     _loadInitialData();
-    _searchController.addListener(() {
-      if (_debounce?.isActive ?? false) _debounce?.cancel();
-      _debounce = Timer(const Duration(milliseconds: 300), () {
-        setState(() {
-          _searchQuery = _searchController.text.toLowerCase();
-          _currentPage = 1;
-        });
-        _fetchImagesForCurrentPage();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _onSearchChanged() {
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      setState(() {
+        _searchQuery = _searchController.text.trim().toLowerCase();
+        _currentPage = 1;
       });
+      _fetchImagesForCurrentPage();
     });
   }
 
   Future<void> _loadInitialData() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
-    final userId = await _secureStorage.getUserId();
-    if (userId != null) {
-      developer.log('Loading initial plaza list for userId: $userId', name: 'PlazaList');
-      await _viewModel.fetchUserPlazas(userId);
-      await _fetchImagesForCurrentPage();
-    }
-    if (mounted) {
-      setState(() => _isLoading = false);
+    final userData = await _secureStorage.getUserData();
+    if (userData != null && userData['entityId'] != null) {
+      final entityId = userData['entityId'].toString();
+      developer.log('Loading initial plaza list for entityId: $entityId', name: 'PlazaList');
+      // Fetch plazas
+      await _viewModel.fetchUserPlazas(entityId);
+
+      // Check if the fetch was successful before fetching images
+      if (!mounted) return; // Check mount status again after async gap
+      if (_viewModel.error == null) { // <--- Check for error
+        await _fetchImagesForCurrentPage();
+      } else {
+        // Optionally log that images won't be fetched due to error
+        developer.log('Skipping image fetch due to error in fetching plazas.', name: 'PlazaList');
+      }
     }
   }
 
@@ -90,6 +102,7 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
     _debounce?.cancel();
     _routeObserver.unsubscribe(this);
     _scrollController.dispose();
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
   }
@@ -99,51 +112,73 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
 
   Future<void> _refreshData() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
     await customCacheManager.emptyCache();
     _viewModel.clearPlazaImages();
     final userId = await _secureStorage.getUserId();
     if (userId != null) {
       developer.log('Refreshing plaza list for userId: $userId', name: 'PlazaList');
+      // Fetch plazas
       await _viewModel.fetchUserPlazas(userId);
-      await _fetchImagesForCurrentPage();
-    }
-    if (mounted) {
-      setState(() => _isLoading = false);
+
+      // Check if the fetch was successful before fetching images
+      if (!mounted) return; // Check mount status again after async gap
+      if (_viewModel.error == null) { // <--- Check for error
+        await _fetchImagesForCurrentPage();
+      } else {
+        developer.log('Skipping image fetch during refresh due to error in fetching plazas.', name: 'PlazaList');
+      }
     }
   }
 
   Future<void> _fetchImagesForCurrentPage() async {
+    // Add an early exit if there's already an error or plazas are empty
+    if (_viewModel.error != null || _viewModel.userPlazas.isEmpty) {
+      developer.log('Skipping _fetchImagesForCurrentPage: Error exists or no plazas.', name: 'PlazaList');
+      return;
+    }
+
     final filteredPlazas = _getFilteredPlazas(_viewModel.userPlazas);
-    final paginatedPlazas = _getPaginatedPlazas(filteredPlazas);
-    final plazaIds = paginatedPlazas.map((p) => p.plazaId.toString()).toList();
-    await _viewModel.fetchPlazaImages(plazaIds);
+    final paginatedPlazas = getPaginatedItems(filteredPlazas, _currentPage);
+    final plazaIds = paginatedPlazas
+        .map((p) => p.plazaId)
+        .where((id) => id != null)
+        .cast<String>()
+        .toList();
+
+    // Check again if there are actually IDs to fetch for the current page
+    if (plazaIds.isNotEmpty) {
+      await _viewModel.fetchPlazaImages(plazaIds);
+    } else {
+      developer.log('No plaza IDs found on current page to fetch images for.', name: 'PlazaList');
+    }
   }
 
-  List<dynamic> _getFilteredPlazas(List<dynamic> plazas) {
-    if (_searchQuery.isEmpty) return plazas;
+  List<Plaza> _getFilteredPlazas(List<Plaza> plazas) {
     return plazas.where((plaza) {
-      return plaza.plazaId.toString().contains(_searchQuery) ||
+      final matchesSearch = _searchQuery.isEmpty ||
+          (plaza.plazaId?.contains(_searchQuery) ?? false) ||
           plaza.plazaName.toLowerCase().contains(_searchQuery) ||
           plaza.address.toLowerCase().contains(_searchQuery);
-    }).toList();
-  }
 
-  List<dynamic> _getPaginatedPlazas(List<dynamic> filteredPlazas) {
-    final startIndex = (_currentPage - 1) * _itemsPerPage;
-    final endIndex = startIndex + _itemsPerPage;
-    return endIndex > filteredPlazas.length
-        ? filteredPlazas.sublist(startIndex)
-        : filteredPlazas.sublist(startIndex, endIndex);
+      final matchesStatus = _selectedStatuses.isEmpty ||
+          (plaza.plazaStatus != null && _selectedStatuses.contains(plaza.plazaStatus!.toLowerCase()));
+
+      return matchesSearch && matchesStatus;
+    }).toList();
   }
 
   void _updatePage(int newPage) {
     final filteredPlazas = _getFilteredPlazas(_viewModel.userPlazas);
-    final totalPages = (filteredPlazas.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
-    if (newPage < 1 || newPage > totalPages) return;
-    setState(() => _currentPage = newPage);
-    developer.log('Page updated to: $_currentPage', name: 'PlazaList');
-    _fetchImagesForCurrentPage();
+    updatePage(newPage, filteredPlazas, (page) {
+      setState(() => _currentPage = page);
+      developer.log('Page updated to: $_currentPage', name: 'PlazaList');
+      _fetchImagesForCurrentPage();
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    });
   }
 
   Widget _buildSearchField(S strings) {
@@ -161,13 +196,15 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
             children: [
               CustomFormFields.searchFormField(
                 controller: _searchController,
-                hintText: strings.hintSearchPlazas, // Assuming this exists in l10n
+                hintText: strings.hintSearchPlazas,
                 context: context,
               ),
               const SizedBox(height: 8),
               Text(
                 '${strings.labelLastUpdated}: ${DateTime.now().toString().substring(0, 16)}. ${strings.labelSwipeToRefresh}',
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: context.textPrimaryColor,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -178,19 +215,293 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
   }
 
   Widget _buildFilterChipsRow(S strings) {
-    // Placeholder for filters (not implemented in original PlazaListScreen)
-    return const SizedBox.shrink(); // Add filter logic if needed later
+    final selectedFilters = _selectedStatuses
+        .map((s) => '${strings.labelStatus}: ${s.capitalize()}')
+        .toList();
+    final textColor = context.textPrimaryColor;
+
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+          child: Row(
+            children: [
+              if (selectedFilters.isNotEmpty) ...[
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedStatuses.clear();
+                      _currentPage = 1;
+                    });
+                    _fetchImagesForCurrentPage();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: context.secondaryCardColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      strings.resetAllLabel,
+                      style: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              _buildMoreFiltersChip(strings),
+              if (selectedFilters.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                ...selectedFilters.map((filter) => Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  child: Chip(
+                    label: Text(filter),
+                    onDeleted: () {
+                      setState(() {
+                        _selectedStatuses.remove(filter.split(': ')[1].toLowerCase());
+                      });
+                      _fetchImagesForCurrentPage();
+                    },
+                    deleteIcon: const Icon(Icons.close, size: 16),
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    labelStyle: TextStyle(color: textColor),
+                    deleteIconColor: textColor,
+                  ),
+                )),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMoreFiltersChip(S strings) {
+    final hasActiveFilters = _selectedStatuses.isNotEmpty;
+    final textColor = context.textPrimaryColor;
+
+    return GestureDetector(
+      onTap: _showAllFiltersDialog,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: context.secondaryCardColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.filter_list,
+              color: textColor,
+              size: 16,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              strings.filtersLabel,
+              style: TextStyle(
+                color: textColor,
+                fontWeight: hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAllFiltersDialog() {
+    final strings = S.of(context);
+    final statuses = _viewModel.userPlazas
+        .map((p) => p.plazaStatus.toLowerCase() ?? '')
+        .where((plazaStatus) => plazaStatus.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.compareTo(b));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.cardColor,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: context.cardColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              height: MediaQuery.of(context).size.height * 0.6,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    child: Container(
+                      width: 50,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.light
+                            ? Colors.grey[300]
+                            : Colors.grey[600],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: Text(
+                      strings.advancedFiltersLabel,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: context.textPrimaryColor,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        _buildFilterSection(
+                          title: strings.labelStatus,
+                          options: statuses
+                              .map((status) => {
+                            'key': status,
+                            'label': status.capitalize(),
+                          })
+                              .toList(),
+                          selectedItems: _selectedStatuses,
+                          onChanged: (value, isSelected) {
+                            setDialogState(() {
+                              if (isSelected) {
+                                _selectedStatuses.add(value);
+                              } else {
+                                _selectedStatuses.remove(value);
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: CustomButtons.secondaryButton(
+                            height: 40,
+                            text: strings.clearAllLabel,
+                            onPressed: () {
+                              setDialogState(() {
+                                _selectedStatuses.clear();
+                              });
+                            },
+                            context: context,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: CustomButtons.primaryButton(
+                            height: 40,
+                            text: strings.applyLabel,
+                            onPressed: () {
+                              setState(() {
+                                _currentPage = 1;
+                              });
+                              _fetchImagesForCurrentPage();
+                              Navigator.pop(context);
+                            },
+                            context: context,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterSection({
+    required String title,
+    required List<Map<String, String>> options,
+    required Set<String> selectedItems,
+    required Function(String, bool) onChanged,
+  }) {
+    final textColor = context.textPrimaryColor;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: options.map((option) {
+              final isSelected = selectedItems.contains(option['key']);
+              return FilterChip(
+                label: Text(option['label'] ?? ''),
+                selected: isSelected,
+                onSelected: (bool value) {
+                  onChanged(option['key']!, value);
+                },
+                selectedColor: AppColors.primary.withOpacity(0.2),
+                checkmarkColor: textColor,
+                backgroundColor: context.secondaryCardColor,
+                labelStyle: TextStyle(
+                  color: isSelected ? textColor : Colors.grey[400],
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Divider(
+          color: Theme.of(context).brightness == Brightness.light
+              ? Colors.grey[300]
+              : Colors.grey[600],
+        ),
+      ],
+    );
   }
 
   Widget _buildShimmerList() {
     return ListView.builder(
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: _itemsPerPage,
+      itemCount: itemsPerPage,
       itemBuilder: (context, index) {
         return Shimmer.fromColors(
-          baseColor: AppColors.shimmerBaseLight,
-          highlightColor: AppColors.shimmerHighlightLight,
+          baseColor: Theme.of(context).brightness == Brightness.light
+              ? AppColors.shimmerBaseLight
+              : AppColors.shimmerBaseDark,
+          highlightColor: Theme.of(context).brightness == Brightness.light
+              ? AppColors.shimmerHighlightLight
+              : AppColors.shimmerHighlightDark,
           child: Card(
             elevation: Theme.of(context).cardTheme.elevation,
             shape: Theme.of(context).cardTheme.shape,
@@ -204,18 +515,30 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
                     Container(
                       width: 100,
                       height: 100,
-                      color: Colors.white,
+                      color: context.backgroundColor,
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(width: double.infinity, height: 20, color: Colors.white),
+                          Container(
+                            width: double.infinity,
+                            height: 20,
+                            color: context.backgroundColor,
+                          ),
                           const SizedBox(height: 8),
-                          Container(width: 120, height: 16, color: Colors.white),
+                          Container(
+                            width: 120,
+                            height: 16,
+                            color: context.backgroundColor,
+                          ),
                           const SizedBox(height: 8),
-                          Container(width: 180, height: 32, color: Colors.white),
+                          Container(
+                            width: 180,
+                            height: 32,
+                            color: context.backgroundColor,
+                          ),
                         ],
                       ),
                     ),
@@ -229,30 +552,34 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
     );
   }
 
-  Widget _buildErrorState(PlazaViewModel viewModel, S strings) {
+  Widget _buildErrorState(PlazaListViewModel viewModel, S strings) {
     String errorTitle = strings.errorTitleDefault;
     String errorMessage = strings.errorMessageDefault;
-    String? errorDetails;
 
     final error = viewModel.error;
     if (error != null) {
       developer.log('Error occurred: $error', name: 'PlazaList');
-      if (error is NoInternetException) {
-        errorTitle = strings.errorTitleNoInternet;
-        errorMessage = strings.errorMessageNoInternet;
-      } else if (error is RequestTimeoutException) {
-        errorTitle = strings.errorTitleTimeout;
-        errorMessage = strings.errorMessageTimeout;
-      } else if (error is HttpException) {
-        errorTitle = strings.errorTitleServer;
-        errorMessage = error.serverMessage ?? strings.errorMessageServer;
-        errorDetails = strings.errorDetailsUnexpected;
-      } else if (error.toString().contains('ServerConnectionException') || error.toString().contains('Connection refused')) {
-        errorTitle = strings.errorTitleServer;
-        errorMessage = strings.errorMessageServer;
-      } else {
-        errorMessage = error.toString().split(':').last.trim();
-        errorDetails = strings.errorDetailsUnexpected;
+      switch (error.runtimeType) {
+        case NoInternetException _:
+          errorTitle = strings.errorTitleNoInternet;
+          errorMessage = strings.errorMessageNoInternet;
+          break;
+        case RequestTimeoutException _:
+          errorTitle = strings.errorTitleTimeout;
+          errorMessage = strings.errorMessageTimeout;
+          break;
+        case HttpException _:
+          final httpError = error as HttpException;
+          errorTitle = strings.errorTitleWithCode(httpError.statusCode ?? 0);
+          errorMessage = httpError.message;
+          break;
+        case ServerConnectionException _:
+          errorTitle = strings.errorTitleServer;
+          errorMessage = strings.errorMessageServer;
+          break;
+        default:
+          errorTitle = strings.errorUnexpected;
+          errorMessage = error.toString().split(':').last.trim();
       }
     }
 
@@ -262,18 +589,20 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
         children: [
           Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
           const SizedBox(height: 16),
-          Text(errorTitle, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(errorTitle, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.textPrimaryColor)),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(errorMessage, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
+            child: Text(errorMessage, style: TextStyle(fontSize: 16, color: context.textPrimaryColor), textAlign: TextAlign.center),
           ),
-          if (errorDetails != null) ...[
-            const SizedBox(height: 8),
-            Text(errorDetails, style: const TextStyle(fontSize: 14, color: Colors.grey)),
-          ],
           const SizedBox(height: 24),
-          CustomButtons.primaryButton(height: 40, width: 150,text: strings.buttonRetry, onPressed: _refreshData, context: context)
+          CustomButtons.primaryButton(
+            height: 40,
+            width: 150,
+            text: strings.buttonRetry,
+            onPressed: _refreshData,
+            context: context,
+          ),
         ],
       ),
     );
@@ -282,11 +611,11 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final strings = S.of(context);
-    return Consumer<PlazaViewModel>(
+    return Consumer<PlazaListViewModel>(
       builder: (context, viewModel, _) {
         final filteredPlazas = _getFilteredPlazas(viewModel.userPlazas);
-        final totalPages = (filteredPlazas.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
-        final paginatedPlazas = _getPaginatedPlazas(filteredPlazas);
+        final totalPages = getTotalPages(filteredPlazas);
+        final paginatedPlazas = getPaginatedItems(filteredPlazas, _currentPage);
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -316,37 +645,45 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: _refreshData,
+                  color: Theme.of(context).colorScheme.primary,
                   child: Stack(
                     children: [
                       ListView(
                         controller: _scrollController,
                         physics: const AlwaysScrollableScrollPhysics(),
                         children: [
-                          SizedBox(height: 8,),
-                          if (viewModel.error != null && !_isLoading)
+                          const SizedBox(height: 8),
+                          if (viewModel.error != null && !viewModel.isLoading)
                             SizedBox(
                               height: MediaQuery.of(context).size.height * 0.5,
                               child: _buildErrorState(viewModel, strings),
                             )
-                          else if (filteredPlazas.isEmpty && !_isLoading)
+                          else if (filteredPlazas.isEmpty && !viewModel.isLoading)
                             SizedBox(
                               height: MediaQuery.of(context).size.height * 0.6,
-                              child: Center(child: Text(strings.messageNoPlazasFound)), // Assuming this exists
+                              child: Center(
+                                child: Text(
+                                  strings.messageNoPlazasFound,
+                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: context.textPrimaryColor,
+                                  ),
+                                ),
+                              ),
                             )
-                          else if (!_isLoading)
+                          else if (!viewModel.isLoading)
                               ...paginatedPlazas.map((plaza) {
-                                final imageUrl = viewModel.plazaImages[plaza.plazaId.toString()];
+                                final imageUrl = viewModel.plazaImages[plaza.plazaId];
                                 return CustomCards.plazaCard(
                                   imageUrl: imageUrl,
                                   plazaName: plaza.plazaName,
-                                  plazaId: plaza.plazaId,
+                                  plazaId: plaza.plazaId ?? '',
                                   location: plaza.address,
                                   onTap: () {
                                     developer.log('Plaza card tapped: ${plaza.plazaId}', name: 'PlazaList');
                                     Navigator.pushNamed(
                                       context,
                                       widget.modifyPlazaInfo ? AppRoutes.plazaInfo : AppRoutes.plazaFaresList,
-                                      arguments: widget.modifyPlazaInfo ? plaza.plazaId : plaza,
+                                      arguments: widget.modifyPlazaInfo ? plaza.plazaId ?? '' : plaza,
                                     );
                                   },
                                   context: context,
@@ -354,17 +691,19 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
                               }),
                         ],
                       ),
-                      if (_isLoading) Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: _buildShimmerList(),
-                      ),
+                      if (viewModel.isLoading)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: _buildShimmerList(),
+                        ),
                     ],
                   ),
                 ),
               ),
             ],
           ),
-          bottomNavigationBar: Container(
+          bottomNavigationBar: filteredPlazas.isNotEmpty && totalPages > 1 && !viewModel.isLoading
+              ? Container(
             color: Theme.of(context).scaffoldBackgroundColor,
             padding: const EdgeInsets.all(4.0),
             child: SafeArea(
@@ -374,9 +713,16 @@ class _PlazaListScreenState extends State<PlazaListScreen> with RouteAware {
                 onPageChange: _updatePage,
               ),
             ),
-          ),
+          )
+              : null,
         );
       },
     );
+  }
+}
+
+extension StringExtension on String {
+  String capitalize() {
+    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
   }
 }

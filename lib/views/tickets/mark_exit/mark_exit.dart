@@ -349,7 +349,7 @@ class _MarkExitScreenState extends State<MarkExitScreen> with RouteAware {
             MaterialPageRoute(
               builder: (context) => ChangeNotifierProvider.value(
                 value: _viewModel,
-                child: MarkExitDetailsScreen(ticket: ticket),
+                child: MarkExitDetailsScreen(ticketId: ticket['ticketID'],),
               ),
             ),
           ).then((_) => _refreshData());

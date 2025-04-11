@@ -37,7 +37,7 @@ class MenuScreen extends StatelessWidget {
       ),
       body: ListView(
         children: [
-          SizedBox(height: 26),
+          SizedBox(height: 12,),
           _buildDropDown(
             context: context,
             title: strings.menuPlazas,
@@ -102,11 +102,6 @@ class MenuScreen extends StatelessWidget {
                 title: strings.menuTicketHistory,
                 icon: Icons.history,
                 onTap: () => _navigate(context, AppRoutes.ticketHistory),
-              ),
-              MenuCardItem(
-                title: strings.menuMarkExit,
-                icon: Icons.exit_to_app,
-                onTap: () => _navigate(context, AppRoutes.markExit),
               ),
             ],
           ),

@@ -179,7 +179,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     children: <Widget>[
                       Text(
                         strings.registerMessage,
-                        style: Theme.of(context).textTheme.headlineMedium,
+                        style: Theme.of(context).textTheme.headlineSmall,
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 30),

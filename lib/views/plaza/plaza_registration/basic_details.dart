@@ -1,452 +1,544 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:merchant_app/models/plaza.dart';
+import 'package:merchant_app/utils/components/dropdown.dart';
+import 'package:merchant_app/utils/components/form_field.dart';
 import 'package:provider/provider.dart';
-import '../../../config/app_config.dart';
-import '../../../models/plaza.dart';
-import '../../../utils/components/dropdown.dart';
-import '../../../utils/components/form_field.dart';
+import '../../../generated/l10n.dart';
+import '../../../viewmodels/plaza/basic_details_viewmodel.dart';
 import '../../../viewmodels/plaza/plaza_viewmodel.dart';
 
-class BasicDetailsStep extends StatefulWidget {
+class BasicDetailsStep extends StatelessWidget {
   const BasicDetailsStep({super.key});
 
   @override
-  State<BasicDetailsStep> createState() => _BasicDetailsStepState();
-}
-
-class _BasicDetailsStepState extends State<BasicDetailsStep> {
-  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-
-  @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<PlazaViewModel>();
+    final basicDetailsVM = context.watch<PlazaViewModel>().basicDetails;
+    final strings = S.of(context);
+    final theme = Theme.of(context);
+    final bool isEnabled = basicDetailsVM.isEditable;
+    final bool isLoading = basicDetailsVM.isLoading;
 
-    return Form(
-      key: formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 16),
-          // Plaza Owner
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'Plaza Owner',
-            controller: viewModel.plazaOwnerController,
-            keyboardType: TextInputType.text,
-            isPassword: false,
-            enabled: false,
-            errorText: viewModel.formState.errors['plazaOwner'],
-          ),
-          const SizedBox(height: 16),
+    developer.log(
+        '[BasicDetailsStep UI Build] isEditable=$isEnabled, isLoading=$isLoading, Errors: ${basicDetailsVM.errors.isNotEmpty}',
+        name: 'BasicDetailsStep');
 
-          // Plaza Name
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'Plaza Name',
-            controller: viewModel.plazaNameController,
-            keyboardType: TextInputType.text,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['plazaName'],
-          ),
-          const SizedBox(height: 16),
+    final ownerName = basicDetailsVM.basicDetails['plazaOwner'] as String?;
+    final ownerId = basicDetailsVM.basicDetails['plazaOwnerId'] as String?;
+    final plazaOwnerDisplay = (ownerName != null && ownerName.isNotEmpty && ownerId != null && ownerId.isNotEmpty)
+        ? '$ownerName (ID: $ownerId)'
+        : (ownerName != null && ownerName.isNotEmpty ? ownerName : strings.labelUserDataNotAvailable);
 
-          // Plaza Operator Name
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'Plaza Operator Name',
-            controller: viewModel.operatorNameController,
-            keyboardType: TextInputType.text,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['operatorName'],
-          ),
-          const SizedBox(height: 16),
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted && basicDetailsVM.plazaOwnerController.text != plazaOwnerDisplay) {
+        basicDetailsVM.plazaOwnerController.text = plazaOwnerDisplay;
+      }
+    });
 
-          // Plaza Operator ID
-          // CustomFormFields.primaryFormField(
-          //   label: 'Plaza Operator ID',
-          //   controller: viewModel.operatorIdController,
-          //   keyboardType: TextInputType.text,
-          //   isPassword: false,
-          //   enabled: viewModel.currentStep == 0 &&
-          //       (viewModel.completeTillStep <= 0 ||
-          //           viewModel.isBasicDetailsEditable),
-          //   errorText: viewModel.formState.errors['operatorId'],
-          // ),
-          // const SizedBox(height: 16),
+    final Color iconColor = isEnabled ? theme.iconTheme.color ?? theme.primaryColor : theme.disabledColor;
+    final Color disabledIconColor = theme.disabledColor;
 
-          // Mobile Number
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'Mobile Number',
-            controller: viewModel.mobileController,
-            keyboardType: TextInputType.phone,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['mobileNumber'],
-          ),
-          const SizedBox(height: 16),
-
-          // Email
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'Email',
-            controller: viewModel.emailController,
-            keyboardType: TextInputType.emailAddress,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['email'],
-          ),
-          const SizedBox(height: 16),
-
-          // Address
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'Address',
-            controller: viewModel.addressController,
-            keyboardType: TextInputType.text,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['address'],
-          ),
-          const SizedBox(height: 16),
-
-          // City
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'City',
-            controller: viewModel.cityController,
-            keyboardType: TextInputType.text,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['city'],
-          ),
-          const SizedBox(height: 16),
-
-          // District
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'District',
-            controller: viewModel.districtController,
-            keyboardType: TextInputType.text,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['district'],
-          ),
-          const SizedBox(height: 16),
-
-          // State
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'State',
-            controller: viewModel.stateController,
-            keyboardType: TextInputType.text,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['state'],
-          ),
-          const SizedBox(height: 16),
-
-          // Pincode
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'Pincode',
-            controller: viewModel.pincodeController,
-            keyboardType: TextInputType.number,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['pincode'],
-          ),
-          const SizedBox(height: 16),
-
-          // Geo Latitude
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'Geo Latitude',
-            controller: viewModel.latitudeController,
-            keyboardType: TextInputType.number,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['latitude'],
-          ),
-          const SizedBox(height: 16),
-
-          // Geo Longitude
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'Geo Longitude',
-            controller: viewModel.longitudeController,
-            keyboardType: TextInputType.number,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['longitude'],
-          ),
-          const SizedBox(height: 16),
-
-          // Plaza Category and Free Parking
-          SizedBox(
-            width: AppConfig.deviceWidth * 0.9,
-            child: Row(
-              children: [
-                Expanded(
-                  child: CustomDropDown.normalDropDown(context:context,
-                    label: "Plaza Category",
-                    value: viewModel.formState.basicDetails['plazaCategory'],
-                    items: Plaza.validPlazaCategories,
-                    enabled: viewModel.currentStep == 0 &&
-                        (viewModel.completeTillStep <= 0 ||
-                            viewModel.isBasicDetailsEditable),
-                    onChanged: (value) {
-                      viewModel.formState.basicDetails['plazaCategory'] = value;
-                    },
-                    // Disable dropdown if not editable
-                    errorText: viewModel
-                        .formState.errors['plazaCategory'], // Specific key
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: CustomDropDown.normalDropDown(context:context,
-                    label: "Plaza Sub-Category",
-                    value: viewModel.formState.basicDetails['plazaSubCategory'],
-                    items: Plaza.validPlazaSubCategories,
-                    enabled: viewModel.currentStep == 0 &&
-                        (viewModel.completeTillStep <= 0 ||
-                            viewModel.isBasicDetailsEditable),
-                    onChanged: (value) {
-                      viewModel.formState.basicDetails['plazaSubCategory'] =
-                          value;
-                    },
-                    // Disable dropdown if not editable
-                    errorText: viewModel
-                        .formState.errors['plazaSubCategory'], // Specific key
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          SizedBox(
-            width: AppConfig.deviceWidth * 0.9,
-            child: Row(
-              children: [
-                Expanded(
-                  child: CustomDropDown.normalDropDown(context:context,
-                    label: "Plaza Status",
-                    value: viewModel.formState.basicDetails['plazaStatus'],
-                    items: Plaza.validPlazaStatuses,
-                    enabled: viewModel.currentStep == 0 &&
-                        (viewModel.completeTillStep <= 0 ||
-                            viewModel.isBasicDetailsEditable),
-                    onChanged: (value) {
-                      viewModel.formState.basicDetails['plazaStatus'] = value;
-                    },
-                    // Disable dropdown if not editable
-                    errorText: viewModel
-                        .formState.errors['plazaStatus'], // Specific key
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: CustomDropDown.normalDropDown(context:context,
-                    label: "Free Parking",
-                    value: viewModel.formState.basicDetails['freeParking'] ?? false ? "Yes" : "No",
-                    items: ['Yes', 'No'],
-                    enabled: viewModel.currentStep == 0 &&
-                        (viewModel.completeTillStep <= 0 || viewModel.isBasicDetailsEditable),
-                    onChanged: (value) {
-                      viewModel.formState.basicDetails['freeParking'] = value == "Yes";
-                    },
-                    errorText: viewModel.formState.errors['freeParking'],
-                  ),
-                )
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Structure Type and Price Category
-          SizedBox(
-            width: AppConfig.deviceWidth * 0.9,
-            child: Row(
-              children: [
-                Expanded(
-                  child: CustomDropDown.normalDropDown(context:context,
-                    label: "Structure Type",
-                    value: viewModel.formState.basicDetails['structureType'],
-                    items: Plaza.validStructureTypes,
-                    enabled: viewModel.currentStep == 0 &&
-                        (viewModel.completeTillStep <= 0 ||
-                            viewModel.isBasicDetailsEditable),
-                    onChanged: (value) {
-                      viewModel.formState.basicDetails['structureType'] = value;
-                    },
-                    errorText: viewModel
-                        .formState.errors['structureType'], // Specific key
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: CustomDropDown.normalDropDown(context:context,
-                    label: "Price Category",
-                    value: viewModel.formState.basicDetails['priceCategory'],
-                    items: Plaza.validPriceCategories, //ToDo Custom
-                    enabled: viewModel.currentStep == 0 &&
-                        (viewModel.completeTillStep <= 0 ||
-                            viewModel.isBasicDetailsEditable),
-                    onChanged: (value) {
-                      viewModel.formState.basicDetails['priceCategory'] = value;
-                    },
-                    errorText: viewModel
-                        .formState.errors['priceCategory'], // Specific key
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Total Parking Slots
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'Total Parking Slots',
-            controller: viewModel.totalParkingSlotsController,
-            keyboardType: TextInputType.number,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['totalParkingSlots'],
-          ),
-          const SizedBox(height: 16),
-
-          // Two-Wheeler Capacity
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'Two-Wheeler Capacity',
-            controller: viewModel.twoWheelerCapacityController,
-            keyboardType: TextInputType.number,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['twoWheelerCapacity'],
-          ),
-          const SizedBox(height: 16),
-
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'LMV Capacity',
-            controller: viewModel.lmvCapacityController,
-            keyboardType: TextInputType.number,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['lmvCapacity'], // Correct key
-          ),
-          const SizedBox(height: 16),
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'LCV Capacity',
-            controller: viewModel.lcvCapacityController,
-            keyboardType: TextInputType.number,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['lcvCapacity'],
-          ),
-          const SizedBox(height: 16),
-          CustomFormFields.normalSizedTextFormField(context:context,
-            label: 'HMV Capacity',
-            controller: viewModel.hmvCapacityController,
-            keyboardType: TextInputType.number,
-            isPassword: false,
-            enabled: viewModel.currentStep == 0 &&
-                (viewModel.completeTillStep <= 0 ||
-                    viewModel.isBasicDetailsEditable),
-            errorText: viewModel.formState.errors['hmvCapacity'],
-          ),
-          const SizedBox(height: 16),
-
-          // Timing Fields
-          GestureDetector(
-            onTap: () async {
-              final TimeOfDay? pickedTime = await showTimePicker(
+    return AbsorbPointer(
+      absorbing: !isEnabled,
+      child: Opacity(
+        opacity: isEnabled ? 1.0 : 0.7,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              CustomFormFields.normalSizedTextFormField(
                 context: context,
-                initialTime: TimeOfDay.now(),
-                builder: (BuildContext context, Widget? child) {
-                  return MediaQuery(
-                    data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-                    child: child!,
-                  );
-                },
-              );
-              if (pickedTime != null) {
-                final formattedTime =
-                    '${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}';
-                viewModel.openingTimeController.text = formattedTime;
-                viewModel.formState.basicDetails['openingTime'] = formattedTime;
-              }
-            },
-            child: AbsorbPointer(
-              child: CustomFormFields.normalSizedTextFormField(context:context,
-                label: 'Opening Time',
-                controller: viewModel.openingTimeController,
-                keyboardType: TextInputType.none,
+                label: strings.labelPlazaOwner,
+                controller: basicDetailsVM.plazaOwnerController,
+                enabled: false,
                 isPassword: false,
-                enabled: viewModel.currentStep == 0 &&
-                    (viewModel.completeTillStep <= 0 ||
-                        viewModel.isBasicDetailsEditable),
-                errorText: viewModel.formState.errors['openingTime'],
+                prefixIcon: Icon(Icons.person_pin_outlined, color: disabledIconColor),
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          GestureDetector(
-            onTap: () async {
-              final TimeOfDay? pickedTime = await showTimePicker(
+              const SizedBox(height: 16),
+              CustomFormFields.normalSizedTextFormField(
                 context: context,
-                initialTime: TimeOfDay.now(),
-                builder: (BuildContext context, Widget? child) {
-                  return MediaQuery(
-                    data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-                    child: child!,
-                  );
-                },
-              );
-              if (pickedTime != null) {
-                final formattedTime =
-                    '${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}';
-                viewModel.closingTimeController.text = formattedTime;
-                viewModel.formState.basicDetails['closingTime'] = formattedTime;
-              }
-            },
-            child: AbsorbPointer(
-              child: CustomFormFields.normalSizedTextFormField(context:context,
-                label: 'Closing Time',
-                controller: viewModel.closingTimeController,
-                keyboardType: TextInputType.none,
+                label: "${strings.labelPlazaName} *",
+                controller: basicDetailsVM.plazaNameController,
+                enabled: isEnabled,
                 isPassword: false,
-                enabled: viewModel.currentStep == 0 &&
-                    (viewModel.completeTillStep <= 0 ||
-                        viewModel.isBasicDetailsEditable),
-                errorText: viewModel.formState.errors['closingTime'],
+                errorText: isEnabled ? basicDetailsVM.errors['plazaName'] : null,
+                prefixIcon: Icon(Icons.business_outlined, color: iconColor),
+                textCapitalization: TextCapitalization.words,
               ),
-            ),
+              const SizedBox(height: 16),
+              CustomFormFields.normalSizedTextFormField(
+                context: context,
+                label: "${strings.labelOperatorName} *",
+                controller: basicDetailsVM.plazaOperatorNameController,
+                enabled: isEnabled,
+                isPassword: false,
+                errorText: isEnabled ? basicDetailsVM.errors['plazaOperatorName'] : null,
+                prefixIcon: Icon(Icons.support_agent_outlined, color: iconColor),
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 16),
+              CustomFormFields.normalSizedTextFormField(
+                context: context,
+                label: "${strings.labelEmail} *",
+                controller: basicDetailsVM.emailController,
+                enabled: isEnabled,
+                isPassword: false,
+                errorText: isEnabled ? basicDetailsVM.errors['email'] : null,
+                keyboardType: TextInputType.emailAddress,
+                prefixIcon: Icon(Icons.email_outlined, color: iconColor),
+              ),
+              const SizedBox(height: 16),
+              CustomFormFields.normalSizedTextFormField(
+                context: context,
+                label: "${strings.labelMobileNumber} *",
+                controller: basicDetailsVM.mobileNumberController,
+                enabled: isEnabled,
+                isPassword: false,
+                errorText: isEnabled ? basicDetailsVM.errors['mobileNumber'] : null,
+                keyboardType: TextInputType.phone,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                maxLength: 10,
+                height: 80,
+                prefixIcon: Icon(Icons.phone_android_outlined, color: iconColor),
+              ),
+              _buildSectionDivider(),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: CustomDropDown.normalDropDown(
+                      context: context,
+                      label: "${strings.labelPlazaCategory} *",
+                      value: basicDetailsVM.basicDetails['plazaCategory'] as String?,
+                      items: Plaza.validPlazaCategories,
+                      enabled: isEnabled,
+                      onChanged: (value) => basicDetailsVM.updateDropdownValue('plazaCategory', value),
+                      errorText: isEnabled ? basicDetailsVM.errors['plazaCategory'] : null,
+                      prefixIcon: Icon(Icons.category_outlined, color: iconColor),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: CustomDropDown.normalDropDown(
+                      context: context,
+                      label: "${strings.labelPlazaSubCategory} *",
+                      value: basicDetailsVM.basicDetails['plazaSubCategory'] as String?,
+                      items: Plaza.validPlazaSubCategories,
+                      enabled: isEnabled,
+                      onChanged: (value) => basicDetailsVM.updateDropdownValue('plazaSubCategory', value),
+                      errorText: isEnabled ? basicDetailsVM.errors['plazaSubCategory'] : null,
+                      prefixIcon: Icon(Icons.subdirectory_arrow_right_outlined, color: iconColor),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: CustomDropDown.normalDropDown(
+                      context: context,
+                      label: "${strings.labelStructureType} *",
+                      value: basicDetailsVM.basicDetails['structureType'] as String?,
+                      items: Plaza.validStructureTypes,
+                      enabled: isEnabled,
+                      onChanged: (value) => basicDetailsVM.updateDropdownValue('structureType', value),
+                      errorText: isEnabled ? basicDetailsVM.errors['structureType'] : null,
+                      prefixIcon: Icon(Icons.home_work_outlined, color: iconColor),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: CustomDropDown.normalDropDown(
+                      context: context,
+                      label: "${strings.labelPriceCategory} *",
+                      value: basicDetailsVM.basicDetails['priceCategory'] as String?,
+                      items: Plaza.validPriceCategories,
+                      enabled: isEnabled,
+                      onChanged: (value) => basicDetailsVM.updateDropdownValue('priceCategory', value),
+                      errorText: isEnabled ? basicDetailsVM.errors['priceCategory'] : null,
+                      prefixIcon: Icon(Icons.price_change_outlined, color: iconColor),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: CustomDropDown.normalDropDown(
+                      context: context,
+                      label: "${strings.labelPlazaStatus} *",
+                      value: basicDetailsVM.basicDetails['plazaStatus'] as String? ?? Plaza.validPlazaStatuses.first,
+                      items: Plaza.validPlazaStatuses,
+                      enabled: isEnabled,
+                      onChanged: (value) => basicDetailsVM.updateDropdownValue('plazaStatus', value),
+                      errorText: isEnabled ? basicDetailsVM.errors['plazaStatus'] : null,
+                      prefixIcon: Icon(Icons.toggle_on_outlined, color: iconColor),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                      child: SwitchListTile(
+                        title: Text(
+                          strings.labelFreeParking,
+                          style: theme.textTheme.bodyMedium?.copyWith(color: isEnabled ? theme.colorScheme.onSurface : theme.disabledColor),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        value: basicDetailsVM.basicDetails['freeParking'] as bool? ?? false,
+                        onChanged: isEnabled ? (value) => basicDetailsVM.updateBooleanValue('freeParking', value) : null,
+                        activeColor: theme.colorScheme.primary,
+                        contentPadding: const EdgeInsets.only(left: 4.0, right: 0),
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                      )),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (isEnabled)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
+                      child: TextButton.icon(
+                        icon: isLoading && basicDetailsVM.geoLatitudeController.text.isEmpty
+                            ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary))
+                            : Icon(Icons.my_location, size: 18, color: theme.colorScheme.primary),
+                        label: Text(strings.buttonGetLocation, style: TextStyle(color: theme.colorScheme.primary)),
+                        onPressed: isLoading
+                            ? null
+                            : () {
+                          if (context.mounted) {
+                            basicDetailsVM.getCurrentLocation(context);
+                          }
+                        },
+                        style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                      ),
+                    ),
+                ],
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                      child: CustomFormFields.normalSizedTextFormField(
+                        context: context,
+                        label: "${strings.labelLatitude} *",
+                        controller: basicDetailsVM.geoLatitudeController,
+                        enabled: isEnabled,
+                        isPassword: false,
+                        errorText: isEnabled ? basicDetailsVM.errors['geoLatitude'] : null,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*'))],
+                        prefixIcon: Icon(Icons.gps_fixed_outlined, color: iconColor),
+                      )),
+                  const SizedBox(width: 16),
+                  Expanded(
+                      child: CustomFormFields.normalSizedTextFormField(
+                        context: context,
+                        label: "${strings.labelLongitude} *",
+                        controller: basicDetailsVM.geoLongitudeController,
+                        enabled: isEnabled,
+                        isPassword: false,
+                        errorText: isEnabled ? basicDetailsVM.errors['geoLongitude'] : null,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*'))],
+                        prefixIcon: Icon(Icons.gps_not_fixed_outlined, color: iconColor),
+                      )),
+                ],
+              ),
+              const SizedBox(height: 16),
+              CustomFormFields.largeSizedTextFormField(
+                context: context,
+                label: "${strings.labelAddress} *",
+                controller: basicDetailsVM.addressController,
+                enabled: isEnabled,
+                errorText: isEnabled ? basicDetailsVM.errors['address'] : null,
+                prefixIcon: Icon(Icons.location_on_outlined, color: iconColor),
+                textCapitalization: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                      child: CustomFormFields.normalSizedTextFormField(
+                        context: context,
+                        label: "${strings.labelCity} *",
+                        controller: basicDetailsVM.cityController,
+                        enabled: isEnabled,
+                        isPassword: false,
+                        errorText: isEnabled ? basicDetailsVM.errors['city'] : null,
+                        textCapitalization: TextCapitalization.words,
+                        prefixIcon: Icon(Icons.location_city_outlined, color: iconColor),
+                      )),
+                  const SizedBox(width: 16),
+                  Expanded(
+                      child: CustomFormFields.normalSizedTextFormField(
+                        context: context,
+                        label: "${strings.labelDistrict} *",
+                        controller: basicDetailsVM.districtController,
+                        enabled: isEnabled,
+                        isPassword: false,
+                        errorText: isEnabled ? basicDetailsVM.errors['district'] : null,
+                        textCapitalization: TextCapitalization.words,
+                        prefixIcon: Icon(Icons.map_outlined, color: iconColor),
+                      )),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                      child: CustomFormFields.normalSizedTextFormField(
+                        context: context,
+                        label: "${strings.labelState} *",
+                        controller: basicDetailsVM.stateController,
+                        enabled: isEnabled,
+                        isPassword: false,
+                        errorText: isEnabled ? basicDetailsVM.errors['state'] : null,
+                        textCapitalization: TextCapitalization.words,
+                        prefixIcon: Icon(Icons.public_outlined, color: iconColor),
+                      )),
+                  const SizedBox(width: 16),
+                  Expanded(
+                      child: CustomFormFields.normalSizedTextFormField(
+                        context: context,
+                        label: "${strings.labelPincode} *",
+                        controller: basicDetailsVM.pincodeController,
+                        enabled: isEnabled,
+                        isPassword: false,
+                        errorText: isEnabled ? basicDetailsVM.errors['pincode'] : null,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        maxLength: 6,
+                        height: 80,
+                        prefixIcon: Icon(Icons.fiber_pin_outlined, color: iconColor),
+                      )),
+                ],
+              ),
+              _buildSectionDivider(),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: isEnabled ? () => _showCustomTimePicker(context, basicDetailsVM.plazaOpenTimingsController, 'plazaOpenTimings', basicDetailsVM) : null,
+                      child: AbsorbPointer(
+                        absorbing: true,
+                        child: CustomFormFields.normalSizedTextFormField(
+                          context: context,
+                          label: "${strings.labelOpeningTime} *",
+                          controller: basicDetailsVM.plazaOpenTimingsController,
+                          enabled: false,
+                          isPassword: false,
+                          errorText: isEnabled ? basicDetailsVM.errors['plazaOpenTimings'] : null,
+                          prefixIcon: Icon(Icons.access_time_outlined, color: isEnabled ? iconColor : disabledIconColor),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: isEnabled ? () => _showCustomTimePicker(context, basicDetailsVM.plazaClosingTimeController, 'plazaClosingTime', basicDetailsVM) : null,
+                      child: AbsorbPointer(
+                        absorbing: true,
+                        child: CustomFormFields.normalSizedTextFormField(
+                          context: context,
+                          label: "${strings.labelClosingTime} *",
+                          controller: basicDetailsVM.plazaClosingTimeController,
+                          enabled: false,
+                          isPassword: false,
+                          errorText: isEnabled ? basicDetailsVM.errors['plazaClosingTime'] : null,
+                          prefixIcon: Icon(Icons.access_time_filled_outlined, color: isEnabled ? iconColor : disabledIconColor),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              CustomFormFields.normalSizedTextFormField(
+                context: context,
+                label: "${strings.labelTotalParkingSlots} *",
+                controller: basicDetailsVM.noOfParkingSlotsController,
+                enabled: isEnabled,
+                isPassword: false,
+                errorText: isEnabled ? basicDetailsVM.errors['noOfParkingSlots'] : null,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                prefixIcon: Icon(Icons.local_parking_outlined, color: iconColor),
+              ),
+              if (isEnabled && basicDetailsVM.errors['noOfParkingSlots'] != null && basicDetailsVM.errors['noOfParkingSlots']!.contains('must be equal'))
+                Padding(
+                  padding: const EdgeInsets.only(top: 4.0, left: 12.0, right: 12.0),
+                  child: Text(
+                    basicDetailsVM.errors['noOfParkingSlots']!,
+                    style: TextStyle(color: theme.colorScheme.error, fontSize: 12),
+                  ),
+                ),
+              const SizedBox(height: 20),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                      child: CustomFormFields.normalSizedTextFormField(
+                        context: context,
+                        label: strings.labelCapacityBike,
+                        controller: basicDetailsVM.capacityBikeController,
+                        enabled: isEnabled,
+                        isPassword: false,
+                        errorText: isEnabled ? basicDetailsVM.errors['capacityBike'] : null,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        prefixIcon: Icon(Icons.two_wheeler_outlined, color: iconColor),
+                      )),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: CustomFormFields.normalSizedTextFormField(
+                        context: context,
+                        label: strings.labelCapacity3Wheeler,
+                        controller: basicDetailsVM.capacity3WheelerController,
+                        enabled: isEnabled,
+                        isPassword: false,
+                        errorText: isEnabled ? basicDetailsVM.errors['capacity3Wheeler'] : null,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        prefixIcon: Icon(Icons.electric_rickshaw_outlined, color: iconColor),
+                      )),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                      child: CustomFormFields.normalSizedTextFormField(
+                        context: context,
+                        label: strings.labelCapacity4Wheeler,
+                        controller: basicDetailsVM.capacity4WheelerController,
+                        enabled: isEnabled,
+                        isPassword: false,
+                        errorText: isEnabled ? basicDetailsVM.errors['capacity4Wheeler'] : null,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        prefixIcon: Icon(Icons.directions_car_outlined, color: iconColor),
+                      )),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: CustomFormFields.normalSizedTextFormField(
+                        context: context,
+                        label: strings.labelCapacityBus,
+                        controller: basicDetailsVM.capacityBusController,
+                        enabled: isEnabled,
+                        isPassword: false,
+                        errorText: isEnabled ? basicDetailsVM.errors['capacityBus'] : null,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        prefixIcon: Icon(Icons.directions_bus_outlined, color: iconColor),
+                      )),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                      child: CustomFormFields.normalSizedTextFormField(
+                        context: context,
+                        label: strings.labelCapacityTruck,
+                        controller: basicDetailsVM.capacityTruckController,
+                        enabled: isEnabled,
+                        isPassword: false,
+                        errorText: isEnabled ? basicDetailsVM.errors['capacityTruck'] : null,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        prefixIcon: Icon(Icons.local_shipping_outlined, color: iconColor),
+                      )),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: CustomFormFields.normalSizedTextFormField(
+                        context: context,
+                        label: strings.labelCapacityHeavyMachinery,
+                        controller: basicDetailsVM.capacityHeavyMachinaryVehicleController,
+                        enabled: isEnabled,
+                        isPassword: false,
+                        errorText: isEnabled ? basicDetailsVM.errors['capacityHeavyMachinaryVehicle'] : null,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        prefixIcon: Icon(Icons.agriculture_outlined, color: iconColor),
+                      )),
+                ],
+              ),
+              const SizedBox(height: 24),
+              if (isEnabled && basicDetailsVM.errors['general'] != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
+                  child: Center(
+                    child: Text(
+                      basicDetailsVM.errors['general']!,
+                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 16),
+            ],
           ),
-          const SizedBox(height: 16),
-        ],
+        ),
       ),
     );
+  }
+
+  Widget _buildSectionDivider() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 8.0),
+      child: Divider(height: 1, thickness: 0.8),
+    );
+  }
+
+  Future<void> _showCustomTimePicker(
+      BuildContext context, TextEditingController controller, String mapKey, BasicDetailsViewModel viewModel) async {
+    developer.log('[BasicDetailsStep] Showing time picker for key: $mapKey', name: 'BasicDetailsStep');
+    TimeOfDay initialTime = TimeOfDay.now();
+    try {
+      final parts = controller.text.split(':');
+      if (parts.length == 2) {
+        final hour = int.tryParse(parts[0]);
+        final minute = int.tryParse(parts[1]);
+        if (hour != null && hour >= 0 && hour < 24 && minute != null && minute >= 0 && minute < 60) {
+          initialTime = TimeOfDay(hour: hour, minute: minute);
+          developer.log('[BasicDetailsStep] Parsed initial time: $initialTime', name: 'BasicDetailsStep');
+        }
+      }
+    } catch (e) {
+      developer.log('[BasicDetailsStep] Error parsing initial time "${controller.text}", using current time. Error: $e', name: 'BasicDetailsStep', level: 800);
+    }
+
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
+
+    if (picked != null && context.mounted) {
+      final formattedTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      developer.log('[BasicDetailsStep] Time picked: $formattedTime. Updating ViewModel for key: $mapKey', name: 'BasicDetailsStep');
+      viewModel.updateTimeValue(mapKey, formattedTime);
+    } else {
+      developer.log('[BasicDetailsStep] Time picker cancelled or context unmounted.', name: 'BasicDetailsStep');
+    }
   }
 }

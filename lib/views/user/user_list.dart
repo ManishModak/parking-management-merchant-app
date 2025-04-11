@@ -15,6 +15,8 @@ import '../../config/app_config.dart';
 import '../../generated/l10n.dart';
 import '../../models/user_model.dart';
 import '../../services/utils/pdf_export_service.dart';
+import '../../utils/components/pagination_mixin.dart';
+import '../../utils/exceptions.dart';
 import 'user_info.dart';
 
 class UserListScreen extends StatefulWidget {
@@ -24,7 +26,8 @@ class UserListScreen extends StatefulWidget {
   State<UserListScreen> createState() => _UserListScreenState();
 }
 
-class _UserListScreenState extends State<UserListScreen> with RouteAware {
+class _UserListScreenState extends State<UserListScreen>
+    with RouteAware, PaginatedListMixin<User> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   final SecureStorageService _secureStorage = SecureStorageService();
@@ -32,9 +35,8 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
   late RouteObserver<ModalRoute> _routeObserver;
   String _searchQuery = '';
   int _currentPage = 1;
-  static const int _itemsPerPage = 10;
   final Set<String> _selectedRoles = {};
-  bool _isLoading = false;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -43,24 +45,26 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
     developer.log('UserListScreen initialized', name: 'UserList');
     _loadInitialData();
     _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text.toLowerCase();
-        _currentPage = 1;
-        developer.log('Search query updated: $_searchQuery', name: 'UserList');
+      if (_debounce?.isActive ?? false) _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 300), () {
+        setState(() {
+          _searchQuery = _searchController.text.toLowerCase();
+          _currentPage = 1;
+          developer.log('Search query updated: $_searchQuery', name: 'UserList');
+        });
       });
     });
   }
 
   Future<void> _loadInitialData() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
-    final userId = await _secureStorage.getUserId();
-    if (userId != null) {
-      developer.log('Loading initial user list for userId: $userId', name: 'UserList');
-      await _viewModel.fetchUserList(userId);
-    }
-    if (mounted) {
-      setState(() => _isLoading = false);
+    final userData = await _secureStorage.getUserData();
+    if (userData != null && userData['entityId'] != null) {
+      final entityId = userData['entityId'].toString();
+      developer.log('Loading initial user list for entityId: $entityId', name: 'UserList');
+      await _viewModel.fetchUserList(entityId);
+    } else {
+      developer.log('No entityId found in userData', name: 'UserList');
     }
   }
 
@@ -73,6 +77,7 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _routeObserver.unsubscribe(this);
     _scrollController.dispose();
     _searchController.dispose();
@@ -84,14 +89,10 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
 
   Future<void> _refreshData() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
     final userId = await _secureStorage.getUserId();
     if (userId != null) {
       developer.log('Refreshing user list for userId: $userId', name: 'UserList');
       await _viewModel.fetchUserList(userId);
-    }
-    if (mounted) {
-      setState(() => _isLoading = false);
     }
   }
 
@@ -103,26 +104,19 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
           user.role.toLowerCase().contains(_searchQuery) ||
           user.mobileNumber.toLowerCase().contains(_searchQuery);
 
-      final matchesRole = _selectedRoles.isEmpty || _selectedRoles.contains(user.role.toLowerCase());
+      final matchesRole = _selectedRoles.isEmpty ||
+          _selectedRoles.contains(user.role.toLowerCase());
 
       return matchesSearch && matchesRole;
     }).toList();
   }
 
-  List<User> _getPaginatedUsers(List<User> filteredUsers) {
-    final startIndex = (_currentPage - 1) * _itemsPerPage;
-    final endIndex = startIndex + _itemsPerPage;
-    return endIndex > filteredUsers.length
-        ? filteredUsers.sublist(startIndex)
-        : filteredUsers.sublist(startIndex, endIndex);
-  }
-
   void _updatePage(int newPage) {
     final filteredUsers = _getFilteredUsers(_viewModel.operators);
-    final totalPages = (filteredUsers.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
-    if (newPage < 1 || newPage > totalPages) return;
-    setState(() => _currentPage = newPage);
-    developer.log('Page updated to: $_currentPage', name: 'UserList');
+    updatePage(newPage, filteredUsers, (page) {
+      setState(() => _currentPage = page);
+      developer.log('Page updated to: $_currentPage', name: 'UserList');
+    });
   }
 
   Widget _buildSearchField(S strings) {
@@ -131,7 +125,7 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
       child: Card(
         margin: EdgeInsets.zero,
         elevation: Theme.of(context).cardTheme.elevation,
-        color: context.cardColor,
+        color: context.secondaryCardColor,
         shape: Theme.of(context).cardTheme.shape,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
@@ -157,34 +151,67 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
   }
 
   Widget _buildFilterChipsRow(S strings) {
-    final selectedFilters = _selectedRoles.map((r) => '${strings.labelRole}: ${r.capitalize()}').toList();
+    final selectedFilters = _selectedRoles
+        .map((r) => '${strings.labelRole}: ${r.capitalize()}')
+        .toList();
+    final textColor = Theme.of(context).brightness == Brightness.light
+        ? AppColors.textPrimaryLight
+        : AppColors.textPrimaryDark;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-        child: Row(
-          children: [
-            _buildMoreFiltersChip(strings),
-            if (selectedFilters.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              ...selectedFilters.map((filter) => Container(
-                margin: const EdgeInsets.only(right: 8),
-                child: Chip(
-                  label: Text(filter),
-                  onDeleted: () {
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+          child: Row(
+            children: [
+              if (selectedFilters.isNotEmpty) ...[
+                GestureDetector(
+                  onTap: () {
                     setState(() {
-                      _selectedRoles.remove(filter.split(': ')[1].toLowerCase());
+                      _selectedRoles.clear();
+                      _currentPage = 1;
                     });
                   },
-                  deleteIcon: const Icon(Icons.close, size: 16),
-                  backgroundColor: AppColors.primary.withOpacity(0.1),
-                  labelStyle: TextStyle(color: AppColors.primary),
-                  deleteIconColor: AppColors.primary,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: context.secondaryCardColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      strings.resetAllLabel,
+                      style: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+                  ),
                 ),
-              )),
+                const SizedBox(width: 8),
+              ],
+              _buildMoreFiltersChip(strings),
+              if (selectedFilters.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                ...selectedFilters.map((filter) => Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  child: Chip(
+                    label: Text(filter),
+                    onDeleted: () {
+                      setState(() {
+                        _selectedRoles.remove(filter.split(': ')[1].toLowerCase());
+                      });
+                    },
+                    deleteIcon: const Icon(Icons.close, size: 16),
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    labelStyle: TextStyle(color: textColor),
+                    deleteIconColor: textColor,
+                  ),
+                )),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -192,13 +219,16 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
 
   Widget _buildMoreFiltersChip(S strings) {
     final hasActiveFilters = _selectedRoles.isNotEmpty;
+    final textColor = Theme.of(context).brightness == Brightness.light
+        ? AppColors.textPrimaryLight
+        : AppColors.textPrimaryDark;
 
     return GestureDetector(
       onTap: _showAllFiltersDialog,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: hasActiveFilters ? AppColors.primary.withOpacity(0.1) : Colors.grey[200],
+          color: context.secondaryCardColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -206,14 +236,14 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
           children: [
             Icon(
               Icons.filter_list,
-              color: hasActiveFilters ? AppColors.primary : Colors.grey,
+              color: textColor,
               size: 16,
             ),
             const SizedBox(width: 6),
             Text(
               strings.filtersLabel,
               style: TextStyle(
-                color: hasActiveFilters ? AppColors.primary : Colors.black87,
+                color: textColor,
                 fontWeight: hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
@@ -235,14 +265,15 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: context.cardColor,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: context.cardColor,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),
               height: MediaQuery.of(context).size.height * 0.6,
@@ -253,14 +284,19 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
                     child: Container(
                       width: 50,
                       height: 5,
-                      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                      decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       strings.advancedFiltersLabel,
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: context.textPrimaryColor),
                     ),
                   ),
                   Expanded(
@@ -268,7 +304,9 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
                       children: [
                         _buildFilterSection(
                           title: strings.labelRole,
-                          options: roles.map((role) => {'key': role, 'label': role.capitalize()}).toList(),
+                          options: roles
+                              .map((role) => {'key': role, 'label': role.capitalize()})
+                              .toList(),
                           selectedItems: _selectedRoles,
                           onChanged: (value, isSelected) {
                             setDialogState(() {
@@ -327,6 +365,8 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
     required Set<String> selectedItems,
     required Function(String, bool) onChanged,
   }) {
+    final textColor = context.textPrimaryColor;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -334,7 +374,10 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           child: Text(
             title,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: context.textPrimaryColor),
           ),
         ),
         Padding(
@@ -350,11 +393,13 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
                 onSelected: (bool value) {
                   onChanged(option['key']!, value);
                 },
-                selectedColor: AppColors.primary.withOpacity(0.2),
-                checkmarkColor: AppColors.primary,
-                backgroundColor: Colors.grey[200],
+                selectedColor: Theme.of(context).brightness == Brightness.light
+                    ? Colors.grey
+                    : Colors.black,
+                checkmarkColor: textColor,
+                backgroundColor: context.secondaryCardColor,
                 labelStyle: TextStyle(
-                  color: isSelected ? AppColors.primary : Colors.black87,
+                  color: textColor,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),
               );
@@ -362,7 +407,11 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
           ),
         ),
         const SizedBox(height: 16),
-        const Divider(),
+        Divider(
+          color: Theme.of(context).brightness == Brightness.light
+              ? Colors.grey[300]
+              : Colors.grey[600],
+        ),
       ],
     );
   }
@@ -394,11 +443,15 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
     return ListView.builder(
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: _itemsPerPage,
+      itemCount: itemsPerPage,
       itemBuilder: (context, index) {
         return Shimmer.fromColors(
-          baseColor: AppColors.shimmerBaseLight,
-          highlightColor: AppColors.shimmerHighlightLight,
+          baseColor: Theme.of(context).brightness == Brightness.light
+              ? AppColors.shimmerBaseLight
+              : AppColors.shimmerBaseDark,
+          highlightColor: Theme.of(context).brightness == Brightness.light
+              ? AppColors.shimmerHighlightLight
+              : AppColors.shimmerHighlightDark,
           child: Card(
             elevation: Theme.of(context).cardTheme.elevation,
             shape: Theme.of(context).cardTheme.shape,
@@ -431,27 +484,31 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
   Widget _buildErrorState(UserViewModel viewModel, S strings) {
     String errorTitle = strings.errorTitleDefault;
     String errorMessage = strings.errorMessageDefault;
-    String? errorDetails;
 
-    final error = viewModel.getError('general');
-    if (error.isNotEmpty) {
+    final error = viewModel.error;
+    if (error != null) {
       developer.log('Error occurred: $error', name: 'UserList');
-      if (error.contains('No internet')) {
-        errorTitle = strings.errorTitleNoInternet;
-        errorMessage = strings.errorMessageNoInternet;
-      } else if (error.contains('timed out')) {
-        errorTitle = strings.errorTitleTimeout;
-        errorMessage = strings.errorMessageTimeout;
-      } else if (error.contains('ServerConnectionException') || error.contains('Connection refused')) {
-        errorTitle = strings.errorTitleServer;
-        errorMessage = strings.errorMessageServer;
-      } else if (error.contains('HttpException')) {
-        errorTitle = strings.errorTitleServer;
-        errorMessage = error.split(':').last.trim();
-        errorDetails = strings.errorDetailsUnexpected;
-      } else {
-        errorMessage = error.split(':').last.trim();
-        errorDetails = strings.errorDetailsUnexpected;
+      switch (error.runtimeType) {
+        case NoInternetException:
+          errorTitle = strings.errorTitleNoInternet;
+          errorMessage = strings.errorMessageNoInternet;
+          break;
+        case RequestTimeoutException:
+          errorTitle = strings.errorTitleTimeout;
+          errorMessage = strings.errorMessageTimeout;
+          break;
+        case HttpException:
+          final httpError = error as HttpException;
+          errorTitle = strings.errorTitleServer;
+          errorMessage = httpError.toString(); // Adjust based on HttpException properties
+          break;
+        case ServiceException:
+          errorTitle = strings.errorUnexpected;
+          errorMessage = error.toString();
+          break;
+        default:
+          errorTitle = strings.errorUnexpected;
+          errorMessage = error.toString();
       }
     }
 
@@ -461,18 +518,20 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
         children: [
           Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
           const SizedBox(height: 16),
-          Text(errorTitle, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(errorTitle, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.textPrimaryColor)),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(errorMessage, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
+            child: Text(errorMessage, style: TextStyle(fontSize: 16, color: context.textPrimaryColor), textAlign: TextAlign.center),
           ),
-          if (errorDetails != null) ...[
-            const SizedBox(height: 8),
-            Text(errorDetails, style: const TextStyle(fontSize: 14, color: Colors.grey)),
-          ],
           const SizedBox(height: 24),
-          CustomButtons.primaryButton(height: 40, width: 150, text: strings.buttonRetry, onPressed: _refreshData, context: context)
+          CustomButtons.primaryButton(
+            height: 40,
+            width: 150,
+            text: strings.buttonRetry,
+            onPressed: _refreshData,
+            context: context,
+          ),
         ],
       ),
     );
@@ -484,8 +543,8 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
     return Consumer<UserViewModel>(
       builder: (context, viewModel, _) {
         final filteredUsers = _getFilteredUsers(viewModel.operators);
-        final totalPages = (filteredUsers.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
-        final paginatedUsers = _getPaginatedUsers(filteredUsers);
+        final totalPages = getTotalPages(filteredUsers);
+        final paginatedUsers = getPaginatedItems(filteredUsers, _currentPage);
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -503,7 +562,8 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
                       await PdfExportService.exportUserList(viewModel.operators);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(strings.messagePdfSuccess, style: TextStyle(color: context.textPrimaryColor)),
+                          content: Text(strings.messagePdfSuccess,
+                              style: TextStyle(color: context.textPrimaryColor)),
                           backgroundColor: AppColors.success,
                         ),
                       );
@@ -511,7 +571,8 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
                       developer.log('PDF export failed: $e', name: 'UserList', error: e);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('${strings.messagePdfFailed}: $e', style: TextStyle(color: context.textPrimaryColor)),
+                          content: Text('${strings.messagePdfFailed}: $e',
+                              style: TextStyle(color: context.textPrimaryColor)),
                           backgroundColor: AppColors.error,
                         ),
                       );
@@ -538,32 +599,39 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
                         controller: _scrollController,
                         physics: const AlwaysScrollableScrollPhysics(),
                         children: [
-                          SizedBox(height: 8,),
-                          if (viewModel.getError('general').isNotEmpty && !_isLoading)
+                          const SizedBox(height: 8),
+                          if (viewModel.error != null && !viewModel.isLoading)
                             SizedBox(
                               height: MediaQuery.of(context).size.height * 0.6,
                               child: _buildErrorState(viewModel, strings),
                             )
-                          else if (filteredUsers.isEmpty && !_isLoading)
+                          else if (filteredUsers.isEmpty && !viewModel.isLoading)
                             SizedBox(
                               height: MediaQuery.of(context).size.height * 0.6,
-                              child: Center(child: Text(strings.messageNoUsersFound)),
+                              child: Center(
+                                child: Text(
+                                  strings.messageNoUsersFound,
+                                  style: TextStyle(color: context.textPrimaryColor),
+                                ),
+                              ),
                             )
-                          else if (!_isLoading)
+                          else if (!viewModel.isLoading)
                               ...paginatedUsers.map((user) => _buildUserCard(user)),
                         ],
                       ),
-                      if (_isLoading) Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: _buildShimmerList(),
-                      ),
+                      if (viewModel.isLoading)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: _buildShimmerList(),
+                        ),
                     ],
                   ),
                 ),
               ),
             ],
           ),
-          bottomNavigationBar: Container(
+          bottomNavigationBar: filteredUsers.isNotEmpty && !viewModel.isLoading
+              ? Container(
             color: Theme.of(context).scaffoldBackgroundColor,
             padding: const EdgeInsets.all(4.0),
             child: SafeArea(
@@ -573,7 +641,8 @@ class _UserListScreenState extends State<UserListScreen> with RouteAware {
                 onPageChange: _updatePage,
               ),
             ),
-          ),
+          )
+              : null,
         );
       },
     );

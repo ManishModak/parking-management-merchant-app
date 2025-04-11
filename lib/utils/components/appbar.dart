@@ -14,7 +14,6 @@ class CustomAppBar {
     bool? centreTitle,
     required BuildContext context,
   }) {
-    final strings = S.of(context); // Access localized strings
     return AppBar(
       leadingWidth: 80,
       leading: CustomButtons.backIconButton(
@@ -41,15 +40,6 @@ class CustomAppBar {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
-      bottom: !darkBackground
-          ? PreferredSize(
-        preferredSize: const Size.fromHeight(1.0),
-        child: Container(
-          height: 3.0,
-          color: context.shadowColor, // Use theme-aware shadow color instead of textDark
-        ),
-      )
-          : null,
     );
   }
 
@@ -60,7 +50,6 @@ class CustomAppBar {
     required List<Widget> actions,
     required BuildContext context,
   }) {
-    final strings = S.of(context); // Access localized strings
     return AppBar(
       leadingWidth: 80,
       leading: CustomButtons.backIconButton(
@@ -88,15 +77,6 @@ class CustomAppBar {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
-      bottom: !darkBackground
-          ? PreferredSize(
-        preferredSize: const Size.fromHeight(1.0),
-        child: Container(
-          height: 3.0,
-          color: context.shadowColor, // Use theme-aware shadow color
-        ),
-      )
-          : null,
     );
   }
 
@@ -106,7 +86,6 @@ class CustomAppBar {
     required List<Widget> actions,
     required BuildContext context, // Added context for theme awareness
   }) {
-    final strings = S.of(context); // Access localized strings
     return AppBar(
       automaticallyImplyLeading: false,
       actions: actions,
@@ -128,15 +107,6 @@ class CustomAppBar {
           overflow: TextOverflow.ellipsis,
         ),
       ),
-      bottom: !darkBackground
-          ? PreferredSize(
-        preferredSize: const Size.fromHeight(1.0),
-        child: Container(
-          height: 3.0,
-          color: context.shadowColor, // Use theme-aware shadow color
-        ),
-      )
-          : null,
     );
   }
 
@@ -145,7 +115,6 @@ class CustomAppBar {
     required bool darkBackground,
     required BuildContext context,
   }) {
-    final strings = S.of(context); // Access localized strings
     return AppBar(
       automaticallyImplyLeading: false,
       backgroundColor: darkBackground ? AppColors.primary : context.backgroundColor, // Use theme-aware background
@@ -164,15 +133,6 @@ class CustomAppBar {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
-      bottom: !darkBackground
-          ? PreferredSize(
-        preferredSize: const Size.fromHeight(1.0),
-        child: Container(
-          height: 3.0,
-          color: context.shadowColor, // Use theme-aware shadow color
-        ),
-      )
-          : null,
     );
   }
 }

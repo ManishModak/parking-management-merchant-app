@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
-import 'package:merchant_app/config/app_config.dart';
+import 'package:merchant_app/config/app_routes.dart';
 import 'package:merchant_app/config/app_theme.dart';
 import 'package:merchant_app/services/storage/secure_storage_service.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
@@ -11,7 +11,6 @@ import 'package:merchant_app/utils/components/form_field.dart';
 import 'package:provider/provider.dart';
 import '../../generated/l10n.dart';
 import '../../utils/screens/otp_verification.dart';
-import '../../viewmodels/plaza/plaza_viewmodel.dart';
 import '../../viewmodels/user_viewmodel.dart';
 import 'dart:developer' as developer;
 
@@ -36,7 +35,6 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> with Ro
   List<String> _entities = [];
   late RouteObserver<ModalRoute> _routeObserver;
 
-  // Local TextEditingControllers
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _mobileController = TextEditingController();
@@ -97,7 +95,6 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> with Ro
     _routeObserver.subscribe(this, ModalRoute.of(context)!);
   }
 
-
   @override
   void dispose() {
     _routeObserver.unsubscribe(this);
@@ -118,14 +115,12 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> with Ro
     final strings = S.of(context);
     final mobile = _mobileController.text;
 
-    // Check only the mobile number format
     if (mobile.isEmpty || !RegExp(r'^\d{10}$').hasMatch(mobile)) {
       userVM.setError('mobile', strings.errorInvalidMobile);
       developer.log('Invalid mobile number format: $mobile', name: 'UserRegistration');
       return;
     }
 
-    // Clear any previous error
     userVM.clearError('mobile');
 
     developer.log('Verifying mobile number: $mobile', name: 'UserRegistration');
@@ -145,7 +140,6 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> with Ro
       });
       developer.log('Mobile number verified: $_verifiedMobileNumber', name: 'UserRegistration');
     } else {
-      // Optionally, set an error if verification failed
       userVM.setError('mobile', strings.errorVerificationFailed);
     }
   }
@@ -183,7 +177,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> with Ro
 
   Future<void> _fetchPlazas(String entityId) async {
     final strings = S.of(context);
-    final plazaVM = Provider.of<PlazaViewModel>(context, listen: false);
+    final userVM = Provider.of<UserViewModel>(context, listen: false);
 
     setState(() {
       _plazas = [];
@@ -193,10 +187,10 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> with Ro
     try {
       String idToUse = currentUserRole == 'Plaza Owner' ? (currentUserId ?? '') : (currentUserEntityId ?? entityId);
       developer.log('Fetching plazas for entityId: $idToUse', name: 'UserRegistration');
-      await plazaVM.fetchUserPlazas(idToUse);
+      await userVM.fetchUserPlazas(idToUse);
       if (mounted) {
         setState(() {
-          _plazas = plazaVM.userPlazas.map((plaza) => plaza.plazaName).toList();
+          _plazas = userVM.userPlazas.map((plaza) => plaza.plazaName).toList();
           if (_plazas.length == 1) selectedPlaza = _plazas.first;
         });
       }
@@ -256,7 +250,6 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> with Ro
     final strings = S.of(context);
     final userVM = Provider.of<UserViewModel>(context, listen: false);
 
-    // Validate using UserViewModel
     final validationErrors = userVM.validateRegistration(
       username: _usernameController.text,
       email: _emailController.text,
@@ -310,8 +303,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> with Ro
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
                 Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, AppRoutes.userList);
               },
               child: Text(strings.buttonOk, style: Theme.of(context).textButtonTheme.style?.textStyle?.resolve({})),
             ),
@@ -515,3 +508,20 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> with Ro
     );
   }
 }
+
+// TODO: Handle the case where the email is already taken during user registration.
+/*
+* [UserService] [USER] Starting registration at URL: http://13.201.218.178:3001/users/createUser
+[UserService] [USER] Request payload: {"username":"Aman","email":"aman@gmail.com","mobileNumber":"7869945231","password":"Manish@19","address":"Pune","state":"Maharashtra","city":"Pune","role":"Plaza Admin","entityName":"SahilT","subEntity":["new plaza"],"entityId":"1"}
+[UserService] [USER] Response Status Code: 500
+[UserService] [USER] Response Body: {"success":false,"msg":"email 'aman@gmail.com' is already taken"}
+[UserService] [USER] Error in userRegister: HttpException: Registration failed (Status: 500, Server: email 'aman@gmail.com' is already taken)
+              HttpException: Registration failed (Status: 500, Server: email 'aman@gmail.com' is already taken)
+              #0      UserService.userRegister (package:merchant_app/services/core/user_service.dart:101:7)
+              <asynchronous suspension>
+              #1      UserViewModel.registerUser (package:merchant_app/viewmodels/user_viewmodel.dart:436:24)
+              <asynchronous suspension>
+              #2      _UserRegistrationScreenState._handleRegister (package:merchant_app/views/user/user_registration.dart:277:21)
+              <asynchronous suspension>
+*
+* */

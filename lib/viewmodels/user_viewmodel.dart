@@ -1,16 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:merchant_app/models/plaza.dart';
 import 'package:merchant_app/models/user_model.dart';
 import 'package:merchant_app/services/storage/secure_storage_service.dart';
 import 'package:merchant_app/services/core/user_service.dart';
+import 'package:merchant_app/utils/exceptions.dart'; // Assuming this exists for exception types
 import 'dart:developer' as developer;
 
+import '../services/core/plaza_service.dart';
+
 class UserViewModel extends ChangeNotifier {
-  final UserService _userService;
+  final UserService _userService = UserService();
+  final PlazaService _plazaService = PlazaService();
   final SecureStorageService _secureStorageService = SecureStorageService();
 
   bool _isLoading = false;
-  User? currentUser;
+  User? _currentUser; // Logged-in user
+  User? _currentOperator; // Operator being viewed
   List<User> _users = [];
+  List<Plaza> _userPlazas = [];
+  Exception? _error;
 
   final Map<String, String> _errors = {
     'username': '',
@@ -27,11 +35,12 @@ class UserViewModel extends ChangeNotifier {
     'general': '',
   };
 
-  User? get currentOperator => currentUser;
+  User? get currentUser => _currentUser;
+  User? get currentOperator => _currentOperator;
   List<User> get operators => _users;
   bool get isLoading => _isLoading;
-
-  UserViewModel(this._userService);
+  List<Plaza> get userPlazas => _userPlazas;
+  Exception? get error => _error;
 
   String getError(String key) => _errors[key] ?? '';
   void setError(String key, String message) {
@@ -46,18 +55,118 @@ class UserViewModel extends ChangeNotifier {
 
   void resetErrors() {
     _errors.updateAll((key, value) => '');
+    _error = null;
     notifyListeners();
   }
 
-  Future<void> fetchUserList(String userId) async {
+  // New method for fetching and storing the logged-in user
+  Future<void> fetchAndStoreCurrentUser({
+    required String userId,
+    bool forceApiCall = false,
+  }) async {
     try {
       _setLoading(true);
-      _users = await _userService.getUsersByEntityId(userId);
+      _error = null;
+
+      if (!forceApiCall) {
+        final cachedUserData = await _secureStorageService.getUserData();
+        if (cachedUserData != null) {
+          _currentUser = User.fromJson(cachedUserData);
+          developer.log("STORAGE CALL: Loaded currentUser: $_currentUser", name: 'UserViewModel');
+          return;
+        }
+      }
+
+      _currentUser = await _userService.fetchUserInfo(userId, true);
+      developer.log("API CALL: Fetched currentUser: $_currentUser", name: 'UserViewModel');
+
+      if (_currentUser != null) {
+        final userDataMap = _currentUser!.toJson();
+        await _secureStorageService.storeUserData(userDataMap);
+        developer.log("Stored updated currentUser data: $userDataMap", name: 'UserViewModel');
+      } else {
+        developer.log("No currentUser data returned from API", name: 'UserViewModel', level: 900);
+      }
       resetErrors();
+    } on NoInternetException catch (e) {
+      _error = e;
+      developer.log('No internet: $e', name: 'UserViewModel');
+    } on RequestTimeoutException catch (e) {
+      _error = e;
+      developer.log('Request timeout: $e', name: 'UserViewModel');
+    } on HttpException catch (e) {
+      _error = e;
+      developer.log('HTTP error: $e', name: 'UserViewModel');
     } catch (e) {
-      setError('general', 'Failed to fetch operators: $e');
+      _error = ServiceException('Failed to load current user profile: $e');
+      developer.log('Unexpected error: $e', name: 'UserViewModel');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Modified fetchUser to only fetch, not store
+  Future<void> fetchUser({
+    required String userId,
+    required bool isCurrentAppUser,
+  }) async {
+    try {
+      _setLoading(true);
+      _error = null;
+
+      if (isCurrentAppUser) {
+        _currentUser = await _userService.fetchUserInfo(userId, isCurrentAppUser);
+        developer.log("API CALL: Fetched currentUser: $_currentUser", name: 'UserViewModel');
+      } else {
+        _currentOperator = await _userService.fetchUserInfo(userId, isCurrentAppUser);
+        developer.log("API CALL: Fetched currentOperator: $_currentOperator", name: 'UserViewModel');
+      }
+
+      if (isCurrentAppUser && _currentUser == null) {
+        developer.log("No currentUser data returned from API", name: 'UserViewModel', level: 900);
+      } else if (!isCurrentAppUser && _currentOperator == null) {
+        developer.log("No currentOperator data returned from API", name: 'UserViewModel', level: 900);
+      }
+      resetErrors();
+    } on NoInternetException catch (e) {
+      _error = e;
+      developer.log('No internet: $e', name: 'UserViewModel');
+    } on RequestTimeoutException catch (e) {
+      _error = e;
+      developer.log('Request timeout: $e', name: 'UserViewModel');
+    } on HttpException catch (e) {
+      _error = e;
+      developer.log('HTTP error: $e', name: 'UserViewModel');
+    } catch (e) {
+      _error = ServiceException('Failed to load user profile: $e');
+      developer.log('Unexpected error: $e', name: 'UserViewModel');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> fetchUserList(String entityId) async {
+    try {
+      _setLoading(true);
+      _error = null;
+      _users = await _userService.getUsersByEntityId(entityId);
+      resetErrors();
+    } on NoInternetException catch (e) {
+      _error = e;
       _users = [];
-      developer.log('Failed to fetch operators: $e', name: 'UserViewModel');
+      developer.log('No internet: $e', name: 'UserViewModel');
+    } on RequestTimeoutException catch (e) {
+      _error = e;
+      _users = [];
+      developer.log('Request timeout: $e', name: 'UserViewModel');
+    } on HttpException catch (e) {
+      _error = e;
+      _users = [];
+      developer.log('HTTP error: $e', name: 'UserViewModel');
+    } catch (e) {
+      _error = ServiceException('Failed to fetch operators: $e');
+      _users = [];
+      developer.log('Unexpected error: $e', name: 'UserViewModel');
     } finally {
       _setLoading(false);
     }
@@ -67,21 +176,29 @@ class UserViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchUser({required String userId, required bool isCurrentAppUser}) async {
+  Future<void> fetchUserPlazas(String userId) async {
     try {
       _setLoading(true);
-      final cachedUserData = await _secureStorageService.getUserData();
-      if (cachedUserData != null && isCurrentAppUser) {
-        currentUser = User.fromJson(cachedUserData);
-        developer.log("STORAGE CALL: $currentUser", name: 'UserViewModel');
-      } else {
-        currentUser = await _userService.fetchUserInfo(userId, isCurrentAppUser);
-        developer.log("API CALL: $currentUser", name: 'UserViewModel');
-      }
-      resetErrors();
+      _error = null;
+      developer.log('Fetching plazas for userId: $userId', name: 'UserViewModel');
+      _userPlazas = await _plazaService.fetchUserPlazas(userId);
+      developer.log('Fetched ${_userPlazas.length} plazas', name: 'UserViewModel');
+    } on NoInternetException catch (e) {
+      _error = e;
+      _userPlazas = [];
+      developer.log('No internet: $e', name: 'UserViewModel');
+    } on RequestTimeoutException catch (e) {
+      _error = e;
+      _userPlazas = [];
+      developer.log('Request timeout: $e', name: 'UserViewModel');
+    } on HttpException catch (e) {
+      _error = e;
+      _userPlazas = [];
+      developer.log('HTTP error: $e', name: 'UserViewModel');
     } catch (e) {
-      setError('general', 'Failed to load user profile: $e');
-      developer.log('Error: $e', name: 'UserViewModel');
+      _error = ServiceException('Error fetching plazas: $e');
+      _userPlazas = [];
+      developer.log('Unexpected error: $e', name: 'UserViewModel');
     } finally {
       _setLoading(false);
     }
@@ -215,6 +332,7 @@ class UserViewModel extends ChangeNotifier {
   }) async {
     try {
       _setLoading(true);
+      _error = null;
       if (currentUser?.id == null) {
         throw Exception('No user selected for update');
       }
@@ -232,15 +350,27 @@ class UserViewModel extends ChangeNotifier {
       );
 
       if (success) {
-        currentUser = await _userService.fetchUserInfo(currentUser!.id, isCurrentAppUser);
+        _currentUser = await _userService.fetchUserInfo(currentUser!.id, isCurrentAppUser);
         resetErrors();
         return true;
       } else {
-        throw Exception('Update failed');
+        throw ServiceException('Update failed');
       }
+    } on NoInternetException catch (e) {
+      _error = e;
+      developer.log('No internet: $e', name: 'UserViewModel');
+      return false;
+    } on RequestTimeoutException catch (e) {
+      _error = e;
+      developer.log('Request timeout: $e', name: 'UserViewModel');
+      return false;
+    } on HttpException catch (e) {
+      _error = e;
+      developer.log('HTTP error: $e', name: 'UserViewModel');
+      return false;
     } catch (e) {
-      setError('general', 'Failed to update user: $e');
-      developer.log('Error: $e', name: 'UserViewModel');
+      _error = ServiceException('Failed to update user: $e');
+      developer.log('Unexpected error: $e', name: 'UserViewModel');
       return false;
     } finally {
       _setLoading(false);
@@ -250,6 +380,7 @@ class UserViewModel extends ChangeNotifier {
   Future<bool> resetPassword(String userId, String newPassword) async {
     try {
       _setLoading(true);
+      _error = null;
       if (userId.isEmpty) {
         throw Exception('User ID is required');
       }
@@ -260,11 +391,23 @@ class UserViewModel extends ChangeNotifier {
         resetErrors();
         return true;
       } else {
-        throw Exception('Password reset failed');
+        throw ServiceException('Password reset failed');
       }
+    } on NoInternetException catch (e) {
+      _error = e;
+      developer.log('No internet: $e', name: 'UserViewModel');
+      return false;
+    } on RequestTimeoutException catch (e) {
+      _error = e;
+      developer.log('Request timeout: $e', name: 'UserViewModel');
+      return false;
+    } on HttpException catch (e) {
+      _error = e;
+      developer.log('HTTP error: $e', name: 'UserViewModel');
+      return false;
     } catch (e) {
-      setError('general', 'Failed to reset password: $e');
-      developer.log('Error: $e', name: 'UserViewModel');
+      _error = ServiceException('Failed to reset password: $e');
+      developer.log('Unexpected error: $e', name: 'UserViewModel');
       return false;
     } finally {
       _setLoading(false);
@@ -287,6 +430,7 @@ class UserViewModel extends ChangeNotifier {
   }) async {
     try {
       _setLoading(true);
+      _error = null;
       resetErrors();
 
       final userData = await _userService.userRegister(
@@ -307,12 +451,23 @@ class UserViewModel extends ChangeNotifier {
       if (userData != null) {
         return true;
       } else {
-        setError('general', 'Registration failed');
-        return false;
+        throw ServiceException('Registration failed');
       }
+    } on NoInternetException catch (e) {
+      _error = e;
+      developer.log('No internet: $e', name: 'UserViewModel');
+      return false;
+    } on RequestTimeoutException catch (e) {
+      _error = e;
+      developer.log('Request timeout: $e', name: 'UserViewModel');
+      return false;
+    } on HttpException catch (e) {
+      _error = e;
+      developer.log('HTTP error: $e', name: 'UserViewModel');
+      return false;
     } catch (e) {
-      setError('general', 'Failed to register user: $e');
-      developer.log('Error: $e', name: 'UserViewModel');
+      _error = ServiceException('Failed to register user: $e');
+      developer.log('Unexpected error: $e', name: 'UserViewModel');
       return false;
     } finally {
       _setLoading(false);

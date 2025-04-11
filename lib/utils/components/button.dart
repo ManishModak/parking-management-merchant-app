@@ -22,7 +22,7 @@ class CustomButtons {
 
     final primaryColor = Theme.of(context).brightness == Brightness.light
         ? AppColors.primary
-        : AppColors.secondary;
+        : AppColors.primary;
 
     return SizedBox(
       width: effectiveWidth,
@@ -82,7 +82,7 @@ class CustomButtons {
         : AppColors.buttonDark;
     final borderColor = Theme.of(context).brightness == Brightness.light
         ? AppColors.primary
-        : AppColors.secondary;
+        : AppColors.primary;
 
     return SizedBox(
       width: effectiveWidth,

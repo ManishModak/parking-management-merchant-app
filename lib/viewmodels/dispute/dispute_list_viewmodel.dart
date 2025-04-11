@@ -37,8 +37,8 @@ class DisputeListViewModel extends ChangeNotifier{
         'entryLaneId': ticket.entryLaneId,
         'entryLaneDirection': ticket.entryLaneDirection,
         'ticketCreationTime': ticket.createdTime.toIso8601String(),
-        'floorId': ticket.floorId.isEmpty ? 'N/A' : ticket.floorId,
-        'slotId': ticket.slotId.isEmpty ? 'N/A' : ticket.slotId,
+        'floorId': ticket.floorId != null ? 'N/A' : ticket.floorId,
+        'slotId': ticket.slotId != null ? 'N/A' : ticket.slotId,
         'capturedImages': ticket.capturedImages,
         'modificationTime': ticket.modificationTime?.toIso8601String(),
       }).toList();

@@ -12,6 +12,7 @@ import '../../../generated/l10n.dart';
 import '../../../viewmodels/dispute/raise_dispute_viewmodel.dart';
 import '../../../viewmodels/ticket/ticket_history_viewmodel.dart';
 import '../../dispute/raise_dispute/raise_dispute_dialog.dart';
+import 'package:merchant_app/config/app_theme.dart'; // Import AppTheme
 
 class ViewTicketScreen extends StatefulWidget {
   final String ticketId;
@@ -38,7 +39,6 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
     final viewModel = Provider.of<TicketHistoryViewModel>(context, listen: false);
     final strings = S.of(context);
     try {
-      await Future.delayed(const Duration(seconds: 2));
       await viewModel.fetchTicketDetails(widget.ticketId);
     } catch (e) {
       if (mounted) {
@@ -50,9 +50,14 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
   void _showErrorSnackBar(String message, String error) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$message: $error'),
+        content: Text('$message: $error', style: Theme.of(context).snackBarTheme.contentTextStyle),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.error,
+        backgroundColor: Theme.of(context).snackBarTheme.backgroundColor,
+        action: SnackBarAction(
+          label: S.of(context).buttonRetry,
+          textColor: Theme.of(context).colorScheme.onSurface,
+          onPressed: _fetchTicketDetails,
+        ),
       ),
     );
   }
@@ -65,6 +70,7 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.all(10),
           child: Stack(
+            alignment: Alignment.center,
             children: [
               InteractiveViewer(
                 boundaryMargin: const EdgeInsets.all(20.0),
@@ -73,9 +79,10 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
                 child: CachedNetworkImage(
                   imageUrl: imageUrl,
                   fit: BoxFit.contain,
-                  placeholder: (context, url) => _buildShimmerPlaceholder(),
-                  errorWidget: (context, url, error) => const Center(
-                    child: Icon(Icons.broken_image_outlined, size: 48, color: Colors.red),
+                  placeholder: (context, url) => _buildShimmerPlaceholder(height: 300),
+                  errorWidget: (context, url, error) => Center(
+                    child: Icon(Icons.broken_image_outlined,
+                        size: 48, color: Theme.of(context).colorScheme.error),
                   ),
                 ),
               ),
@@ -83,7 +90,7 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
                 top: 10,
                 right: 10,
                 child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
+                  icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onPrimary),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
@@ -96,13 +103,13 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
 
   Widget _buildShimmerPlaceholder({double width = double.infinity, double height = 20}) {
     return Shimmer.fromColors(
-      baseColor: Colors.grey.shade300,
-      highlightColor: Colors.grey.shade100,
+      baseColor: AppColors.shimmerBaseLight,
+      highlightColor: AppColors.shimmerHighlightLight,
       child: Container(
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(8),
         ),
       ),
@@ -110,277 +117,166 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
   }
 
   Widget _buildLoadingState() {
-    return ListView(
+    final strings = S.of(context);
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      children: [
-        Card(
-          elevation: 2,
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          color: AppColors.formBackground,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildShimmerPlaceholder(width: 180, height: 24),
-                    _buildShimmerPlaceholder(width: 100, height: 30),
-                  ],
-                ),
-                const SizedBox(height: 22),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildShimmerPlaceholder(width: 110, height: 16),
-                          const SizedBox(height: 10),
-                          _buildShimmerPlaceholder(height: 22),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildShimmerPlaceholder(width: 110, height: 16),
-                          const SizedBox(height: 10),
-                          _buildShimmerPlaceholder(height: 22),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildShimmerPlaceholder(width: 110, height: 16),
-                          const SizedBox(height: 10),
-                          _buildShimmerPlaceholder(height: 22),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildShimmerPlaceholder(width: 110, height: 16),
-                          const SizedBox(height: 10),
-                          _buildShimmerPlaceholder(height: 22),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildShimmerPlaceholder(width: 110, height: 16),
-                          const SizedBox(height: 10),
-                          _buildShimmerPlaceholder(height: 22),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildShimmerPlaceholder(width: 110, height: 16),
-                          const SizedBox(height: 10),
-                          _buildShimmerPlaceholder(height: 22),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildShimmerPlaceholder(width: 80, height: 16),
-                          const SizedBox(height: 10),
-                          _buildShimmerPlaceholder(width: 60, height: 22),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildShimmerPlaceholder(width: 80, height: 16),
-                          const SizedBox(height: 10),
-                          _buildShimmerPlaceholder(width: 70, height: 22),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildShimmerPlaceholder(width: 80, height: 16),
-                          const SizedBox(height: 10),
-                          _buildShimmerPlaceholder(width: 90, height: 22),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+      child: Column(
+        children: [
+          Card(
+            elevation: Theme.of(context).cardTheme.elevation,
+            margin: Theme.of(context).cardTheme.margin,
+            shape: Theme.of(context).cardTheme.shape,
+            color: Theme.of(context).cardColor,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildShimmerPlaceholder(width: 180, height: 24),
+                      _buildShimmerPlaceholder(width: 100, height: 30),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  Row(
+                    children: [
+                      Expanded(child: _buildShimmerFieldPair(strings.labelVehicleNumber)),
+                      const SizedBox(width: 20),
+                      Expanded(child: _buildShimmerFieldPair(strings.labelVehicleType)),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(child: _buildShimmerFieldPair(strings.labelPlazaName)),
+                      const SizedBox(width: 20),
+                      Expanded(child: _buildShimmerFieldPair(strings.labelEntryLane)),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(child: _buildShimmerFieldPair(strings.labelEntryTime)),
+                      const SizedBox(width: 20),
+                      Expanded(child: _buildShimmerFieldPair(strings.labelExitTime)),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        Card(
-          elevation: 2,
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          color: AppColors.formBackground,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildShimmerPlaceholder(width: 180, height: 24),
-                    _buildShimmerPlaceholder(width: 100, height: 30),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildShimmerPlaceholder(width: 80, height: 20),
-                    _buildShimmerPlaceholder(width: 100, height: 20),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                _buildShimmerPlaceholder(width: 140, height: 16),
-              ],
+          Card(
+            elevation: Theme.of(context).cardTheme.elevation,
+            margin: Theme.of(context).cardTheme.margin,
+            shape: Theme.of(context).cardTheme.shape,
+            color: Theme.of(context).cardColor,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildShimmerPlaceholder(width: 180, height: 24),
+                      _buildShimmerPlaceholder(width: 100, height: 30),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildShimmerPlaceholder(width: 80, height: 20),
+                      _buildShimmerPlaceholder(width: 100, height: 20),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        Card(
-          elevation: 2,
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          color: AppColors.formBackground,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildShimmerPlaceholder(width: 140, height: 24),
-                    _buildShimmerPlaceholder(width: 30, height: 24),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: List.generate(
-                    3,
-                        (index) => ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: _buildShimmerPlaceholder(
-                        width: (AppConfig.deviceWidth - 70) / 3,
-                        height: 140,
+          Card(
+            elevation: Theme.of(context).cardTheme.elevation,
+            margin: Theme.of(context).cardTheme.margin,
+            shape: Theme.of(context).cardTheme.shape,
+            color: Theme.of(context).cardColor,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildShimmerPlaceholder(width: 140, height: 24),
+                      _buildShimmerPlaceholder(width: 30, height: 24),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    height: 140,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: List.generate(
+                        3,
+                            (index) => Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: _buildShimmerPlaceholder(
+                            width: (AppConfig.deviceWidth - 70) / 3,
+                            height: 140,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildShimmerPlaceholder(width: 28, height: 28),
-                    const SizedBox(width: 8),
-                    _buildShimmerPlaceholder(width: 90, height: 20),
-                    const SizedBox(width: 8),
-                    _buildShimmerPlaceholder(width: 28, height: 28),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        Card(
-          elevation: 2,
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          color: AppColors.formBackground,
-          child: Padding(
-            padding: const EdgeInsets.all(18.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    _buildShimmerPlaceholder(width: 28, height: 28),
-                    const SizedBox(width: 14),
-                    _buildShimmerPlaceholder(width: 140, height: 24),
-                  ],
-                ),
-                _buildShimmerPlaceholder(width: 28, height: 28),
-              ],
-            ),
-          ),
-        ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerFieldPair(String label) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildShimmerPlaceholder(width: 110, height: 16),
+        const SizedBox(height: 10),
+        _buildShimmerPlaceholder(height: 22),
       ],
     );
   }
 
   Widget _buildImageSection(TicketHistoryViewModel viewModel, S strings) {
     return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      color: AppColors.formBackground,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: Theme.of(context).cardTheme.elevation,
+      margin: Theme.of(context).cardTheme.margin,
+      shape: Theme.of(context).cardTheme.shape,
+      color: Theme.of(context).cardColor,
       child: ExpansionTile(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               strings.labelUploadedDocuments,
-              style: const TextStyle(
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                fontSize: 16,
-                color: AppColors.textPrimary,
               ),
             ),
-            if (viewModel.capturedImageUrls != null)
+            if (viewModel.capturedImageUrls != null && viewModel.capturedImageUrls!.isNotEmpty)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   '${viewModel.capturedImageUrls!.length}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.primary,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -405,11 +301,14 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.image_not_supported, size: 48, color: AppColors.primary),
+                          Icon(Icons.image_not_supported,
+                              size: 48, color: Theme.of(context).colorScheme.primary),
                           const SizedBox(height: 8),
                           Text(
                             strings.messageNoImagesAvailable,
-                            style: const TextStyle(color: Colors.grey, fontSize: 16),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            ),
                           ),
                         ],
                       ),
@@ -429,7 +328,7 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
                           child: Container(
                             width: imageWidth,
                             decoration: BoxDecoration(
-                              border: Border.all(color: AppColors.primary),
+                              border: Border.all(color: Theme.of(context).colorScheme.primary),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: ClipRRect(
@@ -439,14 +338,23 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
                                 child: CachedNetworkImage(
                                   imageUrl: imageUrl,
                                   fit: BoxFit.cover,
-                                  placeholder: (context, url) => _buildShimmerPlaceholder(width: imageWidth, height: 150),
+                                  placeholder: (context, url) =>
+                                      _buildShimmerPlaceholder(width: imageWidth, height: 150),
                                   errorWidget: (context, url, error) => Center(
                                     child: Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        const Icon(Icons.broken_image_outlined, size: 32, color: Colors.grey),
+                                        Icon(Icons.broken_image_outlined,
+                                            size: 32,
+                                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                                         const SizedBox(height: 8),
-                                        Text(strings.errorImageLoadFailed, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                                        Text(strings.errorImageLoadFailed,
+                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withOpacity(0.6),
+                                            )),
                                       ],
                                     ),
                                   ),
@@ -465,39 +373,34 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.arrow_back_ios, size: 18),
-                          color: _currentImagePage > 0 ? AppColors.primary : Colors.grey,
+                          color: _currentImagePage > 0
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                           onPressed: _currentImagePage > 0
-                              ? () {
-                            setState(() {
-                              _currentImagePage--;
-                            });
-                          }
+                              ? () => setState(() => _currentImagePage--)
                               : null,
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             '${strings.labelPage} ${_currentImagePage + 1} ${strings.labelOf} ${_getTotalPages(viewModel)}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: AppColors.primary,
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.arrow_forward_ios, size: 18),
-                          color: _currentImagePage < _getTotalPages(viewModel) - 1 ? AppColors.primary : Colors.grey,
+                          color: _currentImagePage < _getTotalPages(viewModel) - 1
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                           onPressed: _currentImagePage < _getTotalPages(viewModel) - 1
-                              ? () {
-                            setState(() {
-                              _currentImagePage++;
-                            });
-                          }
+                              ? () => setState(() => _currentImagePage++)
                               : null,
                         ),
                       ],
@@ -513,34 +416,30 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
   }
 
   List<String> _getCurrentImages(TicketHistoryViewModel viewModel) {
-    if (viewModel.capturedImageUrls == null || viewModel.capturedImageUrls!.isEmpty) {
-      return [];
-    }
-    final totalImages = viewModel.capturedImageUrls!.length;
+    if (viewModel.capturedImageUrls == null || viewModel.capturedImageUrls!.isEmpty) return [];
     final startIndex = _currentImagePage * 3;
-    final endIndex = (startIndex + 3) > totalImages ? totalImages : (startIndex + 3);
+    final endIndex = (startIndex + 3).clamp(0, viewModel.capturedImageUrls!.length);
     return viewModel.capturedImageUrls!.sublist(startIndex, endIndex);
   }
 
   int _getTotalPages(TicketHistoryViewModel viewModel) {
-    if (viewModel.capturedImageUrls == null || viewModel.capturedImageUrls!.isEmpty) {
-      return 0;
-    }
+    if (viewModel.capturedImageUrls == null || viewModel.capturedImageUrls!.isEmpty) return 0;
     return (viewModel.capturedImageUrls!.length / 3).ceil();
   }
 
   Widget _buildActionButton(TicketHistoryViewModel viewModel, S strings) {
     if (viewModel.ticket == null) return const SizedBox.shrink();
 
-    final bool disputeRaised = true; // Hardcoded for now as per original
-    developer.log('Dispute Raised: ${viewModel.ticket!.disputeRaised.toString()}', name: 'ActionButton');
-    developer.log('Dispute Raised: ${disputeRaised.toString()}', name: 'ActionButton');
+    final bool disputeRaised = true;
+    //final bool disputeRaised = viewModel.ticket!.disputeRaised ?? false;
+    developer.log('Dispute Raised: $disputeRaised', name: 'ActionButton');
+
 
     return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(left: 8, right: 8, top: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: AppColors.formBackground,
+      elevation: Theme.of(context).cardTheme.elevation,
+      margin: Theme.of(context).cardTheme.margin,
+      shape: Theme.of(context).cardTheme.shape,
+      color: Theme.of(context).cardColor,
       child: InkWell(
         onTap: () {
           if (disputeRaised) {
@@ -548,15 +447,13 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
             Navigator.pushNamed(context, AppRoutes.disputeDetail, arguments: {'ticketId': widget.ticketId});
           } else {
             developer.log('Navigating to raise dispute screen', name: 'Navigation');
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              showDialog(
-                context: context,
-                builder: (context) => ChangeNotifierProvider(
-                  create: (_) => RaiseDisputeViewModel(),
-                  child: RaiseDisputeDialog(ticketId: widget.ticketId),
-                ),
-              );
-            });
+            showDialog(
+              context: context,
+              builder: (context) => ChangeNotifierProvider(
+                create: (_) => RaiseDisputeViewModel(),
+                child: RaiseDisputeDialog(ticketId: widget.ticketId),
+              ),
+            );
           }
         },
         borderRadius: BorderRadius.circular(12),
@@ -569,24 +466,23 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
                 children: [
                   Icon(
                     disputeRaised ? Icons.fact_check_outlined : Icons.report_problem_outlined,
-                    color: AppColors.primary,
-                    size: 24,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: Theme.of(context).iconTheme.size,
                   ),
                   const SizedBox(width: 12),
                   Text(
                     disputeRaised ? strings.buttonViewDispute : strings.buttonRaiseDispute,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
                     ),
                   ),
                 ],
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right,
-                color: AppColors.primary,
-                size: 24,
+                color: Theme.of(context).colorScheme.primary,
+                size: Theme.of(context).iconTheme.size,
               ),
             ],
           ),
@@ -609,9 +505,8 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontSize: 13,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -620,30 +515,36 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
               ? Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: value.toLowerCase() == strings.statusSuccess.toLowerCase() ? Colors.green.withOpacity(0.1) : AppColors.error.withOpacity(0.1),
+              color: value.toLowerCase() == strings.statusSuccess.toLowerCase()
+                  ? Colors.green.withOpacity(0.1)
+                  : Theme.of(context).colorScheme.error.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: value.toLowerCase() == strings.statusSuccess.toLowerCase() ? Colors.green : AppColors.error,
+                color: value.toLowerCase() == strings.statusSuccess.toLowerCase()
+                    ? Colors.green
+                    : Theme.of(context).colorScheme.error,
                 width: 1,
               ),
             ),
             child: Text(
               value,
-              style: TextStyle(
-                color: value.toLowerCase() == strings.statusSuccess.toLowerCase() ? Colors.green : AppColors.error,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: value.toLowerCase() == strings.statusSuccess.toLowerCase()
+                    ? Colors.green
+                    : Theme.of(context).colorScheme.error,
                 fontWeight: FontWeight.w600,
-                fontSize: 15,
               ),
             ),
           )
               : Text(
             value.isEmpty ? strings.labelNA : value,
-            style: TextStyle(
-              fontSize: 15,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
               color: highlight
-                  ? (value.toLowerCase() == strings.statusSuccess.toLowerCase() ? Colors.green : Colors.red)
-                  : AppColors.textPrimary.withOpacity(0.9),
+                  ? (value.toLowerCase() == strings.statusSuccess.toLowerCase()
+                  ? Colors.green
+                  : Colors.red)
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
             ),
           ),
         ],
@@ -657,10 +558,10 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
     Widget? trailing,
   }) {
     return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: AppColors.formBackground,
+      elevation: Theme.of(context).cardTheme.elevation,
+      margin: Theme.of(context).cardTheme.margin,
+      shape: Theme.of(context).cardTheme.shape,
+      color: Theme.of(context).cardColor,
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(
@@ -671,15 +572,14 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: AppColors.textPrimary,
                   ),
                 ),
                 if (trailing != null) trailing,
               ],
             ),
+            const SizedBox(height: 8),
             ...children,
           ],
         ),
@@ -693,9 +593,10 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
           ? "${strings.titleTicketDetails}\n${strings.labelLoading}"
           : "${strings.titleTicket} #${viewModel.ticket!.ticketRefId ?? strings.labelNA}\n${strings.labelCreated}: ${viewModel.getFormattedCreationTime()}",
       onPressed: () => Navigator.pop(context),
-      darkBackground: true,
-      fontSize: 18,
-      centreTitle: false, context: context,
+      darkBackground: Theme.of(context).brightness == Brightness.dark,
+      fontSize: 14,
+      centreTitle: false,
+      context: context,
     );
   }
 
@@ -705,24 +606,29 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 48,
-              color: AppColors.error,
-            ),
+            Icon(Icons.error_outline,
+                size: 48, color: Theme.of(context).colorScheme.error),
             const SizedBox(height: 16),
             Text(
-              '${strings.errorGeneric}: ${viewModel.error}',
-              style: const TextStyle(
-                fontSize: 16,
-                color: AppColors.textPrimary,
+              strings.errorGeneric,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              viewModel.error.toString(),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             CustomButtons.primaryButton(
               text: strings.buttonRetry,
-              onPressed: _fetchTicketDetails, context: context,
+              onPressed: _fetchTicketDetails,
+              context: context,
             ),
           ],
         ),
@@ -733,10 +639,10 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
   Widget _buildPaymentDetails(TicketHistoryViewModel viewModel, S strings) {
     if (viewModel.ticket == null) return const SizedBox.shrink();
     return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: AppColors.formBackground,
+      elevation: Theme.of(context).cardTheme.elevation,
+      margin: Theme.of(context).cardTheme.margin,
+      shape: Theme.of(context).cardTheme.shape,
+      color: Theme.of(context).cardColor,
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(
@@ -747,10 +653,8 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
               children: [
                 Text(
                   strings.labelPaymentDetails,
-                  style: const TextStyle(
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: AppColors.textPrimary,
                   ),
                 ),
                 Container(
@@ -761,10 +665,9 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
                   ),
                   child: Text(
                     strings.statusPending,
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: _getStatusColor(strings.statusPending.toLowerCase()),
                       fontWeight: FontWeight.w600,
-                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -776,17 +679,17 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
               children: [
                 Text(
                   strings.labelUPI,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textPrimary,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 Text(
-                  viewModel.ticket!.totalCharges != null ? '₹${viewModel.ticket!.totalCharges}' : '₹0',
-                  style: const TextStyle(
-                    fontSize: 14,
+                  viewModel.ticket!.totalCharges != null
+                      ? '₹${viewModel.ticket!.totalCharges}'
+                      : '₹0',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ],
@@ -794,9 +697,8 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
             const SizedBox(height: 4),
             Text(
               viewModel.getFormattedCreationTime(),
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textPrimary.withOpacity(0.7),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
           ],
@@ -807,129 +709,133 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
 
   Widget _buildTicketDetails(TicketHistoryViewModel viewModel, S strings) {
     if (viewModel.ticket == null) return const SizedBox.shrink();
-    return ListView(
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        _buildCompactSection(
-          title: strings.labelTicketDetails,
-          trailing: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: _getStatusColor(viewModel.ticket!.status.toString().split('.').last.toLowerCase()).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: _getStatusColor(viewModel.ticket!.status.toString().split('.').last.toLowerCase()),
-                width: 1.5,
+      child: Column(
+        children: [
+          _buildCompactSection(
+            title: strings.labelTicketDetails,
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: _getStatusColor(viewModel.ticket!.status.toString().split('.').last.toLowerCase())
+                    .withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color:
+                  _getStatusColor(viewModel.ticket!.status.toString().split('.').last.toLowerCase()),
+                  width: 1.5,
+                ),
+              ),
+              child: Text(
+                viewModel.ticket!.status.toString().split('.').last,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color:
+                  _getStatusColor(viewModel.ticket!.status.toString().split('.').last.toLowerCase()),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            child: Text(
-              viewModel.ticket!.status.toString().split('.').last,
-              style: TextStyle(
-                color: _getStatusColor(viewModel.ticket!.status.toString().split('.').last.toLowerCase()),
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelVehicleNumber,
+                      value: viewModel.ticket!.vehicleNumber ?? strings.labelNA,
+                      strings: strings,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelVehicleType,
+                      value: viewModel.ticket!.vehicleType ?? strings.labelNA,
+                      strings: strings,
+                    ),
+                  ),
+                ],
               ),
-            ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelPlazaName,
+                      value: '${strings.labelPlaza} ${viewModel.ticket!.plazaId ?? strings.labelNA}',
+                      strings: strings,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelEntryLane,
+                      value: viewModel.ticket!.entryLaneId ?? strings.labelNA,
+                      strings: strings,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelFloorId,
+                      value: viewModel.ticket!.floorId ?? strings.labelNA,
+                      strings: strings,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelSlotId,
+                      value: viewModel.ticket!.slotId ?? strings.labelNA,
+                      strings: strings,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelEntryTime,
+                      value: viewModel.getFormattedEntryTime(),
+                      strings: strings,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelExitTime,
+                      value: viewModel.getFormattedExitTime(),
+                      strings: strings,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildDetailItem(
+                    title: strings.labelDuration,
+                    value: viewModel.ticket!.parkingDuration?.toString() ?? strings.labelNA,
+                    strings: strings,
+                  ),
+                  _buildDetailItem(
+                    title: strings.labelFareRate,
+                    value: viewModel.ticket!.fareAmount != null ? '₹${viewModel.ticket!.fareAmount}' : '₹0',
+                    strings: strings,
+                  ),
+                  _buildDetailItem(
+                    title: strings.labelFareType,
+                    value: viewModel.ticket!.fareType ?? strings.labelStandard,
+                    strings: strings,
+                  ),
+                ],
+              ),
+            ],
           ),
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _buildDetailItem(
-                    title: strings.labelVehicleNumber,
-                    value: viewModel.ticket!.vehicleNumber,
-                    strings: strings,
-                  ),
-                ),
-                Expanded(
-                  child: _buildDetailItem(
-                    title: strings.labelVehicleType,
-                    value: viewModel.ticket!.vehicleType,
-                    strings: strings,
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildDetailItem(
-                    title: strings.labelPlazaName,
-                    value: '${strings.labelPlaza} ${viewModel.ticket!.plazaId}',
-                    strings: strings,
-                  ),
-                ),
-                Expanded(
-                  child: _buildDetailItem(
-                    title: strings.labelEntryLane,
-                    value: viewModel.ticket!.entryLaneId,
-                    strings: strings,
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildDetailItem(
-                    title: strings.labelFloorId,
-                    value: viewModel.ticket!.floorId.isEmpty ? strings.labelNA : viewModel.ticket!.floorId,
-                    strings: strings,
-                  ),
-                ),
-                Expanded(
-                  child: _buildDetailItem(
-                    title: strings.labelSlotId,
-                    value: viewModel.ticket!.slotId.isEmpty ? strings.labelNA : viewModel.ticket!.slotId,
-                    strings: strings,
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildDetailItem(
-                    title: strings.labelEntryTime,
-                    value: viewModel.getFormattedEntryTime(),
-                    strings: strings,
-                  ),
-                ),
-                Expanded(
-                  child: _buildDetailItem(
-                    title: strings.labelExitTime,
-                    value: viewModel.getFormattedExitTime(),
-                    strings: strings,
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildDetailItem(
-                  title: strings.labelDuration,
-                  value: viewModel.ticket!.parkingDuration?.toString() ?? '0',
-                  strings: strings,
-                ),
-                _buildDetailItem(
-                  title: strings.labelFareRate,
-                  value: viewModel.ticket!.fareAmount != null ? '₹${viewModel.ticket!.fareAmount}' : '₹0',
-                  strings: strings,
-                ),
-                _buildDetailItem(
-                  title: strings.labelFareType,
-                  value: viewModel.ticket!.fareType ?? strings.labelStandard,
-                  strings: strings,
-                ),
-              ],
-            ),
-          ],
-        ),
-        _buildPaymentDetails(viewModel, strings),
-        _buildImageSection(viewModel, strings),
-        _buildActionButton(viewModel, strings),
-      ],
+          _buildPaymentDetails(viewModel, strings),
+          _buildImageSection(viewModel, strings),
+          _buildActionButton(viewModel, strings),
+        ],
+      ),
     );
   }
 
@@ -947,7 +853,7 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
       case 'complete':
         return Colors.blue;
       default:
-        return Colors.grey;
+        return Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
     }
   }
 
@@ -960,7 +866,7 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
           appBar: _buildCustomAppBar(viewModel, strings),
           body: RefreshIndicator(
             onRefresh: _fetchTicketDetails,
-            child: viewModel.isLoading || viewModel.ticket == null
+            child: viewModel.isLoading
                 ? _buildLoadingState()
                 : viewModel.error != null
                 ? _buildErrorContent(viewModel, strings)

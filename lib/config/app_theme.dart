@@ -530,7 +530,9 @@ extension AppColorsExtension on BuildContext {
   Color get textPrimaryColor => Theme.of(this).textTheme.bodyLarge!.color!;
   Color get textSecondaryColor => Theme.of(this).textTheme.bodySmall!.color!;
   Color get primaryButtonTextColor => Theme.of(this).elevatedButtonTheme.style!.foregroundColor!.resolve({})!;
-  Color get secondaryButtonTextColor => Theme.of(this).outlinedButtonTheme.style!.foregroundColor!.resolve({})!;
+  Color get secondaryButtonTextColor => Theme.of(this).brightness == Brightness.light
+      ? AppColors.textDark
+      : AppColors.textLight;
   Color get cardColor => Theme.of(this).cardColor;
   Color get secondaryCardColor => Theme.of(this).brightness == Brightness.light
       ? AppColors.secondaryCardLight

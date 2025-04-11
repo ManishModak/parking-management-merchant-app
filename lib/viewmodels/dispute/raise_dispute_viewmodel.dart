@@ -13,9 +13,8 @@ class RaiseDisputeViewModel extends ChangeNotifier {
 
   final List<String> disputeReasons = [
     'Duplicate Transaction',
-    'Incorrect Amount',
-    'Service Not Provided',
-    'Other',
+    'Incorrect Charged',
+    'Service Not Availed',
   ];
 
   final ImagePicker _imagePicker = ImagePicker();

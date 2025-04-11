@@ -130,7 +130,7 @@ class NotificationsScreen extends StatelessWidget {
       itemCount: notifications.length + 1,
       itemBuilder: (context, index) {
         if (index == 0) {
-          return const SizedBox(height: 16);
+          return const SizedBox(height: 4);
         }
         final notification = notifications[index - 1];
         return CustomCards.notificationCard(

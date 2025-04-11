@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:merchant_app/utils/components/button.dart';
 import 'package:merchant_app/utils/components/dropdown.dart';
 import 'package:merchant_app/viewmodels/plaza_fare_viewmodel.dart';
 import 'package:provider/provider.dart';
-
-import '../../../config/app_config.dart';
-import '../../../generated/l10n.dart';
-import '../../../models/plaza.dart';
-import '../../../models/plaza_fare.dart';
-import '../../../utils/components/form_field.dart';
+import 'package:merchant_app/config/app_config.dart';
+import 'package:merchant_app/generated/l10n.dart';
+import 'package:merchant_app/models/plaza.dart';
+import 'package:merchant_app/models/plaza_fare.dart';
+import 'package:merchant_app/utils/components/form_field.dart';
 
 class AddFareScreen extends StatefulWidget {
   final Plaza? selectedPlaza; // Optional parameter
@@ -31,7 +29,6 @@ class _AddFareScreenState extends State<AddFareScreen> {
     viewModel = PlazaFareViewModel();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.selectedPlaza != null) {
-        // Pre-select the passed plaza.
         viewModel.setPreSelectedPlaza(widget.selectedPlaza!);
         viewModel.initialize();
       } else {
@@ -40,20 +37,22 @@ class _AddFareScreenState extends State<AddFareScreen> {
     });
   }
 
-  /// Builds a fare card for each PlazaFare.
   Widget _buildFareCard(PlazaFare fare) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-        side: BorderSide(
-            color: fare.isDeleted ? Colors.red.shade100 : Colors.green.shade100,
-            width: 1),
-      ),
+      margin: EdgeInsets.zero,
+      elevation: Theme.of(context).cardTheme.elevation ?? 3,
+      shape: Theme.of(context).cardTheme.shape ??
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+            side: BorderSide(
+              color: fare.isDeleted ? Colors.red.shade100 : Colors.green.shade100,
+              width: 1,
+            ),
+          ),
+      color: Theme.of(context).cardColor,
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
-        onTap: ()  { },
+        onTap: () {}, // Placeholder for future edit functionality
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -63,7 +62,6 @@ class _AddFareScreenState extends State<AddFareScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header with Plaza Name and Status
                     Stack(
                       children: [
                         Container(
@@ -73,17 +71,14 @@ class _AddFareScreenState extends State<AddFareScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Plaza Name",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey.shade600,
+                                'Plaza Name',
+                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                                 ),
                               ),
                               Text(
-                                viewModel.selectedPlaza?.plazaName ??
-                                    'Plaza ID: ${fare.plazaId}',
-                                style: const TextStyle(
-                                  fontSize: 16,
+                                viewModel.selectedPlaza?.plazaName ?? 'Plaza ID: ${fare.plazaId}',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -94,8 +89,7 @@ class _AddFareScreenState extends State<AddFareScreen> {
                           right: 0,
                           child: Container(
                             width: 60,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: fare.isDeleted
                                   ? Colors.red.withOpacity(0.1)
@@ -104,10 +98,9 @@ class _AddFareScreenState extends State<AddFareScreen> {
                             ),
                             child: Text(
                               fare.isDeleted ? 'Inactive' : 'Active',
-                              style: TextStyle(
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                 color: fare.isDeleted ? Colors.red : Colors.green,
                                 fontWeight: FontWeight.w600,
-                                fontSize: 13,
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -116,7 +109,6 @@ class _AddFareScreenState extends State<AddFareScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // Structured Grid-like Layout
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -126,16 +118,14 @@ class _AddFareScreenState extends State<AddFareScreen> {
                             children: [
                               Text(
                                 'Vehicle Type',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 12,
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                                 ),
                               ),
                               Text(
                                 fare.vehicleType,
-                                style: const TextStyle(
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 14,
                                 ),
                               ),
                             ],
@@ -147,16 +137,14 @@ class _AddFareScreenState extends State<AddFareScreen> {
                             children: [
                               Text(
                                 'Fare Type',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 12,
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                                 ),
                               ),
                               Text(
                                 fare.fareType,
-                                style: const TextStyle(
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 14,
                                 ),
                               ),
                             ],
@@ -174,16 +162,14 @@ class _AddFareScreenState extends State<AddFareScreen> {
                             children: [
                               Text(
                                 'Amount',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 12,
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                                 ),
                               ),
                               Text(
                                 '₹${fare.fareRate}',
-                                style: TextStyle(
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 15,
                                 ),
                               ),
                             ],
@@ -195,16 +181,14 @@ class _AddFareScreenState extends State<AddFareScreen> {
                             children: [
                               Text(
                                 'Effective Period',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 12,
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                                 ),
                               ),
                               Text(
                                 '${DateFormat('dd MMM yyyy').format(fare.startEffectDate)} - ${fare.endEffectDate != null ? DateFormat('dd MMM yyyy').format(fare.endEffectDate!) : 'Ongoing'}',
-                                style: const TextStyle(
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 13,
                                 ),
                               ),
                             ],
@@ -220,8 +204,8 @@ class _AddFareScreenState extends State<AddFareScreen> {
                 alignment: Alignment.center,
                 child: Icon(
                   Icons.chevron_right,
-                  color: AppColors.primary,
-                  size: 24,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: Theme.of(context).iconTheme.size,
                 ),
               ),
             ],
@@ -241,7 +225,7 @@ class _AddFareScreenState extends State<AddFareScreen> {
         ),
       ),
     ).then((_) {
-      viewModel.resetFields(); // Reset fields when dialog closes
+      viewModel.resetFields();
     });
   }
 
@@ -253,70 +237,73 @@ class _AddFareScreenState extends State<AddFareScreen> {
       child: Consumer<PlazaFareViewModel>(
         builder: (context, model, child) {
           return Scaffold(
-            backgroundColor: AppColors.lightThemeBackground,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             appBar: CustomAppBar.appBarWithNavigation(
               screenTitle: strings.titleAddFare,
               onPressed: () => Navigator.pop(context),
-              darkBackground: true, context: context,
+              darkBackground: Theme.of(context).brightness == Brightness.dark,
+              context: context,
             ),
             body: model.isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary))
                 : SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 16),
-                  Center(
-                    child: SearchableDropdown(
-                      label: 'Select Plaza',
-                      value: viewModel.selectedPlazaId,
-                      items: viewModel.plazaList,
-                      onChanged: (dynamic selected) {
-                        if (selected != null) {
-                          viewModel.setSelectedPlaza(selected as Plaza);
-                        }
-                      },
-                      itemText: (item) => (item as Plaza).plazaName,
-                      itemValue: (item) => (item as Plaza).plazaId!,
-                      errorText: viewModel.validationErrors['plaza'],
-                      enabled: model.canChangePlaza,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: const Text(
-                      'Fares List:',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  if (model.temporaryFares.isEmpty)
-                    const Center(
-                      child: Text(
-                        'No fares added yet',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey,
+              child: Center(
+                child: SizedBox(
+                  width: AppConfig.deviceWidth*0.9,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      Center(
+                        child: SearchableDropdown(
+                          label: 'Select Plaza',
+                          value: viewModel.selectedPlazaIdString,
+                          items: viewModel.plazaList,
+                          onChanged: (dynamic selected) {
+                            if (selected != null) {
+                              viewModel.setSelectedPlaza(selected as Plaza);
+                            }
+                          },
+                          itemText: (item) => (item as Plaza).plazaName,
+                          itemValue: (item) => (item as Plaza).plazaId!,
+                          errorText: viewModel.validationErrors['plaza'],
+                          enabled: model.canChangePlaza,
                         ),
                       ),
-                    ),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: model.temporaryFares.length,
-                    itemBuilder: (context, index) =>
-                        _buildFareCard(model.temporaryFares[index]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Fares List:',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (model.temporaryFares.isEmpty)
+                        Center(
+                          child: Text(
+                            'No fares added yet',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: model.temporaryFares.length,
+                        itemBuilder: (context, index) => _buildFareCard(model.temporaryFares[index]),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
             floatingActionButton: model.canAddFare
                 ? FloatingActionButton(
               onPressed: _showAddFareDialog,
-              backgroundColor: Colors.green,
+              backgroundColor: Theme.of(context).floatingActionButtonTheme.backgroundColor,
+              foregroundColor: Theme.of(context).floatingActionButtonTheme.foregroundColor,
+              elevation: Theme.of(context).floatingActionButtonTheme.elevation,
               child: const Icon(Icons.add),
             )
                 : null,
@@ -324,8 +311,10 @@ class _AddFareScreenState extends State<AddFareScreen> {
                 ? Padding(
               padding: const EdgeInsets.all(8.0),
               child: CustomButtons.primaryButton(
+                height: 50,
                 text: "Submit",
-                onPressed: () => model.submitAllFares(context), context: context,
+                onPressed: () => model.submitAllFares(context),
+                context: context,
               ),
             )
                 : null,
@@ -339,10 +328,7 @@ class _AddFareScreenState extends State<AddFareScreen> {
 class AddFareDialog extends StatelessWidget {
   final PlazaFareViewModel viewModel;
 
-  const AddFareDialog({
-    super.key,
-    required this.viewModel,
-  });
+  const AddFareDialog({super.key, required this.viewModel});
 
   Future<void> _selectDate(
       BuildContext context,
@@ -352,11 +338,8 @@ class AddFareDialog extends StatelessWidget {
     DateTime initialDate = DateTime.now();
     DateTime minDate = DateTime.now();
 
-    if (firstDate != null &&
-        controller == viewModel.endDateController &&
-        viewModel.startDateController.text.isNotEmpty) {
-      minDate = DateTime.parse(viewModel.startDateController.text)
-          .add(const Duration(days: 1));
+    if (firstDate != null && controller == viewModel.endDateController && viewModel.startDateController.text.isNotEmpty) {
+      minDate = DateTime.parse(viewModel.startDateController.text).add(const Duration(days: 1));
       initialDate = minDate;
     }
 
@@ -382,8 +365,8 @@ class AddFareDialog extends StatelessWidget {
     return GestureDetector(
       onTap: () => _selectDate(context, controller, firstDate: firstDate),
       child: AbsorbPointer(
-        child:   CustomFormFields.normalSizedTextFormField(context:context,
-
+        child: CustomFormFields.normalSizedTextFormField(
+          context: context,
           label: label,
           controller: controller,
           errorText: errorText,
@@ -395,15 +378,14 @@ class AddFareDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildFareInputField(
-{
+  Widget _buildFareInputField({
     required String label,
     required TextEditingController controller,
     required String? errorText,
     required BuildContext context,
   }) {
-    return   CustomFormFields.normalSizedTextFormField(context:context,
-
+    return CustomFormFields.normalSizedTextFormField(
+      context: context,
       label: label,
       controller: controller,
       errorText: errorText,
@@ -416,8 +398,9 @@ class AddFareDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: Theme.of(context).dialogTheme.shape ?? RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       insetPadding: EdgeInsets.zero,
+      backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
       child: SizedBox(
         width: AppConfig.deviceWidth * 0.9,
         child: SingleChildScrollView(
@@ -426,30 +409,24 @@ class AddFareDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Dialog header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Add New Fare',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).dialogTheme.titleTextStyle ??
+                        Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
+                    icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
+                    onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              // Plaza (disabled)
               SearchableDropdown(
                 label: 'Select Plaza',
-                value: viewModel.selectedPlazaId,
+                value: viewModel.selectedPlazaIdString,
                 items: viewModel.plazaList,
                 onChanged: (dynamic selected) {
                   if (selected != null) {
@@ -462,8 +439,8 @@ class AddFareDialog extends StatelessWidget {
                 enabled: false,
               ),
               const SizedBox(height: 16),
-              // Fare Type dropdown
-              CustomDropDown.normalDropDown(context:context,
+              CustomDropDown.normalDropDown(
+                context: context,
                 label: 'Select Fare Type',
                 value: viewModel.selectedFareType,
                 items: viewModel.fareTypes,
@@ -472,8 +449,8 @@ class AddFareDialog extends StatelessWidget {
                 errorText: viewModel.validationErrors['fareType'],
               ),
               const SizedBox(height: 16),
-              // Vehicle Type dropdown
-              CustomDropDown.normalDropDown(context:context,
+              CustomDropDown.normalDropDown(
+                context: context,
                 label: 'Select Vehicle Type',
                 value: viewModel.selectedVehicleType,
                 items: viewModel.vehicleTypes,
@@ -482,10 +459,9 @@ class AddFareDialog extends StatelessWidget {
                 errorText: viewModel.validationErrors['vehicleType'],
               ),
               const SizedBox(height: 16),
-              // Fare input fields based on fare type.
               if (viewModel.isDailyFareVisible) ...[
-                _buildFareInputField(context:context,
-
+                _buildFareInputField(
+                  context: context,
                   label: 'Daily Fare',
                   controller: viewModel.dailyFareController,
                   errorText: viewModel.validationErrors['dailyFare'],
@@ -493,8 +469,8 @@ class AddFareDialog extends StatelessWidget {
                 const SizedBox(height: 16),
               ],
               if (viewModel.isHourlyFareVisible) ...[
-                _buildFareInputField(context:context,
-
+                _buildFareInputField(
+                  context: context,
                   label: 'Hourly Fare',
                   controller: viewModel.hourlyFareController,
                   errorText: viewModel.validationErrors['hourlyFare'],
@@ -502,22 +478,22 @@ class AddFareDialog extends StatelessWidget {
                 const SizedBox(height: 16),
               ],
               if (viewModel.isHourWiseCustomVisible) ...[
-                _buildFareInputField(context:context,
-
+                _buildFareInputField(
+                  context: context,
                   label: 'Base Hours',
                   controller: viewModel.baseHoursController,
                   errorText: viewModel.validationErrors['baseHours'],
                 ),
                 const SizedBox(height: 16),
-                _buildFareInputField(context:context,
-
+                _buildFareInputField(
+                  context: context,
                   label: 'Base Hourly Fare',
                   controller: viewModel.baseHourlyFareController,
                   errorText: viewModel.validationErrors['baseHourlyFare'],
                 ),
                 const SizedBox(height: 16),
-                _buildFareInputField(context:context,
-
+                _buildFareInputField(
+                  context: context,
                   label: 'Discount for Extended Hours',
                   controller: viewModel.discountController,
                   errorText: viewModel.validationErrors['discount'],
@@ -525,15 +501,14 @@ class AddFareDialog extends StatelessWidget {
                 const SizedBox(height: 16),
               ],
               if (viewModel.isMonthlyFareVisible) ...[
-                _buildFareInputField(context:context,
-
+                _buildFareInputField(
+                  context: context,
                   label: 'Monthly Fare',
                   controller: viewModel.monthlyFareController,
                   errorText: viewModel.validationErrors['monthlyFare'],
                 ),
                 const SizedBox(height: 16),
               ],
-              // Date fields
               _buildDateField(
                 label: 'Effective Start Date',
                 controller: viewModel.startDateController,
@@ -547,30 +522,29 @@ class AddFareDialog extends StatelessWidget {
                 controller: viewModel.endDateController,
                 context: context,
                 firstDate: viewModel.startDateController.text.isNotEmpty
-                    ? DateTime.parse(viewModel.startDateController.text)
-                    .add(const Duration(days: 1))
+                    ? DateTime.parse(viewModel.startDateController.text).add(const Duration(days: 1))
                     : DateTime.now(),
                 errorText: viewModel.validationErrors['endDate'],
               ),
               const SizedBox(height: 24),
-              // Inline duplicate error display
               if (viewModel.validationErrors['duplicateFare'] != null) ...[
                 Text(
                   viewModel.validationErrors['duplicateFare']!,
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontSize: 14,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
                   ),
                 ),
                 const SizedBox(height: 8),
               ],
-              // Dialog action buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text("Cancel"),
+                    child: Text(
+                      "Cancel",
+                      style: Theme.of(context).textButtonTheme.style?.textStyle?.resolve({}),
+                    ),
                   ),
                   TextButton(
                     onPressed: () async {
@@ -579,10 +553,13 @@ class AddFareDialog extends StatelessWidget {
                         Navigator.pop(context);
                       }
                     },
-                    child: const Text("Save"),
+                    child: Text(
+                      "Save",
+                      style: Theme.of(context).textButtonTheme.style?.textStyle?.resolve({}),
+                    ),
                   ),
                 ],
-              )
+              ),
             ],
           ),
         ),
