@@ -106,29 +106,45 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(strings.buttonRejectTicket),
-          content: CustomFormFields.largeSizedTextFormField(
-            label: strings.labelRemarks,
-            controller: viewModel.remarksController,
-            enabled: true,
-            context: context,
+        return Dialog(
+
+          child: SizedBox(
+            width: AppConfig.deviceWidth*0.9,
+            height: 300,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CustomFormFields.largeSizedTextFormField(
+                    label: strings.labelRemarks,
+                    controller: viewModel.remarksController,
+                    enabled: true,
+                    context: context,
+                  ),
+                  SizedBox(height: 12,),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(strings.buttonCancel),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          if (viewModel.validateForm()) {
+                            Navigator.pop(context);
+                            await _handleReject(viewModel);
+                          }
+                        },
+                        child: Text(strings.buttonSubmit),
+                      ),
+                    ],
+                  )
+                ],
+              ),
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(strings.buttonCancel),
-            ),
-            TextButton(
-              onPressed: () async {
-                if (viewModel.validateForm()) {
-                  Navigator.pop(context);
-                  await _handleReject(viewModel);
-                }
-              },
-              child: Text(strings.buttonSubmit),
-            ),
-          ],
         );
       },
     );

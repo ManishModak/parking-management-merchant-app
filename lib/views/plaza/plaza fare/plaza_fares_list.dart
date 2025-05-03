@@ -1,21 +1,21 @@
 import 'dart:async';
 import 'dart:developer' as developer; // Import developer for logging
 import 'package:flutter/material.dart';
-import 'package:merchant_app/config/app_theme.dart';
-import 'package:merchant_app/viewmodels/plaza_fare_viewmodel.dart';
+import 'package:merchant_app/models/plaza_fare.dart'; // Import FareTypes
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../config/app_colors.dart';
+import '../../../config/app_colors.dart'; // Assuming AppColors exists
+import '../../../config/app_theme.dart'; // For theme extensions like context.secondaryCardColor
 import '../../../generated/l10n.dart';
 import '../../../models/plaza.dart';
-import '../../../models/plaza_fare.dart'; // Ensure PlazaFare model is imported
 import '../../../utils/components/appbar.dart';
 import '../../../utils/components/form_field.dart';
 import '../../../utils/components/pagination_controls.dart';
-import '../../../utils/components/card.dart';
+import '../../../utils/components/card.dart'; // Assuming CustomCards.fareCard is here
 import '../../../utils/components/pagination_mixin.dart';
+import '../../../viewmodels/plaza_fare_viewmodel.dart';
 import 'add_fare.dart';
-import 'modify_view_fare.dart'; // Renamed from edit_fare.dart based on previous context? Verify filename.
+import 'modify_view_fare.dart'; // Import ViewModel
 
 class PlazaFaresListScreen extends StatefulWidget {
   final Plaza plaza;
@@ -31,7 +31,10 @@ class PlazaFaresListScreen extends StatefulWidget {
 
 class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
     with PaginatedListMixin<PlazaFare> { // Specify PlazaFare type for mixin
-  late final PlazaFareViewModel _viewModel;
+  // Use context.read for one-time reads in initState/callbacks
+  // Use Consumer or context.watch in build method for listening
+  // late final PlazaFareViewModel _viewModel; // No longer needed here
+
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
@@ -44,20 +47,19 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
   @override
   void initState() {
     super.initState();
-    _viewModel = Provider.of<PlazaFareViewModel>(context, listen: false);
+    // Access ViewModel for initial setup if needed, but loading is deferred
+    // _viewModel = Provider.of<PlazaFareViewModel>(context, listen: false); // Can use context.read instead
     developer.log('PlazaFaresListScreen initState for Plaza: ${widget.plaza.plazaName} (ID: ${widget.plaza.plazaId})', name: 'PlazaFaresList');
 
-    // --- CHANGE HERE ---
-    // Defer the initial data load until after the first frame build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         developer.log("Post frame callback: Calling _loadPlazaFaresData", name: "PlazaFaresList");
-        _loadPlazaFaresData();
+        // Pass context for potential error messages during load
+        _loadPlazaFaresData(context);
       } else {
         developer.log("Post frame callback: Widget unmounted, skipping _loadPlazaFaresData", name: "PlazaFaresList");
       }
     });
-    // --- END CHANGE ---
 
     _searchController.addListener(_onSearchChanged);
     developer.log("PlazaFaresListScreen initState complete", name: "PlazaFaresList");
@@ -67,10 +69,13 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
     if (_debounce?.isActive ?? false) _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
       if (!mounted) return;
+      // Use context.read to access ViewModel for filtering if needed, or filter directly
+      // final viewModel = context.read<PlazaFareViewModel>();
       setState(() {
         _searchQuery = _searchController.text.trim().toLowerCase();
-        _currentPage = 1;
+        _currentPage = 1; // Reset to first page on search
         developer.log('Search query changed: $_searchQuery', name: 'PlazaFaresList');
+        // No need to explicitly call a filter method if filtering happens in _getFilteredFares
       });
     });
   }
@@ -85,8 +90,12 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
     super.dispose();
   }
 
-  Future<void> _loadPlazaFaresData() async {
+  // Pass BuildContext for error handling
+  Future<void> _loadPlazaFaresData(BuildContext context) async {
     developer.log("_loadPlazaFaresData called", name: "PlazaFaresList");
+    final viewModel = context.read<PlazaFareViewModel>(); // Use context.read
+    final strings = S.of(context); // Get localization
+
     if (!mounted) {
       developer.log("_loadPlazaFaresData: Widget unmounted at start.", name: "PlazaFaresList");
       return;
@@ -95,18 +104,18 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
 
     if (plazaIdString != null) {
       developer.log('Loading fares for Plaza ID (String): $plazaIdString', name: 'PlazaFaresList');
-      // This fetchExistingFares call will now happen *after* the initial build
-      // Its internal setLoadingFare(true) will be safe.
-      await _viewModel.fetchExistingFares(plazaIdString);
+      // Fetch fares and set the plaza name in the ViewModel
+      await viewModel.fetchExistingFares(plazaIdString);
       if (mounted) {
-        _viewModel.setPlazaName(widget.plaza.plazaName);
+        // Set plaza name for display in edit screen if needed (e.g., in the disabled plaza field)
+        viewModel.setPlazaName(widget.plaza.plazaName!);
       }
     } else {
       developer.log('CRITICAL ERROR: Plaza ID is null for ${widget.plaza.plazaName}. Cannot load fares.', name: 'PlazaFaresList');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(S.of(context).errorMissingPlazaId),
+            content: Text(strings.errorMissingPlazaId), // Localized
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -114,56 +123,56 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
     }
     if (mounted) {
       developer.log("_loadPlazaFaresData complete. Resetting page.", name: "PlazaFaresList");
-      // Reset page *after* data loading is complete (inside the async function)
-      // No need for setState here if _currentPage is only used for calculations
-      // If you need UI to react to page 1 *immediately* after load, use setState:
       setState(() {
-        _currentPage = 1;
+        _currentPage = 1; // Reset page after data load
       });
     }
   }
 
+  // Refresh data - uses _loadPlazaFaresData
   Future<void> _refreshData() async {
     developer.log('Refreshing plaza fares data...', name: 'PlazaFaresList');
     if (!mounted) return;
-    await _loadPlazaFaresData();
+    await _loadPlazaFaresData(context); // Pass context
   }
 
-  // Filters the fares based on the search query
-  List<PlazaFare> _getFilteredFares() {
-    if (_viewModel.existingFares.isEmpty) {
+  // Filters the fares based on the search query (Uses ViewModel's data)
+  List<PlazaFare> _getFilteredFares(PlazaFareViewModel viewModel) {
+    if (viewModel.existingFares.isEmpty) {
       return [];
     }
     if (_searchQuery.isEmpty) {
-      return _viewModel.existingFares;
+      return viewModel.existingFares; // Return all if no query
     }
-    return _viewModel.existingFares.where((fare) {
-      // Ensure fields are not null before calling toLowerCase() or contains()
+    // Filter based on search query (case-insensitive)
+    return viewModel.existingFares.where((fare) {
       final vehicleMatch = fare.vehicleType.toLowerCase().contains(_searchQuery);
       final fareTypeMatch = fare.fareType.toLowerCase().contains(_searchQuery);
-      // Plaza ID is an int in the model, convert to string for search
-      final idMatch = fare.plazaId.toString().contains(_searchQuery);
-      // Fare Rate (optional search field)
-      // final rateMatch = fare.fareRate.toStringAsFixed(2).contains(_searchQuery);
+      // Fare Rate search (convert to string)
+      final rateMatch = fare.fareRate.toStringAsFixed(2).contains(_searchQuery);
+      // Progressive 'from'/'to' search (optional)
+      final fromMatch = fare.from?.toString().contains(_searchQuery) ?? false;
+      final toMatch = fare.toCustom?.toString().contains(_searchQuery) ?? false;
 
-      return idMatch || vehicleMatch || fareTypeMatch /* || rateMatch */;
+      return vehicleMatch || fareTypeMatch || rateMatch || fromMatch || toMatch;
     }).toList();
   }
 
   // Handles page changes for pagination
-  void _updatePage(int newPage) {
-    final filteredFares = _getFilteredFares();
+  void _updatePage(int newPage, List<PlazaFare> filteredFares) {
     // Use the mixin's updatePage method
-    updatePage(newPage, filteredFares, (page) { // Pass total item count
+    updatePage(newPage, filteredFares, (page) {
       if (!mounted) return;
       setState(() => _currentPage = page);
       developer.log('Pagination: Page changed to $_currentPage', name: 'PlazaFaresList');
       // Scroll to top smoothly when page changes
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
     });
   }
 
@@ -172,12 +181,13 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
     return SizedBox(
       width: MediaQuery.of(context).size.width * 0.95,
       child: Card(
-        margin: const EdgeInsets.symmetric(vertical: 4), // Add some vertical margin
-        elevation: Theme.of(context).cardTheme.elevation ?? 1.0, // Use theme elevation
-        color: context.secondaryCardColor,
-        shape: Theme.of(context).cardTheme.shape, // Use theme shape
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        elevation: Theme.of(context).cardTheme.elevation ?? 1.0,
+        // Use theme extension method for color if available
+        color: context.secondaryCardColor, // Assumes AppTheme extension method
+        shape: Theme.of(context).cardTheme.shape,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0), // Adjust padding
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -186,15 +196,15 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
                 hintText: strings.searchPlazaFareHint, // Use specific hint
                 context: context,
               ),
-              const SizedBox(height: 8),
-              // Consider removing or simplifying the 'Last Updated' text if refresh is obvious
-              Text(
-                '${strings.labelLastUpdated}: ${DateTime.now().toString().substring(0, 16)}. ${strings.labelSwipeToRefresh}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: context.textSecondaryColor, // Use secondary text color
-                ),
-                textAlign: TextAlign.center,
-              ),
+              // Optional: Add last updated time or refresh hint
+              // const SizedBox(height: 8),
+              // Text(
+              //   '${strings.labelLastUpdated}: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}. ${strings.labelSwipeToRefresh}',
+              //   style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              //     color: context.textSecondaryColor, // Assumes AppTheme extension
+              //   ),
+              //   textAlign: TextAlign.center,
+              // ),
             ],
           ),
         ),
@@ -203,16 +213,15 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
   }
 
   // Builds the UI shown when no fares are found or match the search
-  Widget _buildEmptyState(S strings) {
+  Widget _buildEmptyState(S strings, PlazaFareViewModel viewModel) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(16.0), // Add padding
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              // Use a more relevant icon like list or search off
-              _searchQuery.isEmpty ? Icons.list_alt_outlined : Icons.search_off_outlined,
+              _searchQuery.isEmpty ? Icons.receipt_long_outlined : Icons.search_off_outlined,
               size: 64,
               color: Colors.grey[400],
             ),
@@ -220,19 +229,20 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
             Text(
               strings.noFaresFoundLabel, // Generic "not found" label
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: context.textPrimaryColor,
+                color: context.textPrimaryColor, // Assumes AppTheme extension
               ),
             ),
             const SizedBox(height: 8),
             Text(
               _searchQuery.isEmpty
-                  ? strings.noFaresForPlazaMessage // Pass plaza name
+                  ? strings.noFaresForPlazaMessage
                   : strings.noFaresMatchSearchMessage,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith( // Use bodyMedium for better readability
-                color: context.textSecondaryColor, // Use secondary color
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: context.textSecondaryColor, // Assumes AppTheme extension
               ),
               textAlign: TextAlign.center,
             ),
+            // Clear search button
             if (_searchQuery.isNotEmpty) ...[
               const SizedBox(height: 16),
               TextButton(
@@ -241,19 +251,19 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
                 },
                 child: Text(
                   strings.clearSearchLabel,
-                  style: const TextStyle(color: AppColors.primary), // Use AppColors
+                  style: TextStyle(color: AppColors.primary), // Use AppColors if defined
                 ),
               ),
             ],
-            // Optionally add a button to navigate to "Add Fare" directly from empty state
+            // Button to Add Fare directly from empty state
             if (_searchQuery.isEmpty) ...[
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 icon: const Icon(Icons.add),
                 label: Text(strings.buttonAddFare), // Add this string
-                onPressed: _navigateToAddFare,
+                onPressed: () => _navigateToAddFare(viewModel), // Pass viewModel
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.primary, // Use AppColors
                   foregroundColor: Colors.white,
                 ),
               )
@@ -266,62 +276,42 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
 
   // Builds the shimmer loading placeholder list
   Widget _buildShimmerList() {
+    // (Implementation remains the same)
     return ListView.builder(
-      // No controller needed here, it's just a placeholder
-      physics: const NeverScrollableScrollPhysics(), // Disable scrolling for shimmer
-      itemCount: itemsPerPage, // Show a fixed number of shimmer items
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: itemsPerPage,
       itemBuilder: (context, index) {
         return Shimmer.fromColors(
           baseColor: Theme.of(context).brightness == Brightness.light
-              ? AppColors.shimmerBaseLight
+              ? AppColors.shimmerBaseLight // Use defined AppColors
               : AppColors.shimmerBaseDark,
           highlightColor: Theme.of(context).brightness == Brightness.light
               ? AppColors.shimmerHighlightLight
               : AppColors.shimmerHighlightDark,
-          child: Padding( // Add padding around shimmer card
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
             child: Card(
-              elevation: 0, // Shimmer card might not need elevation
+              elevation: 0,
               shape: Theme.of(context).cardTheme.shape,
-              child: Container( // Use container for defined height
-                height: 120, // Adjust height to match actual card
+              child: Container(
+                height: 120, // Adjust height to match actual card approx
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Shimmer for Icon/Image placeholder (optional)
-                    /*
-                    Container(
-                      width: 50, // Adjust size
-                      height: 50,
-                      decoration: BoxDecoration(
-                         color: context.backgroundColor, // Use background color for placeholder
-                         borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    */
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceAround, // Space out shimmer elements
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          Container(width: double.infinity, height: 20, color: context.backgroundColor), // Fare Type/Vehicle
+                          Container(width: double.infinity, height: 20, color: context.backgroundColor), // Type/Rate Line 1
                           const SizedBox(height: 8),
-                          Container(width: 150, height: 16, color: context.backgroundColor), // Rate
+                          Container(width: 150, height: 16, color: context.backgroundColor), // Type/Rate Line 2
                           const SizedBox(height: 8),
                           Container(width: 200, height: 16, color: context.backgroundColor), // Dates
                         ],
                       ),
                     ),
-                    // Shimmer for chevron/arrow placeholder (optional)
-                    /*
-                    Container(
-                       width: 24,
-                       height: 24,
-                       color: context.backgroundColor,
-                    )
-                    */
                   ],
                 ),
               ),
@@ -334,26 +324,34 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
 
   // --- Navigation Helpers ---
 
-  // Inside _PlazaFaresListScreenState
-
-  void _navigateToAddFare() async {
+  // Navigate to Add Fare screen
+  void _navigateToAddFare(PlazaFareViewModel viewModel) async {
+    final strings = S.of(context);
     developer.log('Navigating to AddFareScreen', name: 'PlazaFaresList');
-    // NOTE: We are NOT passing the view model instance here.
-    // AddFareScreen will read it from the Provider context.
+    // AddFareScreen uses Provider to get the viewModel instance.
+    // We just need to pass the pre-selected Plaza.
     final added = await Navigator.push(
       context,
       MaterialPageRoute(
-        // Pass the selected plaza data
-        builder: (context) => AddFareScreen(selectedPlaza: widget.plaza),
+        builder: (context) => ChangeNotifierProvider.value( // Provide existing VM instance
+          value: viewModel,
+          child: AddFareScreen(selectedPlaza: widget.plaza), // Pass Plaza data
+        ),
       ),
     );
+    // If AddFareScreen pops with 'true', refresh data
     if (added == true && mounted) {
       developer.log('Returned from AddFareScreen with success, refreshing data.', name: 'PlazaFaresList');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.successFareSubmission), backgroundColor: Colors.green),
+      );
       await _refreshData();
     }
   }
 
-  void _navigateToEditFare(PlazaFare fare) async {
+  // Navigate to Edit Fare screen
+  void _navigateToEditFare(PlazaFare fare, PlazaFareViewModel viewModel) async {
+    final strings = S.of(context);
     developer.log('Attempting to navigate to EditFareScreen for Fare ID: ${fare.fareId}', name: 'PlazaFaresList');
     final String? plazaIdString = widget.plaza.plazaId;
 
@@ -361,18 +359,17 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
       developer.log('Navigation failed: Plaza ID is null.', name: 'PlazaFaresList');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(S.of(context).errorMissingPlazaId), backgroundColor: Colors.red));
+            SnackBar(content: Text(strings.errorMissingPlazaId), backgroundColor: Colors.red));
       }
       return;
     }
 
     final int? plazaIdInt = int.tryParse(plazaIdString);
-
     if (plazaIdInt == null) {
       developer.log('Navigation failed: Could not parse Plaza ID "$plazaIdString" to int.', name: 'PlazaFaresList');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(S.of(context).errorInvalidPlazaIdFormat), backgroundColor: Colors.red)); // Add string
+            SnackBar(content: Text(strings.errorInvalidPlazaIdFormat), backgroundColor: Colors.red));
       }
       return;
     }
@@ -381,7 +378,7 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
       developer.log('Navigation failed: Fare ID is null.', name: 'PlazaFaresList');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(S.of(context).errorMissingFareId), backgroundColor: Colors.red)); // Add string
+            SnackBar(content: Text(strings.errorMissingFareId), backgroundColor: Colors.red));
       }
       return;
     }
@@ -390,13 +387,20 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
     final updated = await Navigator.push(
       context,
       MaterialPageRoute(
-        // Ensure ModifyViewFareScreen (or EditFareScreen) expects fareId (int) and plazaId (int)
-        builder: (context) => EditFareScreen(fareId: fare.fareId!, plazaId: plazaIdInt),
+        // Provide the existing viewModel instance to the EditFareScreen
+        builder: (context) => ChangeNotifierProvider.value(
+          value: viewModel,
+          child: EditFareScreen(fareId: fare.fareId!, plazaId: plazaIdInt), // Pass IDs
+        ),
       ),
     );
 
-    if (updated == true && mounted) { // Check mounted status after async gap
+    // If EditFareScreen pops with 'true', refresh data
+    if (updated == true && mounted) {
       developer.log('Returned from EditFareScreen with success, refreshing data.', name: 'PlazaFaresList');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.successFareUpdated), backgroundColor: Colors.green),
+      );
       await _refreshData();
     }
   }
@@ -407,34 +411,35 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
   Widget build(BuildContext context) {
     final strings = S.of(context); // Localizations instance
 
+    // Use Consumer to get the ViewModel and rebuild when it notifies listeners
     return Consumer<PlazaFareViewModel>(
       builder: (context, viewModel, _) {
-        // Get filtered list based on current search query
-        final filteredFares = _getFilteredFares();
+        // Get filtered list based on current search query using VM data
+        final filteredFares = _getFilteredFares(viewModel);
         // Calculate total pages based on filtered list
         final totalPages = getTotalPages(filteredFares); // Use mixin method
         // Get the items for the current page
         final paginatedFares = getPaginatedItems(filteredFares, _currentPage); // Use mixin method
 
-        // Determine if the view should show loading, empty, or list state
-        final bool showLoading = viewModel.isLoading;
-        final bool showEmpty = !showLoading && paginatedFares.isEmpty;
+        // Determine UI state based on ViewModel's loading status and data
+        final bool showLoading = viewModel.isLoading || viewModel.isLoadingFare; // Combine loading states?
+        final bool showEmpty = !showLoading && filteredFares.isEmpty; // Check filtered list
         final bool showList = !showLoading && paginatedFares.isNotEmpty;
         final bool showPagination = showList && totalPages > 1;
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: CustomAppBar.appBarWithNavigation(
-            // Use a more specific title including the plaza name
-            screenTitle: strings.titleFaresForPlaza, // Add this string
+            // Use a specific title including the plaza name
+            screenTitle: strings.titleFaresForPlaza(widget.plaza.plazaName!), // Localized title with plaza name
             onPressed: () => Navigator.pop(context),
             darkBackground: Theme.of(context).brightness == Brightness.dark,
             context: context,
           ),
           body: Column(
             children: [
-              const SizedBox(height: 4), // Reduced top spacing
-              Padding( // Add padding around search field
+              const SizedBox(height: 4),
+              Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: _buildSearchField(strings),
               ),
@@ -442,43 +447,43 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
                 child: RefreshIndicator(
                   onRefresh: _refreshData,
                   color: Theme.of(context).colorScheme.primary,
-                  child: Stack( // Use Stack to overlay shimmer if needed
+                  child: Stack( // Use Stack to potentially overlay shimmer/empty state
                     children: [
-                      // Use ListView.builder for potentially long lists
+                      // Build the list or empty state
                       ListView.builder(
-                        controller: _scrollController, // Attach scroll controller
-                        physics: const AlwaysScrollableScrollPhysics(), // Ensure refresh indicator works even if list fits screen
-                        // Add padding to the list itself
-                        padding: const EdgeInsets.only(top: 8, bottom: 8, left: 8, right: 8),
-                        // Item count depends on the state
-                        itemCount: showLoading ? itemsPerPage : (showEmpty ? 1 : paginatedFares.length),
+                        controller: _scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.only(top: 8, bottom: 80, left: 8, right: 8), // Padding for FAB
+                        // Item count is 1 for empty/loading state, or actual count
+                        itemCount: showList ? paginatedFares.length : 1,
                         itemBuilder: (context, index) {
                           if (showLoading) {
-                            // Wrap shimmer in Padding if not done inside _buildShimmerList
-                            return _buildShimmerList(); // This already returns a list view builder content
+                            // Show shimmer directly as the only item
+                            return _buildShimmerList();
                           } else if (showEmpty) {
-                            // Display empty state centered within the list area
+                            // Show empty state directly as the only item
                             return SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.6, // Ensure it takes enough space
-                              child: _buildEmptyState(strings),
+                              height: MediaQuery.of(context).size.height * 0.6,
+                              child: _buildEmptyState(strings, viewModel),
                             );
                           } else { // showList
                             final fare = paginatedFares[index];
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 8.0),
+                              // *** DELEGATE FARE DISPLAY TO CustomCards.fareCard ***
+                              // You MUST update CustomCards.fareCard to handle
+                              // Progressive, FreePass, and other types correctly.
                               child: CustomCards.fareCard(
                                 fare: fare,
-                                plazaName: widget.plaza.plazaName,
-                                onTap: () => _navigateToEditFare(fare),
+                                plazaName: widget.plaza.plazaName!, // Pass plaza name
+                                onTap: () => _navigateToEditFare(fare, viewModel), // Pass fare and viewModel
                                 context: context,
+                                strings: strings, // Pass localization strings
                               ),
                             );
                           }
                         },
                       ),
-                      // Alternative Shimmer display (if not using ListView builder count for shimmer)
-                      // if (showLoading)
-                      //    Positioned.fill(child: _buildShimmerList()),
                     ],
                   ),
                 ),
@@ -486,25 +491,37 @@ class _PlazaFaresListScreenState extends State<PlazaFaresListScreen>
             ],
           ),
           floatingActionButton: FloatingActionButton(
-            heroTag: 'addFareFAB', // Ensure unique HeroTag
-            backgroundColor: AppColors.primary,
-            onPressed: _navigateToAddFare,
-            tooltip: strings.buttonAddFare, // Add tooltip
+            heroTag: 'addFareFAB_ListScreen', // Ensure unique HeroTag
+            backgroundColor: AppColors.primary, // Use AppColors
+            onPressed: () => _navigateToAddFare(viewModel), // Pass viewModel
+            tooltip: strings.buttonAddFare, // Localized tooltip
             child: const Icon(Icons.add, color: Colors.white),
           ),
-          bottomNavigationBar: Container(
-            color: Theme.of(context).scaffoldBackgroundColor, // Match background
-            padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0), // Adjust padding
-            child: SafeArea( // Ensure controls are within safe area
+          // Show pagination only if needed
+          bottomNavigationBar: showPagination
+              ? Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+            child: SafeArea(
               child: PaginationControls(
                 currentPage: _currentPage,
                 totalPages: totalPages,
-                onPageChange: _updatePage,
+                // Pass the filtered list count to onPageChange
+                onPageChange: (newPage) => _updatePage(newPage, filteredFares),
               ),
             ),
           )
+              : null, // Hide if not paginated
         );
       },
     );
   }
 }
+
+
+// TODO: Ensure AppTheme extension methods like context.secondaryCardColor,
+// context.textPrimaryColor, context.textSecondaryColor, context.backgroundColor exist.
+
+// TODO: Update the implementation of `CustomCards.fareCard` to display fare details
+// correctly based on `fare.fareType`, including handling for 'Progressive' and 'FREEPASS'.
+// It should accept the `S strings` object for localization.

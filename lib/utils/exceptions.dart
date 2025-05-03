@@ -66,6 +66,19 @@ class ServiceException implements Exception {
   }
 }
 
+class PaymentException implements Exception {
+  final String message;
+  final int? statusCode;
+  final String? serverMessage;
+
+  PaymentException(this.message, {this.statusCode, this.serverMessage});
+
+  @override
+  String toString() {
+    return 'PaymentException: $message${statusCode != null ? ' (Status Code: $statusCode)' : ''}${serverMessage != null ? ' - $serverMessage' : ''}';
+  }
+}
+
 class NoInternetException implements Exception {
   final String message;
 
@@ -105,4 +118,22 @@ class AnprFailureException implements Exception {
 
   @override
   String toString() => 'AnprFailureException: $message';
+}
+
+class MobileNumberInUseException implements Exception {
+  final String message;
+
+  MobileNumberInUseException([this.message = 'Mobile number is already in use']);
+
+  @override
+  String toString() => 'MobileNumberInUseException: $message';
+}
+
+class EmailInUseException implements Exception {
+  final String message;
+
+  EmailInUseException([this.message = 'Email is already in use']);
+
+  @override
+  String toString() => 'EmailInUseException: $message';
 }

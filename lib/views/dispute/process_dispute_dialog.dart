@@ -64,13 +64,22 @@ class _ProcessDisputeDialogState extends State<ProcessDisputeDialog> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        if (viewModel.generalError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text(
+                              viewModel.generalError!,
+                              style: const TextStyle(color: Colors.red, fontSize: 12),
+                            ),
+                          ),
                         const SizedBox(height: 24),
                         CustomDropDown.normalDropDown(
                           label: 'Dispute Action',
                           value: viewModel.selectedAction,
                           items: viewModel.disputeActions,
                           onChanged: viewModel.updateAction,
-                          errorText: viewModel.actionError, context: context,
+                          errorText: viewModel.actionError,
+                          context: context,
                         ),
                         const SizedBox(height: 12),
                         CustomFormFields.largeSizedTextFormField(
@@ -78,7 +87,8 @@ class _ProcessDisputeDialogState extends State<ProcessDisputeDialog> {
                           controller: _remarkController,
                           enabled: true,
                           onChanged: viewModel.updateRemark,
-                          errorText: viewModel.remarkError, context: context,
+                          errorText: viewModel.remarkError,
+                          context: context,
                         ),
                         const SizedBox(height: 12),
                         _buildImageUploadSection(viewModel),
@@ -100,19 +110,41 @@ class _ProcessDisputeDialogState extends State<ProcessDisputeDialog> {
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: () async {
-                          if (viewModel.validate()) {
-                            await viewModel.submitDisputeAction(widget.ticketId);
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Dispute processed successfully!')),
-                            );
+                        onPressed: viewModel.isLoading
+                            ? null
+                            : () async {
+                          if (viewModel.validateInputs()) {
+                            // TODO: Replace with actual user ID from auth service
+                            const processedBy = 'admin@example.com';
+                            final success = await viewModel.submitDisputeAction(processedBy);
+                            if (success) {
+                              if (mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Dispute processed successfully!')),
+                                );
+                              }
+                            } else if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(viewModel.generalError ?? 'Failed to process dispute')),
+                              );
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
-                        child: const Text('Submit'),
+                        child: viewModel.isLoading
+                            ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                            : const Text('Submit', style: TextStyle(color: Colors.white)),
                       ),
                     ],
                   ),
@@ -135,17 +167,17 @@ class _ProcessDisputeDialogState extends State<ProcessDisputeDialog> {
             children: [
               const Text('Uploaded Images', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               TextButton(
-                onPressed: viewModel.pickImage,
+                onPressed: viewModel.isLoading ? null : viewModel.pickImage,
                 style: TextButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  minimumSize: Size.zero,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: const Size(0, 0),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: const Text('Add More', style: TextStyle(fontSize: 12)),
               ),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           SizedBox(
             height: 150,
             child: ListView.builder(
@@ -175,14 +207,14 @@ class _ProcessDisputeDialogState extends State<ProcessDisputeDialog> {
                         top: 0,
                         right: 0,
                         child: InkWell(
-                          onTap: () => viewModel.removeImage(index),
+                          onTap: viewModel.isLoading ? null : () => viewModel.removeImage(index),
                           child: Container(
-                            padding: EdgeInsets.all(2),
-                            decoration: BoxDecoration(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
                               color: Colors.red,
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.close, color: Colors.white, size: 16),
+                            child: const Icon(Icons.close, color: Colors.white, size: 16),
                           ),
                         ),
                       ),
@@ -194,18 +226,18 @@ class _ProcessDisputeDialogState extends State<ProcessDisputeDialog> {
           ),
         ] else ...[
           InkWell(
-            onTap: viewModel.pickImage,
+            onTap: viewModel.isLoading ? null : viewModel.pickImage,
             child: Container(
               width: double.infinity,
               height: 150,
               decoration: BoxDecoration(
-                color:  AppColors.formBackground,
+                color: AppColors.formBackground,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppColors.primary),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+                children: const [
                   Icon(Icons.camera_alt_outlined, size: 32),
                   SizedBox(height: 4),
                   Text('Tap to Add Images',
@@ -218,8 +250,10 @@ class _ProcessDisputeDialogState extends State<ProcessDisputeDialog> {
         if (viewModel.imageError != null)
           Padding(
             padding: const EdgeInsets.only(top: 4.0),
-            child: Text(viewModel.imageError!,
-                style: const TextStyle(color: Colors.red, fontSize: 12)),
+            child: Text(
+              viewModel.imageError!,
+              style: const TextStyle(color: Colors.red, fontSize: 12),
+            ),
           ),
       ],
     );

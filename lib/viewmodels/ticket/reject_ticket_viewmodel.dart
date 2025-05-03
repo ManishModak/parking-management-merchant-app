@@ -74,7 +74,7 @@ class RejectTicketViewModel extends ChangeNotifier {
         'vehicleNumber': ticket.vehicleNumber,
         'vehicleType': ticket.vehicleType,
         'plazaName': "Plaza: ${ticket.plazaId}", // Consider fetching actual plaza name if available
-        'entryTime': ticket.entryTime ?? DateTime.now().toIso8601String(),
+        'entryTime': ticket.entryTime?.toIso8601String() ?? "NA",
         'ticketStatus': ticket.status.toString().split('.').last,
         'entryLaneId': ticket.entryLaneId,
         'entryLaneDirection': ticket.entryLaneDirection,
@@ -120,7 +120,7 @@ class RejectTicketViewModel extends ChangeNotifier {
     currentTicketId = ticket.ticketId;
     ticketIdController.text = ticket.ticketId ?? 'N/A';
     ticketRefIdController.text = ticket.ticketRefId ?? 'N/A';
-    plazaIdController.text = ticket.plazaId ?? 'N/A';
+    plazaIdController.text = ticket.plazaId?.toString() ?? 'N/A';
     entryLaneIdController.text = ticket.entryLaneId ?? 'N/A';
     entryLaneDirectionController.text = ticket.entryLaneDirection ?? 'N/A';
     floorIdController.text = ticket.floorId ?? 'N/A';
@@ -129,9 +129,8 @@ class RejectTicketViewModel extends ChangeNotifier {
     vehicleTypeController.text = ticket.vehicleType ?? 'N/A';
     ticketStatusController.text = ticket.status.toString().split('.').last;
     capturedImageUrls = ticket.capturedImages ?? [];
-
     entryTimeController.text = ticket.entryTime != null
-        ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(ticket.entryTime!))
+        ? DateFormat('dd MMM yyyy, hh:mm a').format(ticket.entryTime!)
         : 'N/A';
     ticketCreationTimeController.text = DateFormat('dd MMM yyyy, hh:mm a').format(ticket.createdTime);
     remarksController.text = ticket.remarks ?? '';

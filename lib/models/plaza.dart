@@ -1,73 +1,87 @@
 import 'dart:developer' as developer;
 
+import 'package:merchant_app/utils/exceptions.dart';
+
+class ValidationException implements Exception {
+  final String message;
+  ValidationException(this.message);
+}
+
 class Plaza {
+  // Existing valid options
   static const List<String> validPlazaCategories = ['Public', 'Private'];
   static const List<String> validPlazaSubCategories = ['Apartment', 'Society', 'OPEN', 'CLOSE'];
   static const List<String> validStructureTypes = ['Open', 'Multistory', 'Underground'];
   static const List<String> validPlazaStatuses = ['Active', 'Inactive'];
   static const List<String> validPriceCategories = ['Premium', 'Standard'];
+  static const List<String> validCompanyTypes = ["Individual", "LLP", "Private Limited", "Public Limited"];
 
+  // Properties (all required fields made nullable)
   String? plazaId;
-  final String plazaName;
-  final String plazaOwner;
-  final String plazaOwnerId;
-  final String plazaOperatorName;
-  final String mobileNumber;
-  final String address;
-  final String email;
-  final String city;
-  final String district;
-  final String state;
-  final String pincode;
-  final double geoLatitude;
-  final double geoLongitude;
-  final String plazaCategory;
-  final String plazaSubCategory;
-  final String structureType;
-  final String plazaStatus;
-  final int noOfParkingSlots;
-  final bool freeParking;
-  final String priceCategory;
-  final int capacityBike;
-  final int capacity3Wheeler;
-  final int capacity4Wheeler;
-  final int capacityBus;
-  final int capacityTruck;
-  final int capacityHeavyMachinaryVehicle; // Kept as per backend
-  final String plazaOpenTimings;
-  final String plazaClosingTime;
-  final bool isDeleted;
+  String? plazaName;
+  String? plazaOwner;
+  String? plazaOwnerId;
+  String? companyName;
+  String? companyType;
+  String? plazaOrgId;
+  String? mobileNumber;
+  String? address;
+  String? email;
+  String? city;
+  String? district;
+  String? state;
+  String? pincode;
+  double? geoLatitude;
+  double? geoLongitude;
+  String? plazaCategory;
+  String? plazaSubCategory;
+  String? structureType;
+  String? plazaStatus;
+  int? noOfParkingSlots;
+  bool? freeParking;
+  String? priceCategory;
+  int? capacityBike;
+  int? capacity3Wheeler;
+  int? capacity4Wheeler;
+  int? capacityBus;
+  int? capacityTruck;
+  int? capacityHeavyMachinaryVehicle;
+  String? plazaOpenTimings;
+  String? plazaClosingTime;
+  bool isDeleted;
 
   Plaza({
     this.plazaId,
-    required this.plazaName,
-    required this.plazaOwner,
-    required this.plazaOwnerId,
-    required this.plazaOperatorName,
-    required this.mobileNumber,
-    required this.address,
-    required this.email,
-    required this.city,
-    required this.district,
-    required this.state,
-    required this.pincode,
-    required this.geoLatitude,
-    required this.geoLongitude,
-    required this.plazaCategory,
-    required this.plazaSubCategory,
-    required this.structureType,
-    required this.plazaStatus,
-    required this.noOfParkingSlots,
-    required this.freeParking,
-    required this.priceCategory,
-    required this.capacityBike,
-    required this.capacity3Wheeler,
-    required this.capacity4Wheeler,
-    required this.capacityBus,
-    required this.capacityTruck,
-    required this.capacityHeavyMachinaryVehicle,
-    required this.plazaOpenTimings,
-    required this.plazaClosingTime,
+    this.plazaName,
+    this.plazaOwner,
+    this.plazaOwnerId,
+    this.companyName,
+    this.companyType,
+    this.plazaOrgId,
+    this.mobileNumber,
+    this.address,
+    this.email,
+    this.city,
+    this.district,
+    this.state,
+    this.pincode,
+    this.geoLatitude,
+    this.geoLongitude,
+    this.plazaCategory,
+    this.plazaSubCategory,
+    this.structureType,
+    this.plazaStatus,
+    this.noOfParkingSlots,
+    this.freeParking,
+    this.priceCategory,
+    this.capacityBike,
+    this.capacity3Wheeler,
+    this.capacity4Wheeler,
+    this.capacityBus,
+    this.capacityTruck,
+    this.capacityHeavyMachinaryVehicle,
+    this.plazaOpenTimings,
+    this.plazaClosingTime,
     this.isDeleted = false,
   });
 
@@ -76,7 +90,9 @@ class Plaza {
     String? plazaName,
     String? plazaOwner,
     String? plazaOwnerId,
-    String? plazaOperatorName,
+    String? companyName,
+    String? companyType,
+    String? plazaOrgId,
     String? mobileNumber,
     String? address,
     String? email,
@@ -108,7 +124,9 @@ class Plaza {
       plazaName: plazaName ?? this.plazaName,
       plazaOwner: plazaOwner ?? this.plazaOwner,
       plazaOwnerId: plazaOwnerId ?? this.plazaOwnerId,
-      plazaOperatorName: plazaOperatorName ?? this.plazaOperatorName,
+      companyName: companyName ?? this.companyName,
+      companyType: companyType ?? this.companyType,
+      plazaOrgId: plazaOrgId ?? this.plazaOrgId,
       mobileNumber: mobileNumber ?? this.mobileNumber,
       address: address ?? this.address,
       email: email ?? this.email,
@@ -138,36 +156,51 @@ class Plaza {
   }
 
   factory Plaza.fromJson(Map<String, dynamic> json) {
+    // Transform time fields from HH:mm:ss to HH:mm if necessary
+    String? transformTime(String? time) {
+      if (time == null || time.isEmpty) return null;
+      // Check if time is in HH:mm:ss format
+      final parts = time.split(':');
+      if (parts.length == 3) {
+        // Return HH:mm by taking first two parts
+        return '${parts[0]}:${parts[1]}';
+      }
+      // Return as is if already in correct format or invalid
+      return time;
+    }
+
     return Plaza(
       plazaId: json['plazaId']?.toString(),
-      plazaName: json['plazaName'] as String? ?? '',
-      plazaOwner: json['plazaOwner'] as String? ?? '',
-      plazaOwnerId: json['plazaOwnerId']?.toString() ?? '',
-      plazaOperatorName: json['plazaOperatorName'] as String? ?? '',
-      mobileNumber: json['mobileNumber']?.toString() ?? '',
-      address: json['address'] as String? ?? '',
-      email: json['email'] as String? ?? '',
-      city: json['city'] as String? ?? '',
-      district: json['district'] as String? ?? '',
-      state: json['state'] as String? ?? '',
-      pincode: json['pincode']?.toString() ?? '',
-      geoLatitude: _parseDouble(json['geoLatitude']) ?? 0.0,
-      geoLongitude: _parseDouble(json['geoLongitude']) ?? 0.0,
-      plazaCategory: json['plazaCategory'] as String? ?? 'Private',
-      plazaSubCategory: json['plazaSubCategory'] as String? ?? 'OPEN',
-      structureType: json['structureType'] as String? ?? 'Open',
-      plazaStatus: json['plazaStatus'] as String? ?? 'Active',
-      noOfParkingSlots: _parseInt(json['noOfParkingSlots']) ?? 0,
-      freeParking: json['freeParking'] as bool? ?? false,
-      priceCategory: json['priceCategory'] as String? ?? 'Standard',
-      capacityBike: _parseInt(json['capacityBike']) ?? 0,
-      capacity3Wheeler: _parseInt(json['capacity3Wheeler']) ?? 0,
-      capacity4Wheeler: _parseInt(json['capacity4Wheeler']) ?? 0,
-      capacityBus: _parseInt(json['capacityBus']) ?? 0,
-      capacityTruck: _parseInt(json['capacityTruck']) ?? 0,
-      capacityHeavyMachinaryVehicle: _parseInt(json['capacityHeavyMachinaryVehicle']) ?? 0,
-      plazaOpenTimings: json['plazaOpenTimings'] as String? ?? '00:00',
-      plazaClosingTime: json['plazaClosingTime'] as String? ?? '23:59',
+      plazaName: json['plazaName'] as String?,
+      plazaOwner: json['plazaOwner'] as String?,
+      plazaOwnerId: json['plazaOwnerId']?.toString(),
+      companyName: json['companyName'] as String?,
+      companyType: json['companyType'] as String? ?? validCompanyTypes.first,
+      plazaOrgId: json['plazaOrgId']?.toString(),
+      mobileNumber: json['mobileNumber']?.toString(),
+      address: json['address'] as String?,
+      email: json['email'] as String?,
+      city: json['city'] as String?,
+      district: json['district'] as String?,
+      state: json['state'] as String?,
+      pincode: json['pincode']?.toString(),
+      geoLatitude: _parseDouble(json['geoLatitude']),
+      geoLongitude: _parseDouble(json['geoLongitude']),
+      plazaCategory: json['plazaCategory'] as String? ?? validPlazaCategories.first,
+      plazaSubCategory: json['plazaSubCategory'] as String? ?? validPlazaSubCategories.first,
+      structureType: json['structureType'] as String? ?? validStructureTypes.first,
+      plazaStatus: json['plazaStatus'] as String? ?? validPlazaStatuses.first,
+      noOfParkingSlots: _parseInt(json['noOfParkingSlots']),
+      freeParking: json['freeParking'] as bool?,
+      priceCategory: json['priceCategory'] as String? ?? validPriceCategories.first,
+      capacityBike: _parseInt(json['capacityBike']),
+      capacity3Wheeler: _parseInt(json['capacity3Wheeler']),
+      capacity4Wheeler: _parseInt(json['capacity4Wheeler']),
+      capacityBus: _parseInt(json['capacityBus']),
+      capacityTruck: _parseInt(json['capacityTruck']),
+      capacityHeavyMachinaryVehicle: _parseInt(json['capacityHeavyMachinaryVehicle']),
+      plazaOpenTimings: transformTime(json['plazaOpenTimings'] as String?) ?? '00:00',
+      plazaClosingTime: transformTime(json['plazaClosingTime'] as String?) ?? '23:59',
       isDeleted: json['isDeleted'] as bool? ?? false,
     );
   }
@@ -200,12 +233,166 @@ class Plaza {
     return null;
   }
 
+  Map<String, String> validate() {
+    final errors = <String, String>{};
+
+    if (plazaName == null || plazaName!.isEmpty) {
+      errors['plazaName'] = 'Plaza name is required';
+    }
+    if (plazaOwner == null || plazaOwner!.isEmpty) {
+      errors['plazaOwner'] = 'Plaza owner is required';
+    }
+    if (plazaOwnerId == null || plazaOwnerId!.isEmpty) {
+      errors['plazaOwnerId'] = 'Plaza owner ID is required';
+    }
+    if (companyName == null || companyName!.isEmpty) {
+      errors['companyName'] = 'Company name is required';
+    }
+    if (companyType == null || !validCompanyTypes.contains(companyType)) {
+      errors['companyType'] = 'Valid company type is required (${validCompanyTypes.join(', ')})';
+    }
+    if (plazaOrgId == null || plazaOrgId!.isEmpty) {
+      errors['plazaOrgId'] = 'Plaza organization ID is required';
+    }
+    if (mobileNumber == null || mobileNumber!.isEmpty) {
+      errors['mobileNumber'] = 'Mobile number is required';
+    } else if (!_isValidMobile(mobileNumber!)) {
+      errors['mobileNumber'] = 'Invalid mobile number format';
+    }
+    if (address == null || address!.isEmpty) {
+      errors['address'] = 'Address is required';
+    }
+    if (email == null || email!.isEmpty) {
+      errors['email'] = 'Email is required';
+    } else if (!_isValidEmail(email!)) {
+      errors['email'] = 'Invalid email format';
+    }
+    if (city == null || city!.isEmpty) {
+      errors['city'] = 'City is required';
+    }
+    if (district == null || district!.isEmpty) {
+      errors['district'] = 'District is required';
+    }
+    if (state == null || state!.isEmpty) {
+      errors['state'] = 'State is required';
+    }
+    if (pincode == null || pincode!.isEmpty) {
+      errors['pincode'] = 'Pincode is required';
+    } else if (!_isValidPincode(pincode!)) {
+      errors['pincode'] = 'Invalid pincode format';
+    }
+    if (geoLatitude == null) {
+      errors['geoLatitude'] = 'Geo latitude is required';
+    }
+    if (geoLongitude == null) {
+      errors['geoLongitude'] = 'Geo longitude is required';
+    }
+    if (plazaCategory == null || !validPlazaCategories.contains(plazaCategory)) {
+      errors['plazaCategory'] = 'Valid plaza category is required (${validPlazaCategories.join(', ')})';
+    }
+    if (plazaSubCategory == null || !validPlazaSubCategories.contains(plazaSubCategory)) {
+      errors['plazaSubCategory'] = 'Valid plaza sub-category is required (${validPlazaSubCategories.join(', ')})';
+    }
+    if (structureType == null || !validStructureTypes.contains(structureType)) {
+      errors['structureType'] = 'Valid structure type is required (${validStructureTypes.join(', ')})';
+    }
+    if (plazaStatus == null || !validPlazaStatuses.contains(plazaStatus)) {
+      errors['plazaStatus'] = 'Valid plaza status is required (${validPlazaStatuses.join(', ')})';
+    }
+    if (noOfParkingSlots == null) {
+      errors['noOfParkingSlots'] = 'Number of parking slots is required';
+    } else if (noOfParkingSlots! < 0) {
+      errors['noOfParkingSlots'] = 'Number of parking slots cannot be negative';
+    }
+    if (freeParking == null) {
+      errors['freeParking'] = 'Free parking status is required';
+    }
+    if (priceCategory == null || !validPriceCategories.contains(priceCategory)) {
+      errors['priceCategory'] = 'Valid price category is required (${validPriceCategories.join(', ')})';
+    }
+    if (capacityBike == null) {
+      errors['capacityBike'] = 'Bike capacity is required';
+    } else if (capacityBike! < 0) {
+      errors['capacityBike'] = 'Bike capacity cannot be negative';
+    }
+    if (capacity3Wheeler == null) {
+      errors['capacity3Wheeler'] = '3-wheeler capacity is required';
+    } else if (capacity3Wheeler! < 0) {
+      errors['capacity3Wheeler'] = '3-wheeler capacity cannot be negative';
+    }
+    if (capacity4Wheeler == null) {
+      errors['capacity4Wheeler'] = '4-wheeler capacity is required';
+    } else if (capacity4Wheeler! < 0) {
+      errors['capacity4Wheeler'] = '4-wheeler capacity cannot be negative';
+    }
+    if (capacityBus == null) {
+      errors['capacityBus'] = 'Bus capacity is required';
+    } else if (capacityBus! < 0) {
+      errors['capacityBus'] = 'Bus capacity cannot be negative';
+    }
+    if (capacityTruck == null) {
+      errors['capacityTruck'] = 'Truck capacity is required';
+    } else if (capacityTruck! < 0) {
+      errors['capacityTruck'] = 'Truck capacity cannot be negative';
+    }
+    if (capacityHeavyMachinaryVehicle == null) {
+      errors['capacityHeavyMachinaryVehicle'] = 'Heavy machinery vehicle capacity is required';
+    } else if (capacityHeavyMachinaryVehicle! < 0) {
+      errors['capacityHeavyMachinaryVehicle'] = 'Heavy machinery vehicle capacity cannot be negative';
+    }
+    if (plazaOpenTimings == null || plazaOpenTimings!.isEmpty) {
+      errors['plazaOpenTimings'] = 'Plaza open timings are required';
+    } else if (!_isValidTime(plazaOpenTimings!)) {
+      errors['plazaOpenTimings'] = 'Invalid time format (HH:mm)';
+    }
+    if (plazaClosingTime == null || plazaClosingTime!.isEmpty) {
+      errors['plazaClosingTime'] = 'Plaza closing time is required';
+    } else if (!_isValidTime(plazaClosingTime!)) {
+      errors['plazaClosingTime'] = 'Invalid time format (HH:mm)';
+    }
+
+    return errors;
+  }
+
+  bool _isValidMobile(String mobile) {
+    // Basic mobile number validation (e.g., 10 digits)
+    final regExp = RegExp(r'^\d{10}$');
+    return regExp.hasMatch(mobile);
+  }
+
+  bool _isValidEmail(String email) {
+    // Basic email validation
+    final regExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    return regExp.hasMatch(email);
+  }
+
+  bool _isValidPincode(String pincode) {
+    // Basic pincode validation (e.g., 6 digits)
+    final regExp = RegExp(r'^\d{6}$');
+    return regExp.hasMatch(pincode);
+  }
+
+  bool _isValidTime(String time) {
+    // Validate time format (HH:mm)
+    final regExp = RegExp(r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$');
+    return regExp.hasMatch(time);
+  }
+
   Map<String, dynamic> toJson() {
+    final validationErrors = validate();
+    if (validationErrors.isNotEmpty) {
+      final errorMessage = 'Validation failed: ${validationErrors.entries.map((e) => '${e.key}: ${e.value}').join(', ')}';
+      developer.log(errorMessage, name: 'Plaza');
+      throw ValidationException(errorMessage);
+    }
+
     final Map<String, dynamic> data = {
       'plazaName': plazaName,
       'plazaOwner': plazaOwner,
       'plazaOwnerId': plazaOwnerId,
-      'plazaOperatorName': plazaOperatorName,
+      'companyName': companyName,
+      'companyType': companyType,
+      'plazaOrgId': plazaOrgId,
       'mobileNumber': mobileNumber,
       'address': address,
       'email': email,
@@ -233,7 +420,7 @@ class Plaza {
       'isDeleted': isDeleted,
     };
 
-    if (plazaId != null) {
+    if (plazaId != null && plazaId!.isNotEmpty) {
       data['plazaId'] = plazaId;
     }
 
@@ -242,39 +429,41 @@ class Plaza {
 
   factory Plaza.empty() {
     return Plaza(
-      plazaId: '',
-      plazaName: '',
-      plazaOwner: '',
-      plazaOwnerId: '',
-      plazaOperatorName: '',
-      mobileNumber: '',
-      address: '',
-      email: '',
-      city: '',
-      district: '',
-      state: '',
-      pincode: '',
-      geoLatitude: 0.0,
-      geoLongitude: 0.0,
-      plazaCategory: 'Private',
-      plazaSubCategory: 'OPEN',
-      structureType: 'Open',
-      plazaStatus: 'Active',
-      noOfParkingSlots: 0,
-      freeParking: false,
-      priceCategory: 'Standard',
-      capacityBike: 0,
-      capacity3Wheeler: 0,
-      capacity4Wheeler: 0,
-      capacityBus: 0,
-      capacityTruck: 0,
-      capacityHeavyMachinaryVehicle: 0,
-      plazaOpenTimings: '00:00',
-      plazaClosingTime: '23:59',
+      plazaId: null,
+      plazaName: null,
+      plazaOwner: null,
+      plazaOwnerId: null,
+      companyName: null,
+      companyType: null,
+      plazaOrgId: null,
+      mobileNumber: null,
+      address: null,
+      email: null,
+      city: null,
+      district: null,
+      state: null,
+      pincode: null,
+      geoLatitude: null,
+      geoLongitude: null,
+      plazaCategory: null,
+      plazaSubCategory: null,
+      structureType: null,
+      plazaStatus: null,
+      noOfParkingSlots: null,
+      freeParking: null,
+      priceCategory: null,
+      capacityBike: null,
+      capacity3Wheeler: null,
+      capacity4Wheeler: null,
+      capacityBus: null,
+      capacityTruck: null,
+      capacityHeavyMachinaryVehicle: null,
+      plazaOpenTimings: null,
+      plazaClosingTime: null,
       isDeleted: false,
     );
   }
 
   @override
-  String toString() => plazaName;
+  String toString() => plazaName ?? 'Unnamed Plaza';
 }

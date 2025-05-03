@@ -51,6 +51,8 @@ class VerificationService {
       if (response.statusCode == 200 && responseData['success'] == true) {
         developer.log('[VERIFICATION] OTP sent successfully to $mobileNumber', name: 'VerificationService');
         return;
+      } else if (response.statusCode == 400 && responseData['message'] == 'Mobile number is already on use') {
+        throw MobileNumberInUseException('Mobile number is already in use');
       }
 
       throw Exception('Failed to send OTP: ${responseData['msg'] ?? 'Unknown error'}');

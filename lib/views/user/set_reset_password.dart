@@ -1,16 +1,17 @@
 import 'dart:developer' as developer;
-
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
+import 'package:merchant_app/config/app_config.dart';
 import 'package:merchant_app/config/app_theme.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:merchant_app/utils/components/button.dart';
 import 'package:merchant_app/utils/components/dropdown.dart';
 import 'package:merchant_app/utils/components/form_field.dart';
+import 'package:merchant_app/utils/exceptions.dart';
+import 'package:merchant_app/services/storage/secure_storage_service.dart';
+import 'package:merchant_app/viewmodels/user_viewmodel.dart';
 import 'package:provider/provider.dart';
 import '../../generated/l10n.dart';
-import '../../services/storage/secure_storage_service.dart';
-import '../../viewmodels/user_viewmodel.dart';
 
 class UserSetResetPasswordScreen extends StatefulWidget {
   final String operatorId;
@@ -37,23 +38,32 @@ class _UserSetResetPasswordScreenState
 
   String? selectedRole;
   String? currentUserRole;
+  bool _isLoading = false;
 
   final Map<String, List<String>> roleHierarchy = {
-    'System Admin': ['System Admin', 'Plaza Owner', 'IT Operator'],
     'Plaza Owner': [
-      'Plaza Admin',
+      'Plaza Owner',
       'Centralized Controller',
+      'Plaza Admin',
       'Plaza Operator',
       'Cashier',
       'Backend Monitoring Operator',
       'Supervisor'
     ],
-    'Plaza Admin': ['Plaza Owner', 'Plaza Operator']
+    'Plaza Admin': [
+      'Plaza Operator',
+      'Cashier',
+      'Backend Monitoring Operator',
+      'Supervisor'
+    ],
   };
 
   @override
   void initState() {
     super.initState();
+    developer.log(
+        'UserSetResetPasswordScreen initialized with operatorId: ${widget.operatorId}',
+        name: 'UserSetResetPasswordScreen');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _fetchUserData();
       await _loadOperatorData();
@@ -61,34 +71,53 @@ class _UserSetResetPasswordScreenState
   }
 
   Future<void> _fetchUserData() async {
+    final strings = S.of(context);
     try {
       final userViewModel = Provider.of<UserViewModel>(context, listen: false);
       final userId = await SecureStorageService().getUserId();
-      await userViewModel.fetchUser(userId: userId!, isCurrentAppUser: true);
-
-      if (mounted) {
-        setState(() {
-          currentUserRole = userViewModel.currentUser?.role;
-        });
+      if (userId != null) {
+        await userViewModel.fetchUser(userId: userId, isCurrentAppUser: true);
+        if (mounted) {
+          setState(() {
+            currentUserRole = userViewModel.currentUser?.role;
+            developer.log('Fetched current user role: $currentUserRole',
+                name: 'UserSetResetPasswordScreen');
+          });
+        }
+      } else {
+        developer.log('No user ID found in storage',
+            name: 'UserSetResetPasswordScreen');
       }
     } catch (e) {
-      debugPrint('Error fetching user data: $e');
+      developer.log('Error fetching user data: $e',
+          name: 'UserSetResetPasswordScreen', error: e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${strings.errorLoadCurrentUserInfo}: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
   Future<void> _loadOperatorData() async {
     final strings = S.of(context);
     try {
-      final operatorViewModel = Provider.of<UserViewModel>(context, listen: false);
-      await operatorViewModel.fetchUser(userId: widget.operatorId, isCurrentAppUser: false);
+      final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+      await userViewModel.fetchUser(
+          userId: widget.operatorId, isCurrentAppUser: false);
       if (mounted) {
         await _loadUser();
       }
     } catch (e) {
+      developer.log('Error loading operator data: $e',
+          name: 'UserSetResetPasswordScreen', error: e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${strings.errorLoadOperatorData}: $e', style: TextStyle(color: context.textPrimaryColor)),
+            content: Text('${strings.errorLoadOperatorData}: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -96,126 +125,181 @@ class _UserSetResetPasswordScreenState
     }
   }
 
+  Future<void> _loadUser() async {
+    final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+    final currentOperator = userViewModel.currentOperator;
+
+    if (currentOperator != null && mounted) {
+      setState(() {
+        _nameController.text = currentOperator.name;
+        _idController.text = currentOperator.id;
+        _emailController.text = currentOperator.email;
+        _mobileNumberController.text = currentOperator.mobileNumber;
+        selectedRole = currentOperator.role;
+        final availableRoles = getAvailableRoles();
+        if (!availableRoles.contains(selectedRole)) {
+          developer.log(
+              'Role $selectedRole not in $availableRoles, setting to null',
+              name: 'UserSetResetPasswordScreen');
+          selectedRole = null;
+        }
+        developer.log(
+            'Loaded operator data: id=${currentOperator.id}, role=$selectedRole',
+            name: 'UserSetResetPasswordScreen');
+      });
+    } else {
+      developer.log(
+          'No operator data loaded for operatorId: ${widget.operatorId}',
+          name: 'UserSetResetPasswordScreen');
+    }
+  }
+
   Future<void> _handleResetPassword() async {
     final strings = S.of(context);
-    final operatorVM = Provider.of<UserViewModel>(context, listen: false);
+    final userViewModel = Provider.of<UserViewModel>(context, listen: false);
 
-    final validationErrors = operatorVM.validateResetPassword(
-      newPassword: _newPasswordController.text,
+    developer.log(
+        'Attempting to reset password for operatorId: ${widget.operatorId}',
+        name: 'UserSetResetPasswordScreen');
+
+// Clear previous errors
+    userViewModel.clearErrors();
+
+// Validate inputs
+    final validationErrors = userViewModel.validateResetPassword(
+      password: _newPasswordController.text,
       confirmPassword: _confirmPasswordController.text,
     );
 
     if (validationErrors.isNotEmpty) {
-      validationErrors.forEach((key, value) => operatorVM.setError(key, value));
+      validationErrors
+          .forEach((key, value) => userViewModel.setError(key, value));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children:
+                  validationErrors.values.map((e) => Text('• $e')).toList(),
+            ),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
       return;
     }
 
+    setState(() => _isLoading = true);
     try {
-      final success = await operatorVM.resetPassword(
+      final success = await userViewModel.resetPassword(
         widget.operatorId,
         _newPasswordController.text,
       );
 
-      if (mounted) {
-        if (success) {
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(strings.successPasswordReset),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        Navigator.pop(context);
+      } else {
+        String errorMessage = strings.errorPasswordResetFailed;
+        final error = userViewModel.getError('generic');
+        if (error != null) {
+          errorMessage =
+              error.isNotEmpty ? error : strings.errorPasswordResetFailed;
+        }
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(strings.successPasswordReset,
-                  style: TextStyle(color: context.textPrimaryColor)),
-              backgroundColor: AppColors.success,
-            ),
-          );
-          Navigator.pop(context);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(strings.errorPasswordResetFailed,
-                  style: TextStyle(color: context.textPrimaryColor)),
+              content: Text(errorMessage),
               backgroundColor: AppColors.error,
+              duration: const Duration(seconds: 6),
             ),
           );
         }
       }
+    } on NoInternetException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(strings.errorNoInternet),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
+      developer.log('No internet connection: $e',
+          name: 'UserSetResetPasswordScreen', error: e);
+    } on RequestTimeoutException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(strings.errorRequestTimeout),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
+      developer.log('Request timed out: $e',
+          name: 'UserSetResetPasswordScreen', error: e);
+    } on HttpException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.serverMessage ?? strings.errorPasswordResetFailed),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
+      developer.log('HTTP error: $e',
+          name: 'UserSetResetPasswordScreen', error: e);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${strings.errorGeneric}: ${e.toString()}',
-                style: TextStyle(color: context.textPrimaryColor)),
+            content: Text('${strings.errorPasswordResetFailed}: $e'),
             backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 6),
           ),
         );
+      }
+      developer.log('Unexpected error: $e',
+          name: 'UserSetResetPasswordScreen', error: e);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
 
   List<String> getAvailableRoles() {
     final roles = roleHierarchy[currentUserRole] ?? [];
-    final uniqueRoles = roles.toSet().toList(); // Remove duplicates
-    developer.log('Unique available roles: $uniqueRoles', name: 'UserSetResetPasswordScreen');
-
-    // Ensure selectedRole is valid; if not, set it to null or a default value
-    if (selectedRole != null && !uniqueRoles.contains(selectedRole)) {
-      developer.log('Selected role $selectedRole not in available roles, resetting to null', name: 'UserSetResetPasswordScreen');
-      selectedRole = null; // Or set to a default role if appropriate
-    }
-
+    final uniqueRoles = roles.toSet().toList();
+    developer.log('Available roles: $uniqueRoles',
+        name: 'UserSetResetPasswordScreen');
     return uniqueRoles;
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _mobileNumberController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
-    _idController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadUser() async {
-    final operatorViewModel = Provider.of<UserViewModel>(context, listen: false);
-    final currentOperator = operatorViewModel.currentOperator;
-
-    if (currentOperator != null && mounted) {
-      setState(() {
-        _nameController.text = currentOperator.name;
-        _emailController.text = currentOperator.email;
-        _idController.text = currentOperator.id;
-        _mobileNumberController.text = currentOperator.mobileNumber;
-        selectedRole = currentOperator.role;
-        final availableRoles = getAvailableRoles();
-        if (!availableRoles.contains(selectedRole)) {
-          developer.log('Role $selectedRole not in $availableRoles, setting to null', name: 'UserSetResetPasswordScreen');
-          selectedRole = null; // Reset if invalid
-        }
-        developer.log('Loaded operator role: $selectedRole', name: 'UserSetResetPasswordScreen');
-      });
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final strings = S.of(context);
-    final operatorVM = Provider.of<UserViewModel>(context);
-
-    // Log available roles and selected role before rendering the dropdown
-    final availableRoles = getAvailableRoles();
-    developer.log('Available roles: $availableRoles',
-        name: 'UserSetResetPasswordScreen');
-    developer.log('Selected role: $selectedRole',
-        name: 'UserSetResetPasswordScreen');
+    final userViewModel = Provider.of<UserViewModel>(context);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: CustomAppBar.appBarWithNavigation(
         screenTitle: strings.titleSetResetPassword,
         onPressed: () => Navigator.pop(context),
         darkBackground: Theme.of(context).brightness == Brightness.dark,
         context: context,
       ),
-      body: operatorVM.isLoading
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: _isLoading
           ? Center(
               child: CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(
@@ -265,12 +349,13 @@ class _UserSetResetPasswordScreenState
                   ),
                   const SizedBox(height: 16),
                   CustomDropDown.normalDropDown(
+                    context: context,
                     label: strings.labelRole,
                     value: selectedRole,
-                    enabled: false,
-                    items: availableRoles,
+                    items: getAvailableRoles(),
                     onChanged: null,
-                    context: context,
+                    enabled: false,
+                    errorText: null,
                   ),
                   const SizedBox(height: 16),
                   CustomFormFields.normalSizedTextFormField(
@@ -280,7 +365,7 @@ class _UserSetResetPasswordScreenState
                     keyboardType: TextInputType.visiblePassword,
                     isPassword: true,
                     enabled: true,
-                    errorText: operatorVM.getError('newPassword'),
+                    errorText: userViewModel.getError('password'),
                   ),
                   const SizedBox(height: 16),
                   CustomFormFields.normalSizedTextFormField(
@@ -290,24 +375,46 @@ class _UserSetResetPasswordScreenState
                     keyboardType: TextInputType.visiblePassword,
                     isPassword: true,
                     enabled: true,
-                    errorText: operatorVM.getError('confirmPassword'),
+                    errorText: userViewModel.getError('confirmPassword'),
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        CustomButtons.secondaryButton(
+                          text: strings.buttonCancel,
+                          onPressed: () => Navigator.pop(context),
+                          height: 50,
+                          width: AppConfig.deviceWidth * 0.4,
+                          context: context,
+                        ),
+                        CustomButtons.primaryButton(
+                          text: strings.buttonConfirm,
+                          onPressed:
+                              _isLoading ? () {} : () => _handleResetPassword(),
+                          height: 50,
+                          width: AppConfig.deviceWidth * 0.4,
+                          context: context,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-      bottomNavigationBar: operatorVM.isLoading
-          ? null
-          : Container(
-              padding: const EdgeInsets.all(16.0),
-              color: Theme.of(context).scaffoldBackgroundColor,
-              child: CustomButtons.primaryButton(
-                height: 50,
-                text: strings.buttonConfirm,
-                onPressed: operatorVM.isLoading ? null : _handleResetPassword,
-                isEnabled: !operatorVM.isLoading,
-                context: context,
-              ),
-            ),
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _idController.dispose();
+    _emailController.dispose();
+    _mobileNumberController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
   }
 }

@@ -11,6 +11,7 @@ import '../../../../utils/components/button.dart';
 import '../../../../utils/components/form_field.dart';
 import '../../../../utils/components/pagination_controls.dart';
 import '../../../generated/l10n.dart';
+import '../../../models/ticket.dart';
 import '../../../utils/components/pagination_mixin.dart';
 import '../../../utils/exceptions.dart';
 import 'view_reject_ticket.dart';
@@ -1179,31 +1180,51 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
   }
 
   Widget _buildTicketCard(Map<String, dynamic> ticket, S strings) {
-    DateTime entryTime = DateTime.parse(ticket['entryTime'] ?? DateTime.now().toIso8601String());
-    String formattedEntryTime = DateFormat('dd MMM yyyy, hh:mm a').format(entryTime);
-    final textColor = context.textPrimaryColor;
+    DateTime createdTime = DateTime.parse(ticket['ticketCreationTime'] ?? DateTime.now().toIso8601String());
+    String formattedCreatedTime = DateFormat('dd MMM, hh:mm a').format(createdTime);
+    Color statusColor;
+    final ticketStatus = ticket['ticketStatus'] is Status
+        ? ticket['ticketStatus'].toString().split('.').last.toLowerCase()
+        : ticket['ticketStatus']?.toString().toLowerCase() ?? '';
+    switch (ticketStatus) {
+      case 'open':
+        statusColor = Colors.green;
+        break;
+      case 'rejected':
+        statusColor = Colors.red;
+        break;
+      case 'completed':
+        statusColor = Colors.blue;
+        break;
+      default:
+        statusColor = Colors.orange;
+    }
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      elevation: Theme.of(context).cardTheme.elevation,
       color: context.secondaryCardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: statusColor.withOpacity(0.2), width: 1),
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(15),
         onTap: () {
-          developer.log('Ticket card tapped: ${ticket['ticketId']}', name: 'RejectTicketScreen');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChangeNotifierProvider<RejectTicketViewModel>.value(
-                value: _viewModel,
-                child: ViewRejectTicketScreen(ticketId: ticket['ticketId'].toString()),
+          developer.log('Ticket card tapped: ${ticket['ticketId']}', name: 'TicketHistory');
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ChangeNotifierProvider<RejectTicketViewModel>.value(
+                  value: Provider.of<RejectTicketViewModel>(context, listen: false),
+                  child: ViewRejectTicketScreen(ticketId: ticket['ticketId'].toString()),
+                ),
               ),
-            ),
-          ).then((_) => _refreshData());
+            ).then((_) => _refreshData());
+
         },
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.only(left: 8.0, right: 4, top: 8, bottom: 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1211,151 +1232,49 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Stack(
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.only(right: 65),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                strings.ticketIdLabel,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: textColor,
-                                ),
-                              ),
-                              Text(
-                                ticket['ticketRefId']?.toString() ?? strings.naLabel,
-                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: textColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Positioned(
-                          right: 0,
-                          child: Container(
-                            width: 60,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              ticket['ticketStatus']?.toString() ?? strings.statusPending,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.green,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      '${ticket['plazaName']?.toString() ?? strings.naLabel} | ${ticket['entryLaneId']?.toString() ?? strings.naLabel} | ${ticket['ticketRefId']?.toString() ?? strings.naLabel}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textPrimaryColor),
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                strings.vehicleNumberLabel,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: textColor,
-                                ),
-                              ),
-                              Text(
-                                ticket['vehicleNumber']?.toString() ?? strings.naLabel,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: textColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                strings.vehicleTypeLabel,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: textColor,
-                                ),
-                              ),
-                              Text(
-                                ticket['vehicleType']?.toString() ?? strings.naLabel,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: textColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 6),
+                    Text(
+                      '${ticket['vehicleNumber']?.toString() ?? strings.naLabel} | ${ticket['vehicleType']?.toString() ?? strings.naLabel} | $formattedCreatedTime',
+                      style: TextStyle(color: context.textPrimaryColor, fontSize: 14),
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                strings.plazaNameLabel,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: textColor,
-                                ),
-                              ),
-                              Text(
-                                ticket['plazaName']?.toString() ?? strings.naLabel,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: textColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                strings.entryTimeLabel,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: textColor,
-                                ),
-                              ),
-                              Text(
-                                formattedEntryTime,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: textColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                    if (ticket['remarks']?.isNotEmpty ?? false)
+                      Text(
+                        ticket['remarks'],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: context.textPrimaryColor, fontSize: 14),
+                      ),
                   ],
                 ),
               ),
-              Container(
-                width: 30,
-                alignment: Alignment.center,
-                child: const Icon(
-                  Icons.chevron_right,
-                  color: AppColors.primary,
-                  size: 24,
+
+              SizedBox(
+                width: 75,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        ticketStatus.capitalize(),
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color, size: 20),
+                  ],
                 ),
               ),
             ],

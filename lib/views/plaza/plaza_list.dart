@@ -157,8 +157,8 @@ class _PlazaListScreenState extends State<PlazaListScreen>
     return plazas.where((plaza) {
       final matchesSearch = _searchQuery.isEmpty ||
           (plaza.plazaId?.contains(_searchQuery) ?? false) ||
-          plaza.plazaName.toLowerCase().contains(_searchQuery) ||
-          plaza.address.toLowerCase().contains(_searchQuery);
+          plaza.plazaName!.toLowerCase().contains(_searchQuery) ||
+          plaza.address!.toLowerCase().contains(_searchQuery);
 
       final matchesStatus = _selectedStatuses.isEmpty ||
           (plaza.plazaStatus != null && _selectedStatuses.contains(plaza.plazaStatus!.toLowerCase()));
@@ -318,7 +318,7 @@ class _PlazaListScreenState extends State<PlazaListScreen>
   void _showAllFiltersDialog() {
     final strings = S.of(context);
     final statuses = _viewModel.userPlazas
-        .map((p) => p.plazaStatus.toLowerCase() ?? '')
+        .map((p) => p.plazaStatus!.toLowerCase() ?? '')
         .where((plazaStatus) => plazaStatus.isNotEmpty)
         .toSet()
         .toList()
@@ -675,9 +675,9 @@ class _PlazaListScreenState extends State<PlazaListScreen>
                                 final imageUrl = viewModel.plazaImages[plaza.plazaId];
                                 return CustomCards.plazaCard(
                                   imageUrl: imageUrl,
-                                  plazaName: plaza.plazaName,
+                                  plazaName: plaza.plazaName!,
                                   plazaId: plaza.plazaId ?? '',
-                                  location: plaza.address,
+                                  location: plaza.address!,
                                   onTap: () {
                                     developer.log('Plaza card tapped: ${plaza.plazaId}', name: 'PlazaList');
                                     Navigator.pushNamed(

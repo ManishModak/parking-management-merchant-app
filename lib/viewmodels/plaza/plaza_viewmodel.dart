@@ -304,7 +304,7 @@
           final String dialogTitle = strings.dialogTitleSuccess;
           final String dialogContent = wasFirstSave
               ? strings
-              .dialogContentBankDetailsAdded // "Bank Details Added Successfully"
+              .dialogContentBankDetailsRegistered // "Bank Details Added Successfully"
               : strings
               .dialogContentBankDetailsModified; // "Bank Details Updated Successfully"
     
@@ -351,7 +351,7 @@
           final strings = S.of(context);
           final String dialogTitle = strings.dialogTitleSuccess;
           // Different message based on overall flow mode (Registration vs Modification)
-          final String dialogContent = strings.plazaImageUploadComplete; // "Plaza Registration Complete"
+          final String dialogContent = strings.plazaImageUploadSuccessfully; // "Plaza Registration Complete"
     
           // Action after OK: Pop the screen
           onOkAction() {

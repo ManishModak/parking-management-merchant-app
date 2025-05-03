@@ -137,7 +137,10 @@ class AppRoutes {
       case rejectTicket:
         return MaterialPageRoute(builder: (_) => const RejectTicketScreen());
       case ticketHistory:
-        return MaterialPageRoute(builder: (_) => const TicketHistoryScreen());
+        return MaterialPageRoute(
+          builder: (_) => const TicketHistoryScreen(),
+          settings: settings,
+        );
       case markExit:
         return MaterialPageRoute(builder: (_) => const MarkExitScreen());
       case disputeList:

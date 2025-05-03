@@ -1,17 +1,23 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:merchant_app/config/app_config.dart';
 import 'package:merchant_app/utils/components/dropdown.dart';
 import 'package:provider/provider.dart';
-
 import '../../../config/app_colors.dart';
 import '../../../utils/components/form_field.dart';
 import '../../../viewmodels/dispute/raise_dispute_viewmodel.dart';
 
 class RaiseDisputeDialog extends StatefulWidget {
   final String ticketId;
+  final Map<String, dynamic> ticketData; // Add ticket data parameter
 
-  const RaiseDisputeDialog({super.key, required this.ticketId});
+  const RaiseDisputeDialog({
+    super.key,
+    required this.ticketId,
+    required this.ticketData,
+  });
 
   @override
   _RaiseDisputeDialogState createState() => _RaiseDisputeDialogState();
@@ -41,22 +47,17 @@ class _RaiseDisputeDialogState extends State<RaiseDisputeDialog> {
     return Consumer<RaiseDisputeViewModel>(
       builder: (context, viewModel, child) {
         return Dialog(
-          // Set custom shape and inset padding
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           insetPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          // Direct child is our custom content
           child: Container(
             width: AppConfig.deviceWidth * 0.95,
-            constraints: BoxConstraints(
-              maxHeight: AppConfig.deviceHeight * 0.75,
-            ),
-            child: Column(
+            constraints: BoxConstraints(maxHeight: AppConfig.deviceHeight * 0.75),
+            child: viewModel.isLoading
+                ? Center(child: CircularProgressIndicator())
+                : Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Default header style
                 Padding(
                   padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
                   child: Text(
@@ -64,8 +65,6 @@ class _RaiseDisputeDialogState extends State<RaiseDisputeDialog> {
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                 ),
-
-                // Content
                 Flexible(
                   child: SingleChildScrollView(
                     padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -79,7 +78,8 @@ class _RaiseDisputeDialogState extends State<RaiseDisputeDialog> {
                           value: viewModel.selectedReason,
                           items: viewModel.disputeReasons,
                           onChanged: viewModel.updateReason,
-                          errorText: viewModel.reasonError, context: context,
+                          errorText: viewModel.reasonError,
+                          context: context,
                         ),
                         const SizedBox(height: 12),
                         CustomFormFields.normalSizedTextFormField(
@@ -89,7 +89,8 @@ class _RaiseDisputeDialogState extends State<RaiseDisputeDialog> {
                           enabled: true,
                           errorText: viewModel.amountError,
                           label: 'Dispute Amount',
-                          isPassword: false, context: context,
+                          isPassword: false,
+                          context: context,
                         ),
                         const SizedBox(height: 12),
                         CustomFormFields.largeSizedTextFormField(
@@ -97,16 +98,23 @@ class _RaiseDisputeDialogState extends State<RaiseDisputeDialog> {
                           controller: _remarkController,
                           enabled: true,
                           onChanged: viewModel.updateRemark,
-                          errorText: viewModel.remarkError, context: context,
+                          errorText: viewModel.remarkError,
+                          context: context,
                         ),
                         const SizedBox(height: 12),
                         _buildImageUploadSection(viewModel),
+                        if (viewModel.generalError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Text(
+                              viewModel.generalError!,
+                              style: TextStyle(color: Colors.red, fontSize: 12),
+                            ),
+                          ),
                       ],
                     ),
                   ),
                 ),
-
-                // Actions
                 Padding(
                   padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
                   child: Row(
@@ -122,12 +130,73 @@ class _RaiseDisputeDialogState extends State<RaiseDisputeDialog> {
                       const SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: () async {
-                          if (viewModel.validate()) {
-                            await viewModel.submitDispute(widget.ticketId);
+                          developer.log('Submitting dispute for ticketId: ${widget.ticketId}', name: 'RaiseDisputeDialog.Submit');
+                          final userId = widget.ticketData['userId'] is int
+                              ? widget.ticketData['userId'] as int
+                              : int.tryParse(widget.ticketData['userId']?.toString() ?? '') ?? 1;
+                          final plazaId = int.tryParse(widget.ticketData['plazaId'].toString()) ?? 0;
+                          final dateFormat = DateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+                          String ticketCreationTime;
+                          if (widget.ticketData['ticketCreationTime'] != null) {
+                            try {
+                              final parsedTime = DateTime.parse(widget.ticketData['ticketCreationTime']);
+                              ticketCreationTime = dateFormat.format(parsedTime.toUtc());
+                            } catch (e) {
+                              developer.log('Failed to parse ticketCreationTime: ${widget.ticketData['ticketCreationTime']}, error: $e',
+                                  name: 'RaiseDisputeDialog.Validation');
+                              ticketCreationTime = dateFormat.format(DateTime.now().toUtc());
+                            }
+                          } else {
+                            developer.log('ticketCreationTime is null, using current UTC time', name: 'RaiseDisputeDialog.Validation');
+                            ticketCreationTime = dateFormat.format(DateTime.now().toUtc());
+                          }
+                          final vehicleNumber = widget.ticketData['vehicleNumber']?.toString() ?? 'UNKNOWN';
+                          final vehicleType = widget.ticketData['vehicleType']?.toString() ?? 'Unknown';
+                          final parkingDuration = widget.ticketData['parkingDuration']?.toString() ?? 'Unknown';
+                          final fareAmount = (widget.ticketData['fareAmount'] ?? 0).toDouble();
+                          final paymentAmount = (widget.ticketData['totalCharges'] ?? 0).toDouble();
+                          final paymentTime = widget.ticketData['exitTime']?.toString();
+                          final paymentMode = widget.ticketData['paymentMode']?.toString() ?? 'Unknown';
+
+                          // Validate ticketCreationTime format
+                          if (!RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$').hasMatch(ticketCreationTime)) {
+                            developer.log('Invalid ticketCreationTime format: $ticketCreationTime',
+                                name: 'RaiseDisputeDialog.Validation');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Invalid ticket creation time format')),
+                            );
+                            return;
+                          }
+
+                          developer.log(
+                              'Dispute Parameters: userId=$userId, plazaId=$plazaId, ticketCreationTime=$ticketCreationTime, '
+                                  'vehicleNumber=$vehicleNumber, vehicleType=$vehicleType, parkingDuration=$parkingDuration, '
+                                  'fareAmount=$fareAmount, paymentAmount=$paymentAmount, paymentTime=$paymentTime, paymentMode=$paymentMode',
+                              name: 'RaiseDisputeDialog.Parameters');
+
+                          final success = await viewModel.submitDispute(
+                            ticketId: widget.ticketId,
+                            userId: userId,
+                            plazaId: plazaId,
+                            ticketCreationTime: ticketCreationTime,
+                            vehicleNumber: vehicleNumber,
+                            vehicleType: vehicleType,
+                            parkingDuration: parkingDuration,
+                            fareAmount: fareAmount,
+                            paymentAmount: paymentAmount,
+                            paymentTime: paymentTime,
+                            paymentMode: paymentMode,
+                          );
+                          if (success) {
+                            developer.log('Dispute raised successfully for ticketId: ${widget.ticketId}',
+                                name: 'RaiseDisputeDialog.Success');
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Dispute raised successfully!')),
                             );
+                          } else {
+                            developer.log('Failed to raise dispute for ticketId: ${widget.ticketId}, error: ${viewModel.generalError}',
+                                name: 'RaiseDisputeDialog.Failure');
                           }
                         },
                         style: ElevatedButton.styleFrom(
@@ -154,7 +223,8 @@ class _RaiseDisputeDialogState extends State<RaiseDisputeDialog> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Uploaded Images', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const Text('Uploaded Images',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               TextButton(
                 onPressed: viewModel.pickImage,
                 style: TextButton.styleFrom(
@@ -166,7 +236,7 @@ class _RaiseDisputeDialogState extends State<RaiseDisputeDialog> {
               ),
             ],
           ),
-          SizedBox(height: 8,),
+          SizedBox(height: 8),
           SizedBox(
             height: 150,
             child: ListView.builder(
@@ -178,7 +248,7 @@ class _RaiseDisputeDialogState extends State<RaiseDisputeDialog> {
                   child: Stack(
                     children: [
                       Container(
-                        width: AppConfig.deviceWidth*0.25,
+                        width: AppConfig.deviceWidth * 0.25,
                         height: 150,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(8),
@@ -220,14 +290,14 @@ class _RaiseDisputeDialogState extends State<RaiseDisputeDialog> {
               width: double.infinity,
               height: 150,
               decoration: BoxDecoration(
-                color:  AppColors.formBackground,
+                color: AppColors.formBackground,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppColors.primary),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.camera_alt_outlined,size: 32,),
+                  Icon(Icons.camera_alt_outlined, size: 32),
                   SizedBox(height: 4),
                   Text('Tap to Add Images',
                       style: TextStyle(color: Colors.black, fontSize: 14)),

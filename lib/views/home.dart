@@ -9,7 +9,7 @@ import 'package:provider/provider.dart';
 import '../../generated/l10n.dart';
 import '../services/storage/secure_storage_service.dart';
 import '../utils/components/navigationbar.dart';
-import '../viewmodels/user_viewmodel.dart';
+import '../viewmodels/settings_viewmodel.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import 'dashboard.dart';
@@ -97,10 +97,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadProfileData() async {
     final strings = S.of(context);
-    final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+    final settingsViewModel = Provider.of<SettingsViewModel>(context, listen: false);
     developer.log('Loading profile data', name: 'HomeScreen');
 
     try {
+      setState(() => _isLoadingProfile = true);
       final userId = await _secureStorage.getUserId();
       if (userId == null) {
         developer.log('User ID not found', name: 'HomeScreen', level: 900);
@@ -115,15 +116,14 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // Use the new method to fetch and store the logged-in user's data
-      await userViewModel.fetchAndStoreCurrentUser(
+      final success = await settingsViewModel.fetchAndStoreUserData(
         userId: userId,
-        forceApiCall: true, // Force API call to get the latest data
+        isCurrentAppUser: true,
       );
-      developer.log('User profile fetched and stored successfully for ID: $userId', name: 'HomeScreen');
+      developer.log('User profile ${success ? 'fetched and stored' : 'failed to fetch/store'} for ID: $userId', name: 'HomeScreen');
 
-      if (userViewModel.currentUser == null) {
-        developer.log('No user data returned from fetchAndStoreCurrentUser', name: 'HomeScreen', level: 900);
+      if (!success || settingsViewModel.currentUser == null) {
+        developer.log('No user data returned or failed to store', name: 'HomeScreen', level: 900);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -134,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (e) {
-      developer.log("Error fetching user data: $e", name: 'HomeScreen', level: 1000);
+      developer.log("Error fetching/storing user data: $e", name: 'HomeScreen', level: 1000);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -152,12 +152,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final strings = S.of(context);
-
     return Scaffold(
       backgroundColor: context.backgroundColor,
       body: Stack(
         children: [
+          if (_isLoadingProfile)
+            const Center(child: CircularProgressIndicator()),
           ..._screens.asMap().entries.map((entry) {
             final index = entry.key;
             final screen = entry.value;
@@ -169,28 +169,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             );
           }),
-          if (_isLoadingProfile)
-            Container(
-              color: context.shadowColor.withOpacity(0.5),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      color: Theme.of(context).primaryColor,
-                    ),
-                    const SizedBox(height: 16),
-                    AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 500),
-                      style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                        color: context.textPrimaryColor.withOpacity(_isLoadingProfile ? 1.0 : 0.7),
-                      ),
-                      child: Text(strings.labelLoading),
-                    ),
-                  ],
-                ),
-              ),
-            ),
         ],
       ),
       bottomNavigationBar: CustomNavigationBar(

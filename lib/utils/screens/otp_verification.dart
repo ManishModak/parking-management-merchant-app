@@ -22,7 +22,6 @@ class OtpVerificationScreen extends StatefulWidget {
 }
 
 class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
-  // Initialize 6 controllers and focus nodes for 6-digit OTP
   final List<TextEditingController> _controllers = List.generate(
     6,
         (index) => TextEditingController(),
@@ -36,7 +35,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   bool _isLoading = false;
   final _verificationService = VerificationService();
 
-  // Timer for resend OTP functionality
   Timer? _resendTimer;
   int _resendSeconds = 30;
   bool _canResendOTP = false;
@@ -45,7 +43,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   void initState() {
     super.initState();
     _startResendTimer();
-    _sendOTP(); // Send OTP on screen load
+    _focusNodes[0].requestFocus();
     developer.log('OtpVerificationScreen initialized for ${widget.mobileNumber}',
         name: 'OtpVerificationScreen');
   }
@@ -68,48 +66,18 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     });
   }
 
-  Future<void> _sendOTP() async {
-    setState(() => _isLoading = true);
-    try {
-      await _verificationService.sendOtp(widget.mobileNumber);
-      developer.log('OTP sent to ${widget.mobileNumber}',
-          name: 'OtpVerificationScreen');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(S.of(context).otpSentSuccess),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${S.of(context).otpSendFailed}: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   Future<void> _resendOTP() async {
     if (!_canResendOTP) return;
 
     setState(() => _isLoading = true);
     try {
-      // Clear all 6 fields
       for (var controller in _controllers) {
         controller.clear();
       }
       _focusNodes[0].requestFocus();
 
       await _verificationService.sendOtp(widget.mobileNumber);
-      developer.log('OTP resent to ${widget.mobileNumber}',
-          name: 'OtpVerificationScreen');
+      developer.log('OTP resent to ${widget.mobileNumber}', name: 'OtpVerificationScreen');
       HapticFeedback.lightImpact();
 
       if (mounted) {
@@ -122,10 +90,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       }
       _startResendTimer();
     } catch (e) {
+      setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${S.of(context).otpResendFailed}: $e'),
+            content: Text('${S.of(context).errorSendingOtp}: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -147,10 +116,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     super.dispose();
   }
 
-  // Check if all 6 fields are filled
   bool get _isOtpComplete => _controllers.every((controller) => controller.text.isNotEmpty);
 
-  // Concatenate all 6 digits
   String get _completeOtp => _controllers.map((e) => e.text).join();
 
   Future<void> _verifyOTP() async {
@@ -285,9 +252,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(
-        6, // Updated to 6 fields
+        6,
             (index) => SizedBox(
-          width: 40, // Adjusted width to fit 6 fields
+          width: 40,
           height: 65,
           child: TextField(
             controller: _controllers[index],
@@ -317,20 +284,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               ),
             ),
             onChanged: (value) {
-              developer.log('OTP field $index changed to: $value',
-                  name: 'OtpVerificationScreen');
+              developer.log('OTP field $index changed to: $value', name: 'OtpVerificationScreen');
               if (value.isNotEmpty) {
                 HapticFeedback.selectionClick();
               }
-              // Move focus to next field if not the last (index < 5)
               if (value.length == 1 && index < 5) {
                 _focusNodes[index + 1].requestFocus();
-              }
-              // Move focus to previous field if cleared
-              else if (value.isEmpty && index > 0) {
+              } else if (value.isEmpty && index > 0) {
                 _focusNodes[index - 1].requestFocus();
               }
-              // Auto-submit when last field is filled and OTP is complete
               if (_isOtpComplete && index == 5) {
                 FocusScope.of(context).unfocus();
                 Future.delayed(const Duration(milliseconds: 300), () {

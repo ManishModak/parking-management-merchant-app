@@ -667,23 +667,60 @@ class CustomCards {
     required String plazaName,
     required VoidCallback onTap,
     required BuildContext context,
+    required S strings, // Added strings parameter
   }) {
-    final strings = S.of(context);
+    // Determine fare details string based on fare type
+    String fareDetails = '';
+    String timeDetails = ''; // For progressive range or hour-wise base hours/discount
+
+    switch (fare.fareType) {
+      case FareTypes.progressive:
+        fareDetails = '${strings.labelFareAmount}: ₹${fare.fareRate.toStringAsFixed(2)}'; // "Fare: ₹X.XX"
+        timeDetails = '${strings.labelTimeRange}: ${fare.from ?? '?'} - ${fare.toCustom ?? '?'} ${strings.labelMinutesAbbr}'; // "Range: X - Y min"
+        break;
+      case FareTypes.freePass:
+        fareDetails = strings.fareTypeFreePass; // "Free Pass"
+        timeDetails = ''; // No extra details
+        break;
+      case FareTypes.daily:
+        fareDetails = '₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelDay}'; // "₹X.XX / Day"
+        break;
+      case FareTypes.hourly:
+        fareDetails = '₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelHour}'; // "₹X.XX / Hour"
+        break;
+      case FareTypes.monthlyPass:
+        fareDetails = '₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelMonth}'; // "₹X.XX / Month"
+        break;
+      case FareTypes.hourWiseCustom:
+        fareDetails = '${strings.labelBaseRate}: ₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelHour}'; // "Base: ₹X.XX / Hour"
+        timeDetails = '${strings.labelBaseHours}: ${fare.baseHours ?? '-'}'; // "Base Hours: X"
+        if (fare.discountRate != null && fare.discountRate! > 0) {
+          // Add discount info if present and positive
+          timeDetails += '\n${strings.labelDiscount}: ${fare.discountRate}%'; // "Discount: Y%"
+        }
+        break;
+      default:
+      // Fallback for unknown types (shouldn't happen ideally)
+        fareDetails = '${strings.labelRate}: ₹${fare.fareRate.toStringAsFixed(2)}'; // "Rate: ₹X.XX"
+    }
+
     return Card(
-      margin: EdgeInsets.zero,
-      elevation: 3,
-      shape: RoundedRectangleBorder(
+      margin: EdgeInsets.zero, // Keep margin as is unless specified otherwise
+      elevation: Theme.of(context).cardTheme.elevation ?? 2, // Use theme elevation
+      shape: Theme.of(context).cardTheme.shape ?? RoundedRectangleBorder( // Use theme shape
         borderRadius: BorderRadius.circular(15),
         side: BorderSide(
-          color: fare.isDeleted ? AppColors.error.withOpacity(0.2) : AppColors.success.withOpacity(0.2),
+          color: fare.isDeleted
+              ? AppColors.error.withOpacity(0.3) // Use defined AppColors more prominently
+              : AppColors.success.withOpacity(0.3), // Use defined AppColors
           width: 1,
         ),
       ),
-      color: context.cardColor,
+      color: context.cardColor, // Use theme extension
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
         onTap: () {
-          developer.log('Fare card tapped for plaza: $plazaName', name: 'CustomCards');
+          developer.log('Fare card tapped for plaza: $plazaName, Fare ID: ${fare.fareId}', name: 'CustomCards');
           onTap();
         },
         child: Padding(
@@ -695,6 +732,7 @@ class CustomCards {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Row 1: Plaza Name and Status
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -703,29 +741,37 @@ class CustomCards {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${strings.labelPlazaName}: $plazaName',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: context.textPrimaryColor,
+                                strings.labelPlazaName, // Label text
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: context.textSecondaryColor, // Use theme secondary color
                                 ),
+                              ),
+                              Text(
+                                plazaName, // Plaza name value
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: context.textPrimaryColor, // Use theme primary color
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
                         ),
+                        const SizedBox(width: 8), // Space before status
                         Container(
-                          width: 60,
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: fare.isDeleted ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+                            color: fare.isDeleted
+                                ? AppColors.error.withOpacity(0.1)
+                                : AppColors.success.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             fare.isDeleted ? strings.labelInactive : strings.labelActive,
-                            style: TextStyle(
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: fare.isDeleted ? AppColors.error : AppColors.success,
                               fontWeight: FontWeight.w600,
-                              fontSize: 13,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -733,6 +779,8 @@ class CustomCards {
                       ],
                     ),
                     const SizedBox(height: 12),
+
+                    // Row 2: Vehicle Type and Fare Type
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -742,11 +790,16 @@ class CustomCards {
                             children: [
                               Text(
                                 strings.labelVehicleType,
-                                style: TextStyle(color: context.textPrimaryColor, fontWeight: FontWeight.w600, fontSize: 12),
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: context.textSecondaryColor,
+                                ),
                               ),
                               Text(
                                 fare.vehicleType,
-                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: context.textPrimaryColor),
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: context.textPrimaryColor,
+                                ),
                               ),
                             ],
                           ),
@@ -757,11 +810,16 @@ class CustomCards {
                             children: [
                               Text(
                                 strings.labelFareType,
-                                style: TextStyle(color: context.textPrimaryColor, fontWeight: FontWeight.w600, fontSize: 12),
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: context.textSecondaryColor,
+                                ),
                               ),
                               Text(
                                 fare.fareType,
-                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: context.textPrimaryColor),
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: context.textPrimaryColor,
+                                ),
                               ),
                             ],
                           ),
@@ -769,6 +827,8 @@ class CustomCards {
                       ],
                     ),
                     const SizedBox(height: 12),
+
+                    // Row 3: Fare/Time Details and Effective Period
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -777,13 +837,30 @@ class CustomCards {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                strings.labelAmount,
-                                style: TextStyle(color: context.textPrimaryColor, fontWeight: FontWeight.w600, fontSize: 12),
+                                // Dynamic label based on content
+                                fare.fareType == FareTypes.progressive ? strings.labelDetails : strings.labelFareDetails,
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: context.textSecondaryColor,
+                                ),
                               ),
                               Text(
-                                '₹${fare.fareRate}',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: context.textPrimaryColor),
+                                fareDetails, // The calculated fare string
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.bold, // Make rate bold
+                                  color: context.textPrimaryColor,
+                                ),
                               ),
+                              // Show time details if present (Progressive, Hour-wise)
+                              if (timeDetails.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  timeDetails,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                    color: context.textSecondaryColor,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -793,11 +870,17 @@ class CustomCards {
                             children: [
                               Text(
                                 strings.labelEffectivePeriod,
-                                style: TextStyle(color: context.textPrimaryColor, fontWeight: FontWeight.w600, fontSize: 12),
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: context.textSecondaryColor,
+                                ),
                               ),
                               Text(
+                                // Format dates, use 'Ongoing' if end date is null
                                 '${DateFormat('dd MMM yyyy').format(fare.startEffectDate)} - ${fare.endEffectDate != null ? DateFormat('dd MMM yyyy').format(fare.endEffectDate!) : strings.labelOngoing}',
-                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: context.textPrimaryColor),
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: context.textPrimaryColor,
+                                ),
                               ),
                             ],
                           ),
@@ -807,10 +890,14 @@ class CustomCards {
                   ],
                 ),
               ),
+              // Keep chevron for navigation indication
               Container(
                 width: 30,
                 alignment: Alignment.center,
-                child: Icon(Icons.chevron_right, color: context.textPrimaryColor, size: 24),
+                child: Icon(
+                    Icons.chevron_right,
+                    color: context.textSecondaryColor, // Use secondary color for less emphasis
+                    size: Theme.of(context).iconTheme.size ?? 24),
               ),
             ],
           ),

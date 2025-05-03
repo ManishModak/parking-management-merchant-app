@@ -13,7 +13,8 @@ class ViewDisputeDetailsScreen extends StatefulWidget {
   const ViewDisputeDetailsScreen({super.key, required this.ticketId});
 
   @override
-  _ViewDisputeDetailsScreenState createState() => _ViewDisputeDetailsScreenState();
+  _ViewDisputeDetailsScreenState createState() =>
+      _ViewDisputeDetailsScreenState();
 }
 
 class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
@@ -42,8 +43,10 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Failed to load dispute details: $message',
-            style: Theme.of(context).snackBarTheme.contentTextStyle),
+        content: Text(
+          'Failed to load dispute details: $message',
+          style: Theme.of(context).snackBarTheme.contentTextStyle,
+        ),
         behavior: SnackBarBehavior.floating,
         backgroundColor: Theme.of(context).snackBarTheme.backgroundColor,
       ),
@@ -68,8 +71,11 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
                   fit: BoxFit.contain,
                   placeholder: (context, url) => _buildShimmerPlaceholder(),
                   errorWidget: (context, url, error) => Center(
-                    child: Icon(Icons.broken_image_outlined,
-                        size: 48, color: Theme.of(context).colorScheme.error),
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                 ),
               ),
@@ -77,7 +83,10 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
                 top: 10,
                 right: 10,
                 child: IconButton(
-                  icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onPrimary),
+                  icon: Icon(
+                    Icons.close,
+                    color: Theme.of(context).colorScheme.onPrimary,
+                  ),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
@@ -88,7 +97,8 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
     );
   }
 
-  Widget _buildShimmerPlaceholder({double width = double.infinity, double height = 20}) {
+  Widget _buildShimmerPlaceholder(
+      {double width = double.infinity, double height = 20}) {
     return Shimmer.fromColors(
       baseColor: AppColors.shimmerBaseLight,
       highlightColor: AppColors.shimmerHighlightLight,
@@ -171,7 +181,8 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
                   children: [
                     _buildShimmerPlaceholder(width: 130, height: 16),
                     const SizedBox(height: 6),
-                    _buildShimmerPlaceholder(width: double.infinity, height: 18),
+                    _buildShimmerPlaceholder(
+                        width: double.infinity, height: 18),
                   ],
                 ),
               ],
@@ -199,7 +210,8 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
                       return Padding(
                         padding: const EdgeInsets.only(right: 8.0),
                         child: _buildShimmerPlaceholder(
-                          width: (AppConfig.deviceWidth - 64) / 3 + (index % 2 == 0 ? 15 : -15),
+                          width: (AppConfig.deviceWidth - 64) / 3 +
+                              (index % 2 == 0 ? 15 : -15),
                           height: 160,
                         ),
                       );
@@ -238,10 +250,11 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
             Text(
               'Uploaded Documents',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
-            if (viewModel.capturedImageUrls != null && viewModel.capturedImageUrls!.isNotEmpty)
+            if (viewModel.capturedImageUrls != null &&
+                viewModel.capturedImageUrls!.isNotEmpty)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
@@ -251,15 +264,16 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
                 child: Text(
                   '${viewModel.capturedImageUrls!.length}',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w500,
-                  ),
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
                 ),
               ),
           ],
         ),
         initiallyExpanded: true,
-        onExpansionChanged: (expanded) => setState(() => _isImagesExpanded = expanded),
+        onExpansionChanged: (expanded) =>
+            setState(() => _isImagesExpanded = expanded),
         shape: const RoundedRectangleBorder(side: BorderSide.none),
         tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         children: [
@@ -268,21 +282,31 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (viewModel.capturedImageUrls == null || viewModel.capturedImageUrls!.isEmpty)
+                if (viewModel.capturedImageUrls == null ||
+                    viewModel.capturedImageUrls!.isEmpty)
                   SizedBox(
                     height: 150,
                     child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.image_not_supported,
-                              size: 48, color: Theme.of(context).colorScheme.primary),
+                          Icon(
+                            Icons.image_not_supported,
+                            size: 48,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             'No Images Available',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.6),
+                                ),
                           ),
                         ],
                       ),
@@ -302,7 +326,8 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
                           child: Container(
                             width: imageWidth,
                             decoration: BoxDecoration(
-                              border: Border.all(color: Theme.of(context).colorScheme.primary),
+                              border: Border.all(
+                                  color: Theme.of(context).colorScheme.primary),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: ClipRRect(
@@ -313,11 +338,17 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
                                   imageUrl: imageUrl,
                                   fit: BoxFit.cover,
                                   placeholder: (context, url) =>
-                                      _buildShimmerPlaceholder(width: imageWidth, height: 150),
+                                      _buildShimmerPlaceholder(
+                                          width: imageWidth, height: 150),
                                   errorWidget: (context, url, error) => Center(
-                                    child: Icon(Icons.broken_image_outlined,
-                                        size: 32,
-                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                                    child: Icon(
+                                      Icons.broken_image_outlined,
+                                      size: 32,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.6),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -336,33 +367,48 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
                           icon: const Icon(Icons.arrow_back_ios, size: 18),
                           color: _currentImagePage > 0
                               ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.5),
                           onPressed: _currentImagePage > 0
                               ? () => setState(() => _currentImagePage--)
                               : null,
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             'Page ${_currentImagePage + 1} of ${_getTotalPages(viewModel)}',
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelMedium
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.arrow_forward_ios, size: 18),
-                          color: _currentImagePage < _getTotalPages(viewModel) - 1
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                          onPressed: _currentImagePage < _getTotalPages(viewModel) - 1
-                              ? () => setState(() => _currentImagePage++)
-                              : null,
+                          color:
+                              _currentImagePage < _getTotalPages(viewModel) - 1
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.5),
+                          onPressed:
+                              _currentImagePage < _getTotalPages(viewModel) - 1
+                                  ? () => setState(() => _currentImagePage++)
+                                  : null,
                         ),
                       ],
                     ),
@@ -376,7 +422,7 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
     );
   }
 
-  void _showAuditDetailsDialog() {
+  void _showAuditDetailsDialog(Map<String, dynamic> displayData) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -394,12 +440,18 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
                   children: [
                     Text(
                       'Audit Details',
-                      style: Theme.of(context).dialogTheme.titleTextStyle?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                      style: Theme.of(context)
+                          .dialogTheme
+                          .titleTextStyle
+                          ?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
+                      icon: Icon(
+                        Icons.close,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
@@ -407,30 +459,40 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
                 const Divider(),
                 const SizedBox(height: 4),
                 _buildDetailItem(
-                    title: 'Dispute Raised By', value: 'User1@mail.com'), // Hardcoded
+                  title: 'Dispute Raised By',
+                  value: displayData['disputeRaisedBy'] ?? 'N/A',
+                ),
                 _buildDetailItem(
-                    title: 'Dispute Raised Date', value: '30-01-2025  10:20:28'), // Hardcoded
+                  title: 'Dispute Raised Date',
+                  value: displayData['disputeRaisedDate'] ?? 'N/A',
+                ),
                 _buildDetailItem(
-                    title: 'Dispute Processed By', value: 'Admin1@mail.com'), // Hardcoded
+                  title: 'Dispute Processed By',
+                  value: displayData['disputeProcessedBy'] ?? 'N/A',
+                ),
                 _buildDetailItem(
-                    title: 'Dispute Processed Date', value: '31-01-2025  15:20:28'), // Hardcoded
+                  title: 'Dispute Processed Date',
+                  value: displayData['disputeProcessedDate'] ?? 'N/A',
+                ),
                 const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerRight,
                   child: ElevatedButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
-                      padding: WidgetStateProperty.all(
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
-                    ),
+                    style:
+                        Theme.of(context).elevatedButtonTheme.style?.copyWith(
+                              padding: WidgetStateProperty.all(
+                                  const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8)),
+                            ),
                     child: Text(
                       'Close',
                       style: Theme.of(context)
                           .elevatedButtonTheme
                           .style
                           ?.textStyle
-                          ?.resolve({})!
-                          .copyWith(color: Theme.of(context).colorScheme.onPrimary),
+                          ?.resolve({})?.copyWith(
+                              color: Theme.of(context).colorScheme.onPrimary),
                     ),
                   ),
                 ),
@@ -442,25 +504,25 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
     );
   }
 
-  Widget _buildDisputeDetailWithAuditLink() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildDisputeDetailWithAuditLink(Map<String, dynamic> displayData) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           'Dispute Information',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         GestureDetector(
-          onTap: _showAuditDetailsDialog,
+          onTap: () => _showAuditDetailsDialog(displayData),
           child: Text(
             'Audit Details',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.w600,
-              decoration: TextDecoration.underline,
-            ),
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.underline,
+                ),
           ),
         ),
       ],
@@ -468,15 +530,18 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
   }
 
   List<String> _getCurrentImages(ViewDisputeViewModel viewModel) {
-    if (viewModel.capturedImageUrls == null || viewModel.capturedImageUrls!.isEmpty) return [];
+    if (viewModel.capturedImageUrls == null ||
+        viewModel.capturedImageUrls!.isEmpty) return [];
     final totalImages = viewModel.capturedImageUrls!.length;
     final startIndex = _currentImagePage * 3;
-    final endIndex = (startIndex + 3) > totalImages ? totalImages : (startIndex + 3);
+    final endIndex =
+        (startIndex + 3) > totalImages ? totalImages : (startIndex + 3);
     return viewModel.capturedImageUrls!.sublist(startIndex, endIndex);
   }
 
   int _getTotalPages(ViewDisputeViewModel viewModel) {
-    if (viewModel.capturedImageUrls == null || viewModel.capturedImageUrls!.isEmpty) return 0;
+    if (viewModel.capturedImageUrls == null ||
+        viewModel.capturedImageUrls!.isEmpty) return 0;
     return (viewModel.capturedImageUrls!.length / 3).ceil();
   }
 
@@ -494,47 +559,44 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
           Text(
             title,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.w600,
-            ),
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
           const SizedBox(height: 4),
           isBadge
               ? Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: value.toLowerCase() == 'open'
-                  ? Colors.green.withOpacity(0.1)
-                  : Theme.of(context).colorScheme.error.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: value.toLowerCase() == 'open'
-                    ? Colors.green
-                    : Theme.of(context).colorScheme.error,
-                width: 1,
-              ),
-            ),
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: value.toLowerCase() == 'open'
-                    ? Colors.green
-                    : Theme.of(context).colorScheme.error,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          )
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(value).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _getStatusColor(value),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    value,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: _getStatusColor(value),
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                )
               : Text(
-            value.isEmpty ? 'N/A' : value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
-              color: highlight
-                  ? (value.toLowerCase() == 'open'
-                  ? Colors.green
-                  : Theme.of(context).colorScheme.error)
-                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
-            ),
-          ),
+                  value.isEmpty ? 'N/A' : value,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight:
+                            highlight ? FontWeight.bold : FontWeight.normal,
+                        color: highlight
+                            ? _getStatusColor(value)
+                            : Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.9),
+                      ),
+                ),
         ],
       ),
     );
@@ -571,10 +633,11 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
   }
 
   PreferredSizeWidget _buildCustomAppBar(ViewDisputeViewModel viewModel) {
+    final displayData = viewModel.getDisputeDisplayData();
     return CustomAppBar.appBarWithNavigation(
       screenTitle: viewModel.dispute == null
           ? "Dispute Details\nLoading..."
-          : "Dispute #${viewModel.dispute!.disputeId ?? 'N/A'}\nRaised: ${viewModel.dispute!.disputeRaisedDate ?? 'N/A'}",
+          : "Ticket #${displayData['ticketId']}\nStatus: ${displayData['disputeStatus']}",
       onPressed: () => Navigator.pop(context),
       darkBackground: Theme.of(context).brightness == Brightness.dark,
       fontSize: 14,
@@ -584,108 +647,152 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
   }
 
   Widget _buildDisputeDetails(ViewDisputeViewModel viewModel) {
-    if (viewModel.dispute == null) return const SizedBox.shrink();
+    if (viewModel.dispute == null) {
+      return const Center(child: Text('No dispute data available'));
+    }
+
+    final displayData = viewModel.getDisputeDisplayData();
+
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
         _buildCompactSection(
-          title: _buildDisputeDetailWithAuditLink(),
+          title: _buildDisputeDetailWithAuditLink(displayData),
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: _getStatusColor(viewModel.dispute!.disputeStatus).withOpacity(0.2),
+              color: _getStatusColor(displayData['disputeStatus'])
+                  .withOpacity(0.2),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                  color: _getStatusColor(viewModel.dispute!.disputeStatus), width: 1.5),
+                color: _getStatusColor(displayData['disputeStatus']),
+                width: 1.5,
+              ),
             ),
             child: Text(
-              viewModel.dispute!.disputeStatus,
+              displayData['disputeStatus'],
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: _getStatusColor(viewModel.dispute!.disputeStatus),
-                fontWeight: FontWeight.bold,
-              ),
+                    color: _getStatusColor(displayData['disputeStatus']),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
           ),
           children: [
             Row(
               children: [
                 Expanded(
-                    child: _buildDetailItem(
-                        title: 'Ticket ID', value: viewModel.dispute!.ticketId)),
+                  child: _buildDetailItem(
+                    title: 'Ticket ID',
+                    value: displayData['ticketId'],
+                  ),
+                ),
                 Expanded(
-                    child: _buildDetailItem(
-                        title: 'Plaza Name', value: viewModel.dispute!.plazaName)),
+                  child: _buildDetailItem(
+                    title: 'Plaza Name',
+                    value: displayData['plazaName'],
+                  ),
+                ),
               ],
             ),
             Row(
               children: [
                 Expanded(
-                    child: _buildDetailItem(
-                        title: 'Vehicle Number', value: viewModel.dispute!.vehicleNumber)),
+                  child: _buildDetailItem(
+                    title: 'Vehicle Number',
+                    value: displayData['vehicleNumber'],
+                  ),
+                ),
                 Expanded(
-                    child: _buildDetailItem(
-                        title: 'Vehicle Type', value: viewModel.dispute!.vehicleType)),
+                  child: _buildDetailItem(
+                    title: 'Vehicle Type',
+                    value: displayData['vehicleType'],
+                  ),
+                ),
               ],
             ),
             Row(
               children: [
                 Expanded(
-                    child: _buildDetailItem(
-                        title: 'Entry Time', value: viewModel.dispute!.vehicleEntryTime)),
+                  child: _buildDetailItem(
+                    title: 'Entry Time',
+                    value: displayData['vehicleEntryTime'],
+                  ),
+                ),
                 Expanded(
-                    child: _buildDetailItem(
-                        title: 'Exit Time', value: viewModel.dispute!.vehicleExitTime)),
+                  child: _buildDetailItem(
+                    title: 'Exit Time',
+                    value: displayData['vehicleExitTime'],
+                  ),
+                ),
               ],
             ),
             Row(
               children: [
                 Expanded(
-                    child: _buildDetailItem(
-                        title: 'Parking Duration',
-                        value: viewModel.dispute!.parkingDuration)),
+                  child: _buildDetailItem(
+                    title: 'Parking Duration',
+                    value: displayData['parkingDuration'],
+                  ),
+                ),
                 Expanded(
-                    child: _buildDetailItem(
-                        title: 'Payment Amount',
-                        value: '₹${viewModel.dispute!.paymentAmount}')),
+                  child: _buildDetailItem(
+                    title: 'Payment Amount',
+                    value: displayData['paymentAmount'],
+                  ),
+                ),
               ],
             ),
             Row(
               children: [
                 Expanded(
-                    child: _buildDetailItem(
-                        title: 'Fare Type', value: viewModel.dispute!.fareType)),
+                  child: _buildDetailItem(
+                    title: 'Fare Type',
+                    value: displayData['fareType'],
+                  ),
+                ),
                 Expanded(
-                    child: _buildDetailItem(
-                        title: 'Fare Amount', value: '₹${viewModel.dispute!.fareAmount}')),
+                  child: _buildDetailItem(
+                    title: 'Fare Amount',
+                    value: displayData['fareAmount'],
+                  ),
+                ),
               ],
             ),
             Row(
               children: [
                 Expanded(
-                    child: _buildDetailItem(
-                        title: 'Payment Date', value: viewModel.dispute!.paymentDate)),
+                  child: _buildDetailItem(
+                    title: 'Payment Date',
+                    value: displayData['paymentDate'],
+                  ),
+                ),
                 Expanded(
-                    child: _buildDetailItem(
-                        title: 'Expiry Date',
-                        value: viewModel.dispute!.disputeExpiryDate)),
+                  child: _buildDetailItem(
+                    title: 'Expiry Date',
+                    value: displayData['disputeExpiryDate'],
+                  ),
+                ),
               ],
             ),
             Row(
               children: [
                 Expanded(
-                    child: _buildDetailItem(
-                        title: 'Dispute Reason', value: viewModel.dispute!.disputeReason)),
+                  child: _buildDetailItem(
+                    title: 'Dispute Reason',
+                    value: displayData['disputeReason'],
+                  ),
+                ),
                 Expanded(
-                    child: _buildDetailItem(
-                        title: 'Dispute Amount',
-                        value: '₹${viewModel.dispute!.disputeAmount}')),
+                  child: _buildDetailItem(
+                    title: 'Dispute Amount',
+                    value: displayData['disputeAmount'],
+                  ),
+                ),
               ],
             ),
             _buildDetailItem(
               title: 'Dispute Remark',
-              value: viewModel.dispute!.disputeRemark.isEmpty
-                  ? 'N/A'
-                  : viewModel.dispute!.disputeRemark,
+              value: displayData['disputeRemark'],
             ),
           ],
         ),
@@ -698,8 +805,10 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
     switch (status.toLowerCase()) {
       case 'open':
         return Colors.green;
-      case 'pending':
+      case 'inprogress':
         return Colors.orange;
+      case 'accepted':
+        return Colors.blue;
       case 'rejected':
         return Colors.red;
       default:
@@ -715,7 +824,9 @@ class _ViewDisputeDetailsScreenState extends State<ViewDisputeDetailsScreen> {
           appBar: _buildCustomAppBar(viewModel),
           body: RefreshIndicator(
             onRefresh: _fetchDisputeDetails,
-            child: viewModel.isLoading ? _buildLoadingState() : _buildDisputeDetails(viewModel),
+            child: viewModel.isLoading
+                ? _buildLoadingState()
+                : _buildDisputeDetails(viewModel),
           ),
         );
       },

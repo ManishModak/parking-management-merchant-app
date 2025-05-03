@@ -31,12 +31,13 @@ class TicketHistoryViewModel extends ChangeNotifier {
         'plazaId': ticket.plazaId,
         'vehicleNumber': ticket.vehicleNumber,
         'vehicleType': ticket.vehicleType,
-        'plazaName': 'Plaza ${ticket.plazaId}', // TODO  Replace with actual plazaName if available
+        'plazaName': 'Plaza ${ticket.plazaId}',
         'entryTime': ticket.entryTime ?? ticket.createdTime.toIso8601String(),
         'ticketStatus': ticket.status.toString().split('.').last,
+        'disputeStatus': ticket.disputeStatus ?? 'Not Raised',
         'entryLaneId': ticket.entryLaneId,
         'entryLaneDirection': ticket.entryLaneDirection,
-        'ticketCreationTime': ticket.createdTime.toIso8601String(), // Use createdTime
+        'ticketCreationTime': ticket.createdTime.toIso8601String(),
         'floorId': ticket.floorId ?? 'N/A',
         'slotId': ticket.slotId ?? 'N/A',
         'modificationTime': ticket.modificationTime?.toIso8601String(),
@@ -79,8 +80,7 @@ class TicketHistoryViewModel extends ChangeNotifier {
 
   String getFormattedEntryTime() {
     if (_ticket?.entryTime == null) return 'N/A';
-    final entryTime = DateTime.parse(_ticket!.entryTime!);
-    return DateFormat('dd MMM yyyy, hh:mm a').format(entryTime);
+    return DateFormat('dd MMM yyyy, hh:mm a').format(_ticket!.entryTime!);
   }
 
   String getFormattedExitTime() {

@@ -7,20 +7,34 @@ import '../../models/plaza.dart';
 import '../../config/api_config.dart';
 import '../../utils/exceptions.dart';
 import '../network/connectivity_service.dart';
+import '../storage/secure_storage_service.dart';
 
 class PlazaService {
   final http.Client _client;
   final ConnectivityService _connectivityService;
+  final SecureStorageService _secureStorageService;
   final String baseUrl = ApiConfig.baseUrl;
 
-  /// Constructor with dependency injection for http.Client and ConnectivityService
-  PlazaService({http.Client? client, ConnectivityService? connectivityService})
-      : _client = client ?? http.Client(),
-        _connectivityService = connectivityService ?? ConnectivityService();
+  /// Constructor with dependency injection for http.Client, ConnectivityService, and SecureStorageService
+  PlazaService({
+    http.Client? client,
+    ConnectivityService? connectivityService,
+    SecureStorageService? secureStorageService,
+  })  : _client = client ?? http.Client(),
+        _connectivityService = connectivityService ?? ConnectivityService(),
+        _secureStorageService = secureStorageService ?? SecureStorageService();
+
+  /// Helper method to get headers with Authorization token
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _secureStorageService.getAuthToken();
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
 
   /// Fetches plazas for a given user by userId.
   Future<List<Plaza>> fetchUserPlazas(String userId) async {
-    // Check device connectivity
     if (!(await _connectivityService.isConnected())) {
       throw NoInternetException(
           'No internet connection. Please check your network settings.');
@@ -29,7 +43,6 @@ class PlazaService {
     final fullUrl = '${ApiConfig.getFullUrl(PlazaApi.getByOwnerId)}$userId';
     final serverUrl = Uri.parse(fullUrl);
 
-    // Check server reachability
     if (!(await _connectivityService.canReachServer(serverUrl.host))) {
       developer.log('[PLAZA] Server unreachable: ${serverUrl.host}',
           name: 'PlazaService');
@@ -46,7 +59,7 @@ class PlazaService {
       final response = await _client
           .get(
         Uri.parse(fullUrl),
-        headers: {'Content-Type': 'application/json'},
+        headers: await _getHeaders(),
       )
           .timeout(const Duration(seconds: 10));
 
@@ -111,7 +124,6 @@ class PlazaService {
 
   /// Retrieves a single plaza by its ID.
   Future<Plaza> getPlazaById(String plazaId) async {
-    // Check device connectivity
     if (!(await _connectivityService.isConnected())) {
       throw NoInternetException(
           'No internet connection. Please check your network settings.');
@@ -120,7 +132,6 @@ class PlazaService {
     final fullUrl = '${ApiConfig.getFullUrl(PlazaApi.get)}$plazaId';
     final serverUrl = Uri.parse(fullUrl);
 
-    // Check server reachability
     if (!(await _connectivityService.canReachServer(serverUrl.host))) {
       developer.log('[PLAZA] Server unreachable: ${serverUrl.host}',
           name: 'PlazaService');
@@ -137,7 +148,7 @@ class PlazaService {
       final response = await _client
           .get(
         Uri.parse(fullUrl),
-        headers: {'Content-Type': 'application/json'},
+        headers: await _getHeaders(),
       )
           .timeout(const Duration(seconds: 10));
 
@@ -187,7 +198,6 @@ class PlazaService {
 
   /// Creates a new plaza.
   Future<String> addPlaza(Plaza plaza) async {
-    // Check device connectivity
     if (!(await _connectivityService.isConnected())) {
       throw NoInternetException(
           'No internet connection. Please check your network settings.');
@@ -196,7 +206,6 @@ class PlazaService {
     final fullUrl = ApiConfig.getFullUrl(PlazaApi.create);
     final serverUrl = Uri.parse(fullUrl);
 
-    // Check server reachability
     if (!(await _connectivityService.canReachServer(serverUrl.host))) {
       developer.log('[PLAZA] Server unreachable: ${serverUrl.host}',
           name: 'PlazaService');
@@ -214,7 +223,7 @@ class PlazaService {
       final response = await _client
           .post(
         Uri.parse(fullUrl),
-        headers: {'Content-Type': 'application/json'},
+        headers: await _getHeaders(),
         body: body,
       )
           .timeout(const Duration(seconds: 10));
@@ -263,7 +272,6 @@ class PlazaService {
 
   /// Updates an existing plaza.
   Future<bool> updatePlaza(Plaza plaza, String plazaId) async {
-    // Check device connectivity
     if (!(await _connectivityService.isConnected())) {
       throw NoInternetException(
           'No internet connection. Please check your network settings.');
@@ -272,7 +280,6 @@ class PlazaService {
     final fullUrl = '${ApiConfig.getFullUrl(PlazaApi.update)}$plazaId';
     final serverUrl = Uri.parse(fullUrl);
 
-    // Check server reachability
     if (!(await _connectivityService.canReachServer(serverUrl.host))) {
       developer.log('[PLAZA] Server unreachable: ${serverUrl.host}',
           name: 'PlazaService');
@@ -291,7 +298,7 @@ class PlazaService {
       final response = await _client
           .put(
         Uri.parse(fullUrl),
-        headers: {'Content-Type': 'application/json'},
+        headers: await _getHeaders(),
         body: body,
       )
           .timeout(const Duration(seconds: 10));
@@ -333,7 +340,6 @@ class PlazaService {
 
   /// Deletes a plaza by its ID.
   Future<void> deletePlaza(String plazaId) async {
-    // Check device connectivity
     if (!(await _connectivityService.isConnected())) {
       throw NoInternetException(
           'No internet connection. Please check your network settings.');
@@ -342,7 +348,6 @@ class PlazaService {
     final fullUrl = '${ApiConfig.getFullUrl(PlazaApi.delete)}$plazaId';
     final serverUrl = Uri.parse(fullUrl);
 
-    // Check server reachability
     if (!(await _connectivityService.canReachServer(serverUrl.host))) {
       developer.log('[PLAZA] Server unreachable: ${serverUrl.host}',
           name: 'PlazaService');
@@ -359,7 +364,7 @@ class PlazaService {
       final response = await _client
           .delete(
         Uri.parse(fullUrl),
-        headers: {'Content-Type': 'application/json'},
+        headers: await _getHeaders(),
       )
           .timeout(const Duration(seconds: 10));
 
@@ -399,7 +404,6 @@ class PlazaService {
 
   /// Retrieves all plaza owners.
   Future<List<String>> getAllPlazaOwners() async {
-    // Check device connectivity
     if (!(await _connectivityService.isConnected())) {
       throw NoInternetException(
           'No internet connection. Please check your network settings.');
@@ -408,7 +412,6 @@ class PlazaService {
     final fullUrl = ApiConfig.getFullUrl(PlazaApi.getAllOwners);
     final serverUrl = Uri.parse(fullUrl);
 
-    // Check server reachability
     if (!(await _connectivityService.canReachServer(serverUrl.host))) {
       developer.log('[PLAZA] Server unreachable: ${serverUrl.host}',
           name: 'PlazaService');
@@ -424,7 +427,7 @@ class PlazaService {
       final response = await _client
           .get(
         Uri.parse(fullUrl),
-        headers: {'Content-Type': 'application/json'},
+        headers: await _getHeaders(),
       )
           .timeout(const Duration(seconds: 10));
 

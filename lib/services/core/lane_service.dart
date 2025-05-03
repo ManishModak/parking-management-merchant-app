@@ -3,21 +3,34 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import '../../models/lane.dart'; // Assuming Lane model is here
-import '../../config/api_config.dart'; // Assuming ApiConfig is here
-import '../../utils/exceptions.dart'; // Assuming custom exceptions are here
-import '../network/connectivity_service.dart'; // Assuming connectivity service is here
+import '../../models/lane.dart';
+import '../../config/api_config.dart';
+import '../../utils/exceptions.dart';
+import '../network/connectivity_service.dart';
+import '../storage/secure_storage_service.dart';
 
 class LaneService {
   final http.Client _client;
   final ConnectivityService _connectivityService;
+  final SecureStorageService _secureStorageService;
   final String baseUrl = ApiConfig.baseUrl;
 
   LaneService({
     http.Client? client,
     ConnectivityService? connectivityService,
+    SecureStorageService? secureStorageService,
   })  : _client = client ?? http.Client(),
-        _connectivityService = connectivityService ?? ConnectivityService();
+        _connectivityService = connectivityService ?? ConnectivityService(),
+        _secureStorageService = secureStorageService ?? SecureStorageService();
+
+  /// Helper method to get headers with Authorization token
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _secureStorageService.getAuthToken();
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
 
   /// Adds one or more lanes to a plaza.
   /// Uses `toJsonForCreate()` for serialization.
@@ -26,7 +39,6 @@ class LaneService {
     final serverUrl = Uri.parse(fullUrl);
 
     // --- Connectivity Checks ---
-    // Refactored connectivity check for brevity
     await _checkConnectivity(serverUrl.host, 'LaneService.addLane');
 
     developer.log('[LANE SVC] Adding ${lanes.length} lanes at URL: $fullUrl',
@@ -35,8 +47,7 @@ class LaneService {
     try {
       // --- Validate Lanes Before Sending ---
       for (final lane in lanes) {
-        final validationError =
-            lane.validateForCreate(); // USE CREATE VALIDATION
+        final validationError = lane.validateForCreate();
         if (validationError != null) {
           developer.log(
               '[LANE SVC] Validation failed for a lane during add: $validationError',
@@ -45,7 +56,6 @@ class LaneService {
           throw ServiceException(
               'Lane validation failed before sending: $validationError');
         }
-        // Optional: Check if laneId is null, as expected for creation
         if (lane.laneId != null) {
           developer.log(
               '[LANE SVC] Warning: Lane ID ${lane.laneId} provided for creation. It should be null.',
@@ -58,7 +68,6 @@ class LaneService {
       developer.log(
           '[LANE SVC] Preparing request body for ${lanes.length} lanes using toJsonForCreate',
           name: 'LaneService.addLane');
-      // USE toJsonForCreate
       final laneJsonList = lanes.map((lane) => lane.toJsonForCreate()).toList();
       developer.log(
           '[LANE SVC] Converted ${laneJsonList.length} lanes to JSON for creation',
@@ -74,12 +83,10 @@ class LaneService {
       final response = await _client
           .post(
             serverUrl,
-            headers: {'Content-Type': 'application/json'},
-            // Content-Length often automatic
+            headers: await _getHeaders(),
             body: body,
           )
-          .timeout(ApiConfig
-              .longTimeout); // Using a potentially longer timeout for create
+          .timeout(ApiConfig.longTimeout);
 
       developer.log('[LANE SVC] Response Status Code: ${response.statusCode}',
           name: 'LaneService.addLane');
@@ -149,39 +156,33 @@ class LaneService {
               'Lane creation succeeded (status ${response.statusCode}), but failed to decode response body.');
         }
       } else {
-        // Use the original _handleErrorResponse logic
         throw _handleErrorResponse(response, 'Failed to add lanes');
       }
     } on SocketException catch (e) {
-      // Keep original exception handling structure
       developer.log('[LANE SVC] SocketException: $e',
           name: 'LaneService.addLane', error: e);
       throw ServerConnectionException(
-          'Failed to connect to the lane server: ${e.message}'); // Use message
+          'Failed to connect to the lane server: ${e.message}');
     } on TimeoutException catch (e) {
       developer.log('[LANE SVC] TimeoutException: $e',
           name: 'LaneService.addLane', error: e);
       throw RequestTimeoutException('Request timed out while adding lanes');
     } catch (e, stackTrace) {
-      // Keep generic catch block
       developer.log('[LANE SVC] Unexpected error: $e',
           name: 'LaneService.addLane',
           error: e,
           stackTrace: stackTrace,
           level: 1000);
       if (e is PlazaException) {
-        // Rethrow custom exceptions if needed
         rethrow;
       }
-      // Wrap other errors as ServiceException
       throw ServiceException(
           'An unexpected error occurred while adding lanes: ${e.toString()}');
     }
   }
 
-  /// Deletes a lane by its ID. (Kept original signature with String laneId)
+  /// Deletes a lane by its ID.
   Future<bool> deleteLane(String laneId) async {
-    // Original URL structure: base + / + laneId
     final fullUrl = '${ApiConfig.getFullUrl(PlazaApi.updateLane)}/$laneId';
     final serverUrl = Uri.parse(fullUrl);
 
@@ -195,10 +196,12 @@ class LaneService {
     try {
       developer.log('[LANE SVC] Sending DELETE request to $serverUrl',
           name: 'LaneService.deleteLane');
-      final response = await _client.delete(
-        serverUrl,
-        headers: {'Content-Type': 'application/json'},
-      ).timeout(ApiConfig.defaultTimeout); // Using default timeout
+      final response = await _client
+          .delete(
+            serverUrl,
+            headers: await _getHeaders(),
+          )
+          .timeout(ApiConfig.defaultTimeout);
 
       developer.log('[LANE SVC] Response Status Code: ${response.statusCode}',
           name: 'LaneService.deleteLane');
@@ -208,7 +211,7 @@ class LaneService {
       if (response.statusCode == 200) {
         try {
           final responseData =
-              json.decode(response.body) as Map<String, dynamic>; // Expect Map
+              json.decode(response.body) as Map<String, dynamic>;
           developer.log(
               '[LANE SVC] Response success flag: ${responseData['success']}',
               name: 'LaneService.deleteLane');
@@ -220,7 +223,6 @@ class LaneService {
             developer.log(
                 '[LANE SVC] Delete failed according to server response: ${responseData['msg']}',
                 name: 'LaneService.deleteLane');
-            // Keep original behavior of returning false on success:false
             return false;
           }
         } catch (e, stackTrace) {
@@ -233,13 +235,11 @@ class LaneService {
               'Delete request succeeded (status 200), but failed to parse response.');
         }
       } else if (response.statusCode == 204) {
-        // Explicitly handle 204 No Content as success
         developer.log(
             '[LANE SVC] Successfully deleted lane ID: $laneId (Status 204 No Content)',
             name: 'LaneService.deleteLane');
         return true;
       } else {
-        // Use original error handling
         throw _handleErrorResponse(response, 'Failed to delete lane');
       }
     } on SocketException catch (e) {
@@ -250,10 +250,8 @@ class LaneService {
     } on TimeoutException catch (e) {
       developer.log('[LANE SVC] TimeoutException: $e',
           name: 'LaneService.deleteLane', error: e);
-      throw RequestTimeoutException(
-          'Request timed out while deleting lane'); // Adjusted message slightly
+      throw RequestTimeoutException('Request timed out while deleting lane');
     } catch (e, stackTrace) {
-      // Keep original rethrow logic
       developer.log('[LANE SVC] Error in deleteLane: $e',
           name: 'LaneService.deleteLane', error: e, stackTrace: stackTrace);
       if (e is PlazaException) rethrow;
@@ -262,12 +260,8 @@ class LaneService {
     }
   }
 
-  /// Toggles the active status of a lane. (Restored original logic)
-  /// NOTE: This sends only {'isActive': ...} to the update endpoint.
-  /// This might not be standard REST PUT behavior and depends heavily on the specific API implementation.
-  /// Consider using a dedicated PATCH endpoint or the full `updateLane` method if this causes issues.
+  /// Toggles the active status of a lane.
   Future<bool> toggleLaneStatus(String laneId, bool isActive) async {
-    // Original URL structure
     final fullUrl = '${ApiConfig.getFullUrl(PlazaApi.updateLane)}/$laneId';
     final serverUrl = Uri.parse(fullUrl);
 
@@ -278,7 +272,6 @@ class LaneService {
     developer.log('[LANE SVC] Lane ID: $laneId, New Status: $isActive',
         name: 'LaneService.toggleLaneStatus');
 
-    // Original body structure
     final body = json.encode({'isActive': isActive});
     developer.log('[LANE SVC] Request Body (encoded): $body',
         name: 'LaneService.toggleLaneStatus');
@@ -286,15 +279,13 @@ class LaneService {
     try {
       developer.log('[LANE SVC] Sending PUT request to $serverUrl',
           name: 'LaneService.toggleLaneStatus');
-      // Original used PUT for toggle
       final response = await _client
           .put(
             serverUrl,
-            headers: {'Content-Type': 'application/json'},
-            // Content-Length automatic
+            headers: await _getHeaders(),
             body: body,
           )
-          .timeout(ApiConfig.defaultTimeout); // Default timeout
+          .timeout(ApiConfig.defaultTimeout);
 
       developer.log('[LANE SVC] Response Status Code: ${response.statusCode}',
           name: 'LaneService.toggleLaneStatus');
@@ -317,7 +308,7 @@ class LaneService {
             developer.log(
                 '[LANE SVC] Toggle status failed according to server response: ${responseData['msg']}',
                 name: 'LaneService.toggleLaneStatus');
-            return false; // Original behavior
+            return false;
           }
         } catch (e, stackTrace) {
           developer.log('[LANE SVC] Error parsing toggle success response: $e',
@@ -334,7 +325,6 @@ class LaneService {
             name: 'LaneService.toggleLaneStatus');
         return true;
       } else {
-        // Use original error handling
         throw _handleErrorResponse(response, 'Failed to toggle lane status');
       }
     } on SocketException catch (e) {
@@ -345,10 +335,8 @@ class LaneService {
     } on TimeoutException catch (e) {
       developer.log('[LANE SVC] TimeoutException: $e',
           name: 'LaneService.toggleLaneStatus', error: e);
-      throw RequestTimeoutException(
-          'Request timed out while toggling status'); // Adjusted message
+      throw RequestTimeoutException('Request timed out while toggling status');
     } catch (e, stackTrace) {
-      // Keep original rethrow
       developer.log('[LANE SVC] Error in toggleLaneStatus: $e',
           name: 'LaneService.toggleLaneStatus',
           error: e,
@@ -359,9 +347,8 @@ class LaneService {
     }
   }
 
-  /// Retrieves a lane by its ID. (Kept original signature with String laneId)
+  /// Retrieves a lane by its ID.
   Future<Lane> getLaneById(String laneId) async {
-    // Original uses query parameter
     final uri = Uri.parse(ApiConfig.getFullUrl(PlazaApi.getLane))
         .replace(queryParameters: {'id': laneId});
 
@@ -375,10 +362,12 @@ class LaneService {
     try {
       developer.log('[LANE SVC] Sending GET request to $uri',
           name: 'LaneService.getLaneById');
-      final response = await _client.get(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-      ).timeout(ApiConfig.defaultTimeout);
+      final response = await _client
+          .get(
+            uri,
+            headers: await _getHeaders(),
+          )
+          .timeout(ApiConfig.defaultTimeout);
 
       developer.log('[LANE SVC] Response Status Code: ${response.statusCode}',
           name: 'LaneService.getLaneById');
@@ -393,24 +382,20 @@ class LaneService {
           developer.log(
               '[LANE SVC] Response success flag: ${responseData['success']}',
               name: 'LaneService.getLaneById');
-          // Original check
           if (responseData['success'] == true &&
               responseData['laneData'] != null &&
               responseData['laneData'] is Map) {
             developer.log('[LANE SVC] Successfully fetched lane ID: $laneId',
                 name: 'LaneService.getLaneById');
-            // Parse the single lane object
             return Lane.fromJson(
                 responseData['laneData'] as Map<String, dynamic>);
           } else {
-            // Handle cases where success might be false or data is missing/wrong type
             final serverMsg = responseData['msg'] ?? 'Invalid response format';
             developer.log(
                 '[LANE SVC] Failed to fetch lane or invalid format: $serverMsg',
                 name: 'LaneService.getLaneById',
                 level: 900);
-            throw ServiceException(
-                'Failed to fetch lane: $serverMsg'); // Throw specific error
+            throw ServiceException('Failed to fetch lane: $serverMsg');
           }
         } catch (e, stackTrace) {
           developer.log(
@@ -423,7 +408,6 @@ class LaneService {
               'Request succeeded (status 200), but failed to parse response data.');
         }
       } else {
-        // Use original error handling
         throw _handleErrorResponse(response, 'Failed to fetch lane');
       }
     } on SocketException catch (e) {
@@ -434,10 +418,8 @@ class LaneService {
     } on TimeoutException catch (e) {
       developer.log('[LANE SVC] TimeoutException: $e',
           name: 'LaneService.getLaneById', error: e);
-      throw RequestTimeoutException(
-          'Request timed out while fetching lane'); // Adjusted message
+      throw RequestTimeoutException('Request timed out while fetching lane');
     } catch (e, stackTrace) {
-      // Keep original rethrow
       developer.log('[LANE SVC] Error in getLaneById: $e',
           name: 'LaneService.getLaneById', error: e, stackTrace: stackTrace);
       if (e is PlazaException) rethrow;
@@ -460,19 +442,22 @@ class LaneService {
     try {
       developer.log('[LANE SVC] Sending GET request to $uri',
           name: 'LaneService.getLanesByPlazaId');
-      final response = await _client.get(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-      ).timeout(ApiConfig.defaultTimeout);
+      final response = await _client
+          .get(
+            uri,
+            headers: await _getHeaders(),
+          )
+          .timeout(ApiConfig.defaultTimeout);
 
       developer.log('[LANE SVC] Response Status Code: ${response.statusCode}',
           name: 'LaneService.getLanesByPlazaId');
-      developer.log('[LANE SVC] Response Body: ${response.body}', // Full body
+      developer.log('[LANE SVC] Response Body: ${response.body}',
           name: 'LaneService.getLanesByPlazaId');
 
       if (response.statusCode == 200) {
         try {
-          final responseData = json.decode(response.body) as Map<String, dynamic>;
+          final responseData =
+              json.decode(response.body) as Map<String, dynamic>;
           developer.log(
               '[LANE SVC] Response success flag: ${responseData['success']}',
               name: 'LaneService.getLanesByPlazaId');
@@ -528,7 +513,9 @@ class LaneService {
       throw RequestTimeoutException('Request timed out while fetching lanes');
     } catch (e, stackTrace) {
       developer.log('[LANE SVC] Error in getLanesByPlazaId: $e',
-          name: 'LaneService.getLanesByPlazaId', error: e, stackTrace: stackTrace);
+          name: 'LaneService.getLanesByPlazaId',
+          error: e,
+          stackTrace: stackTrace);
       if (e is PlazaException) rethrow;
       throw ServiceException(
           'An unexpected error occurred fetching lanes: ${e.toString()}');
@@ -536,10 +523,7 @@ class LaneService {
   }
 
   /// Updates an existing lane.
-  /// Uses `validateForUpdate()` and `toJsonForUpdate()`.
-  /// Assumes PUT request to the base collection URL (e.g., /lanes).
   Future<bool> updateLane(Lane lane) async {
-    // Assumes PUT to the base URL, ID is in the body
     final fullUrl = ApiConfig.getFullUrl(PlazaApi.updateLane);
     final serverUrl = Uri.parse(fullUrl);
 
@@ -551,7 +535,7 @@ class LaneService {
 
     try {
       // --- Validate Lane Before Sending ---
-      final validationError = lane.validateForUpdate(); // USE UPDATE VALIDATION
+      final validationError = lane.validateForUpdate();
       if (validationError != null) {
         developer.log(
             '[LANE SVC] Validation failed before update: $validationError',
@@ -560,7 +544,6 @@ class LaneService {
         throw ServiceException(
             'Lane validation failed before sending update: $validationError');
       }
-      // Crucial check: laneId MUST exist for an update based on update schema
       if (lane.laneId == null) {
         developer.log(
             '[LANE SVC] Validation failed: Lane ID is missing for update.',
@@ -574,10 +557,9 @@ class LaneService {
       developer.log(
           '[LANE SVC] Preparing request body for lane update using toJsonForUpdate',
           name: 'LaneService.updateLane');
-      final laneJson = lane.toJsonForUpdate(); // USE toJsonForUpdate
+      final laneJson = lane.toJsonForUpdate();
       developer.log('[LANE SVC] Lane JSON for update: $laneJson',
-          name:
-              'LaneService.updateLane'); // Log full JSON for update if not too large
+          name: 'LaneService.updateLane');
       final body = json.encode(laneJson);
       developer.log(
           '[LANE SVC] Request Body (encoded - truncated): ${body.substring(0, body.length > 500 ? 500 : body.length)}...',
@@ -588,9 +570,8 @@ class LaneService {
           name: 'LaneService.updateLane');
       final response = await _client
           .put(
-            // Original used PUT
             serverUrl,
-            headers: {'Content-Type': 'application/json'},
+            headers: await _getHeaders(),
             body: body,
           )
           .timeout(ApiConfig.defaultTimeout);
@@ -608,7 +589,6 @@ class LaneService {
           developer.log(
               '[LANE SVC] Response success flag: ${responseBody['success']}',
               name: 'LaneService.updateLane');
-          // Original check
           if (responseBody['success'] == true) {
             developer.log(
                 '[LANE SVC] Successfully updated lane ID: ${lane.laneId}',
@@ -618,7 +598,7 @@ class LaneService {
             developer.log(
                 '[LANE SVC] Update failed according to server response: ${responseBody['msg']}',
                 name: 'LaneService.updateLane');
-            return false; // Original behavior
+            return false;
           }
         } catch (e, stackTrace) {
           developer.log('[LANE SVC] Error parsing update success response: $e',
@@ -630,13 +610,11 @@ class LaneService {
               'Update request succeeded (status 200), but failed to parse response.');
         }
       } else if (response.statusCode == 204) {
-        // Handle No Content success
         developer.log(
             '[LANE SVC] Successfully updated lane ID: ${lane.laneId} (Status 204 No Content)',
             name: 'LaneService.updateLane');
         return true;
       } else {
-        // Use original error handling
         throw _handleErrorResponse(response, 'Failed to update lane');
       }
     } on SocketException catch (e) {
@@ -647,10 +625,8 @@ class LaneService {
     } on TimeoutException catch (e) {
       developer.log('[LANE SVC] TimeoutException: $e',
           name: 'LaneService.updateLane', error: e);
-      throw RequestTimeoutException(
-          'Request timed out while updating lane'); // Adjusted message
+      throw RequestTimeoutException('Request timed out while updating lane');
     } catch (e, stackTrace) {
-      // Keep original rethrow
       developer.log('[LANE SVC] Error in updateLane: $e',
           name: 'LaneService.updateLane', error: e, stackTrace: stackTrace);
       if (e is PlazaException) rethrow;
@@ -667,22 +643,15 @@ class LaneService {
       throw NoInternetException(
           'No internet connection. Please check your network settings.');
     }
-    // NOTE: canReachServer check removed as per previous refinement discussion (can be slow/unreliable)
-    // if (!(await _connectivityService.canReachServer(host))) {
-    //   developer.log('[LANE SVC] Cannot reach server: $host', name: logName);
-    //   throw ServerConnectionException('Cannot reach the lane server.', host: host);
-    // }
   }
 
-  /// Helper method to handle error responses consistently (original simpler version).
+  /// Helper method to handle error responses consistently.
   HttpException _handleErrorResponse(
       http.Response response, String defaultMessage) {
     String? serverMessage;
     try {
-      // Attempt to decode msg field from JSON body
       final responseData = json.decode(response.body);
       if (responseData is Map<String, dynamic>) {
-        // Check if it's a map
         serverMessage = responseData['msg'] as String?;
       }
       developer.log(
@@ -691,20 +660,16 @@ class LaneService {
     } catch (e) {
       developer.log('[LANE SVC] Failed to decode error response or get msg: $e',
           name: 'LaneService.handleErrorResponse', error: e);
-      // Keep serverMessage as null if decoding fails or 'msg' is not found
       serverMessage = null;
     }
-    // Create the generic HttpException as in the original code
     final exception = HttpException(
       defaultMessage,
       statusCode: response.statusCode,
-      serverMessage: serverMessage ??
-          'Unknown server error or non-JSON response', // Provide default if null
+      serverMessage:
+          serverMessage ?? 'Unknown server error or non-JSON response',
     );
     developer.log('[LANE SVC] Created HttpException: ${exception.toString()}',
         name: 'LaneService.handleErrorResponse');
     return exception;
   }
 }
-
-

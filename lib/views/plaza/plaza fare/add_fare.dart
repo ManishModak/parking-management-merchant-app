@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:merchant_app/models/plaza_fare.dart'; // Import FareTypes
 import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:merchant_app/utils/components/button.dart';
 import 'package:merchant_app/utils/components/dropdown.dart';
@@ -8,8 +9,9 @@ import 'package:provider/provider.dart';
 import 'package:merchant_app/config/app_config.dart';
 import 'package:merchant_app/generated/l10n.dart';
 import 'package:merchant_app/models/plaza.dart';
-import 'package:merchant_app/models/plaza_fare.dart';
 import 'package:merchant_app/utils/components/form_field.dart';
+import 'add_fare_dialog.dart';
+import 'dart:developer' as developer; // Import developer for logging
 
 class AddFareScreen extends StatefulWidget {
   final Plaza? selectedPlaza; // Optional parameter
@@ -21,38 +23,102 @@ class AddFareScreen extends StatefulWidget {
 }
 
 class _AddFareScreenState extends State<AddFareScreen> {
-  late PlazaFareViewModel viewModel;
+  // *** Hold the ViewModel instance obtained in initState ***
+  late PlazaFareViewModel _viewModelInstance;
 
   @override
   void initState() {
     super.initState();
-    viewModel = PlazaFareViewModel();
+    // *** Obtain and store the instance here ***
+    _viewModelInstance =
+        Provider.of<PlazaFareViewModel>(context, listen: false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.selectedPlaza != null) {
-        viewModel.setPreSelectedPlaza(widget.selectedPlaza!);
-        viewModel.initialize();
-      } else {
-        viewModel.initialize();
+      if (mounted) {
+        // Use the stored instance
+        _viewModelInstance.initialize(preSelectedPlaza: widget.selectedPlaza);
       }
     });
   }
 
-  Widget _buildFareCard(PlazaFare fare) {
+  // --- Dispose method to reset ViewModel state ---
+  @override
+  void dispose() {
+    developer.log('Disposing AddFareScreen - Calling resetStateForDisposal.',
+        name: 'AddFareScreen');
+    // *** Use the stored instance variable, NOT context.read() ***
+    _viewModelInstance.resetStateForDisposal();
+    super.dispose();
+  }
+
+  // --- END OF DISPOSE METHOD ---
+
+  // Updated Fare Card Builder
+  Widget _buildFareCard(BuildContext context, PlazaFare fare, S strings) {
+    // Access ViewModel using read or the stored instance (_viewModelInstance)
+    // Using read is fine here as it's within build context scope implicitly
+    final viewModel = context.read<PlazaFareViewModel>();
+    String fareDetails = '';
+    String timeDetails = '';
+
+    // ... (rest of _buildFareCard logic remains the same) ...
+    switch (fare.fareType) {
+      case FareTypes.progressive:
+        fareDetails =
+            '${strings.labelFareAmount}: ₹${fare.fareRate.toStringAsFixed(2)}';
+        timeDetails =
+            '${strings.labelTimeRange}: ${fare.from ?? '?'} - ${fare.toCustom ?? '?'} ${strings.labelMinutesAbbr}';
+        break;
+      case FareTypes.freePass:
+        fareDetails = strings.fareTypeFreePass; // "Free Pass"
+        timeDetails = ''; // No extra details
+        break;
+      case FareTypes.daily:
+        fareDetails =
+            '₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelDay}';
+        break;
+      case FareTypes.hourly:
+        fareDetails =
+            '₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelHour}';
+        break;
+      case FareTypes.monthlyPass:
+        fareDetails =
+            '₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelMonth}';
+        break;
+      case FareTypes.hourWiseCustom:
+        fareDetails =
+            '${strings.labelBaseRate}: ₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelHour}';
+        timeDetails = '${strings.labelBaseHours}: ${fare.baseHours ?? '-'}';
+        if (fare.discountRate != null && fare.discountRate! > 0) {
+          timeDetails +=
+              '\n${strings.labelDiscount}: ${fare.discountRate}%'; // Show discount if present
+        }
+        break;
+      default:
+        fareDetails =
+            '${strings.labelRate}: ₹${fare.fareRate.toStringAsFixed(2)}';
+    }
+
     return Card(
-      margin: EdgeInsets.zero,
-      elevation: Theme.of(context).cardTheme.elevation ?? 3,
+      margin: const EdgeInsets.only(bottom: 12),
+      // Add space below card
+      elevation: Theme.of(context).cardTheme.elevation ?? 2,
       shape: Theme.of(context).cardTheme.shape ??
           RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(12), // Consistent radius
             side: BorderSide(
-              color: fare.isDeleted ? Colors.red.shade100 : Colors.green.shade100,
-              width: 1,
+              // Use theme colors or specific status colors
+              color: fare.isDeleted
+                  ? Colors.red.shade200
+                  : Theme.of(context).dividerColor.withOpacity(0.5),
+              width: 0.8,
             ),
           ),
       color: Theme.of(context).cardColor,
       child: InkWell(
-        borderRadius: BorderRadius.circular(15),
-        onTap: () {}, // Placeholder for future edit functionality
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          print("Tapped temporary fare: ${fare.fareType}");
+        },
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -62,53 +128,69 @@ class _AddFareScreenState extends State<AddFareScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Stack(
+                    // Row 1: Plaza Name and Status
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.only(right: 65),
+                        Expanded(
+                          // Allow Plaza Name to wrap if long
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Plaza Name',
-                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                ),
+                                strings.labelPlazaName, // "Plaza Name"
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.6),
+                                    ),
                               ),
                               Text(
-                                viewModel.selectedPlaza?.plazaName ?? 'Plaza ID: ${fare.plazaId}',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                // Use viewModel.selectedPlaza read from context
+                                viewModel.selectedPlaza?.plazaName ??
+                                    '${strings.labelPlazaId}: ${fare.plazaId}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
                         ),
-                        Positioned(
-                          right: 0,
-                          child: Container(
-                            width: 60,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: fare.isDeleted
-                                  ? Colors.red.withOpacity(0.1)
-                                  : Colors.green.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              fare.isDeleted ? 'Inactive' : 'Active',
-                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: fare.isDeleted ? Colors.red : Colors.green,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
+                        const SizedBox(width: 8), // Space before status
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            strings.statusPending, // "Pending" or "Staged"
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: Colors.blue.shade700,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
+
+                    // Row 2: Vehicle Type and Fare Type
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -117,16 +199,25 @@ class _AddFareScreenState extends State<AddFareScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Vehicle Type',
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                ),
+                                strings.labelVehicleType, // "Vehicle Type"
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.6),
+                                    ),
                               ),
                               Text(
                                 fare.vehicleType,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
                             ],
                           ),
@@ -136,16 +227,25 @@ class _AddFareScreenState extends State<AddFareScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Fare Type',
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                ),
+                                strings.labelFareType, // "Fare Type"
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.6),
+                                    ),
                               ),
                               Text(
-                                fare.fareType,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                fare.fareType, // Display the actual fare type
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
                             ],
                           ),
@@ -153,6 +253,8 @@ class _AddFareScreenState extends State<AddFareScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
+
+                    // Row 3: Fare Details and Time Details (Conditional)
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -161,17 +263,44 @@ class _AddFareScreenState extends State<AddFareScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Amount',
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                ),
+                                fare.fareType == FareTypes.progressive
+                                    ? strings.labelDetails
+                                    : strings.labelFareDetails,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.6),
+                                    ),
                               ),
                               Text(
-                                '₹${fare.fareRate}',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                fareDetails,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                               ),
+                              if (timeDetails.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  timeDetails,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.8),
+                                      ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -180,16 +309,25 @@ class _AddFareScreenState extends State<AddFareScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Effective Period',
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                ),
+                                strings.labelEffectivePeriod,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.6),
+                                    ),
                               ),
                               Text(
-                                '${DateFormat('dd MMM yyyy').format(fare.startEffectDate)} - ${fare.endEffectDate != null ? DateFormat('dd MMM yyyy').format(fare.endEffectDate!) : 'Ongoing'}',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                '${DateFormat('dd MMM yyyy').format(fare.startEffectDate)} - ${fare.endEffectDate != null ? DateFormat('dd MMM yyyy').format(fare.endEffectDate!) : strings.labelOngoing}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
                             ],
                           ),
@@ -199,15 +337,6 @@ class _AddFareScreenState extends State<AddFareScreen> {
                   ],
                 ),
               ),
-              Container(
-                width: 30,
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.chevron_right,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: Theme.of(context).iconTheme.size,
-                ),
-              ),
             ],
           ),
         ),
@@ -215,355 +344,164 @@ class _AddFareScreenState extends State<AddFareScreen> {
     );
   }
 
+  // Function to show the Add Fare Dialog
   Future<void> _showAddFareDialog() async {
+    // Use the stored instance here when passing to the dialog provider
+    final strings = S.of(context);
+    if (_viewModelInstance.selectedPlaza == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(strings.warningSelectPlazaToAddFare),
+          backgroundColor: Colors.orange.shade700,
+        ),
+      );
+      return;
+    }
+
     await showDialog(
       context: context,
       builder: (BuildContext context) => ChangeNotifierProvider.value(
-        value: viewModel,
-        child: Consumer<PlazaFareViewModel>(
-          builder: (context, model, _) => AddFareDialog(viewModel: model),
-        ),
+        // Pass the stored instance
+        value: _viewModelInstance,
+        child: const AddFareDialog(),
       ),
     ).then((_) {
-      viewModel.resetFields();
+      // Use the stored instance
+      _viewModelInstance.resetFieldsAfterAdd();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final strings = S.of(context);
-    return ChangeNotifierProvider.value(
-      value: viewModel,
-      child: Consumer<PlazaFareViewModel>(
-        builder: (context, model, child) {
-          return Scaffold(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            appBar: CustomAppBar.appBarWithNavigation(
-              screenTitle: strings.titleAddFare,
-              onPressed: () => Navigator.pop(context),
-              darkBackground: Theme.of(context).brightness == Brightness.dark,
-              context: context,
-            ),
-            body: model.isLoading
-                ? Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary))
-                : SingleChildScrollView(
-              child: Center(
-                child: SizedBox(
-                  width: AppConfig.deviceWidth*0.9,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      Center(
-                        child: SearchableDropdown(
-                          label: 'Select Plaza',
-                          value: viewModel.selectedPlazaIdString,
-                          items: viewModel.plazaList,
-                          onChanged: (dynamic selected) {
-                            if (selected != null) {
-                              viewModel.setSelectedPlaza(selected as Plaza);
-                            }
-                          },
-                          itemText: (item) => (item as Plaza).plazaName,
-                          itemValue: (item) => (item as Plaza).plazaId!,
-                          errorText: viewModel.validationErrors['plaza'],
-                          enabled: model.canChangePlaza,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Fares List:',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      if (model.temporaryFares.isEmpty)
-                        Center(
-                          child: Text(
-                            'No fares added yet',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+    // Use Consumer here to react to changes in the ViewModel for the main build
+    return Consumer<PlazaFareViewModel>(
+      builder: (context, model, child) {
+        // model is the instance of PlazaFareViewModel
+        // You can also use _viewModelInstance here if preferred, but model is conventional
+        return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: CustomAppBar.appBarWithNavigation(
+            screenTitle: strings.titleAddFare, // Localized
+            onPressed: () => Navigator.pop(context),
+            darkBackground: Theme.of(context).brightness == Brightness.dark,
+            context: context,
+          ),
+          body: model.isLoading
+              ? Center(
+                  child: CircularProgressIndicator(
+                      color: Theme.of(context).colorScheme.primary))
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: 80),
+                  child: Center(
+                    child: SizedBox(
+                      width: AppConfig.deviceWidth * 0.9,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 16),
+                          Center(
+                            child: SearchableDropdown(
+                              label: strings.labelSelectPlaza,
+                              value: model.selectedPlazaIdString,
+                              items: model.plazaList,
+                              onChanged: (dynamic selected) {
+                                if (selected != null && model.canChangePlaza) {
+                                  model.setSelectedPlaza(selected as Plaza);
+                                }
+                              },
+                              itemText: (item) => (item as Plaza).plazaName!,
+                              itemValue: (item) =>
+                                  (item as Plaza).plazaId ?? '',
+                              errorText: model.validationErrors['plaza'],
+                              enabled: model.canChangePlaza,
                             ),
                           ),
-                        ),
-                      const SizedBox(height: 16),
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: model.temporaryFares.length,
-                        itemBuilder: (context, index) => _buildFareCard(model.temporaryFares[index]),
+                          const SizedBox(height: 24),
+                          Text(
+                            strings.labelFaresToBeAdded,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (model.temporaryFares.isEmpty)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 30.0),
+                              child: Center(
+                                child: Text(
+                                  strings.messageNoFaresAddedYet,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.6),
+                                      ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: model.temporaryFares.length,
+                            itemBuilder: (context, index) {
+                              final fare = model.temporaryFares[index];
+                              // Pass context to _buildFareCard
+                              return _buildFareCard(context, fare, strings);
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            floatingActionButton: model.canAddFare
-                ? FloatingActionButton(
-              onPressed: _showAddFareDialog,
-              backgroundColor: Theme.of(context).floatingActionButtonTheme.backgroundColor,
-              foregroundColor: Theme.of(context).floatingActionButtonTheme.foregroundColor,
-              elevation: Theme.of(context).floatingActionButtonTheme.elevation,
-              child: const Icon(Icons.add),
-            )
-                : null,
-            bottomNavigationBar: model.temporaryFares.isNotEmpty
-                ? Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: CustomButtons.primaryButton(
-                height: 50,
-                text: "Submit",
-                onPressed: () => model.submitAllFares(context),
-                context: context,
-              ),
-            )
-                : null,
-          );
-        },
-      ),
-    );
-  }
-}
-
-class AddFareDialog extends StatelessWidget {
-  final PlazaFareViewModel viewModel;
-
-  const AddFareDialog({super.key, required this.viewModel});
-
-  Future<void> _selectDate(
-      BuildContext context,
-      TextEditingController controller, {
-        DateTime? firstDate,
-      }) async {
-    DateTime initialDate = DateTime.now();
-    DateTime minDate = DateTime.now();
-
-    if (firstDate != null && controller == viewModel.endDateController && viewModel.startDateController.text.isNotEmpty) {
-      minDate = DateTime.parse(viewModel.startDateController.text).add(const Duration(days: 1));
-      initialDate = minDate;
-    }
-
-    final DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: minDate,
-      lastDate: DateTime(2100),
-    );
-
-    if (pickedDate != null) {
-      controller.text = DateFormat('yyyy-MM-dd').format(pickedDate);
-    }
-  }
-
-  Widget _buildDateField({
-    required String label,
-    required TextEditingController controller,
-    required BuildContext context,
-    DateTime? firstDate,
-    String? errorText,
-  }) {
-    return GestureDetector(
-      onTap: () => _selectDate(context, controller, firstDate: firstDate),
-      child: AbsorbPointer(
-        child: CustomFormFields.normalSizedTextFormField(
-          context: context,
-          label: label,
-          controller: controller,
-          errorText: errorText,
-          keyboardType: TextInputType.datetime,
-          isPassword: false,
-          enabled: true,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFareInputField({
-    required String label,
-    required TextEditingController controller,
-    required String? errorText,
-    required BuildContext context,
-  }) {
-    return CustomFormFields.normalSizedTextFormField(
-      context: context,
-      label: label,
-      controller: controller,
-      errorText: errorText,
-      keyboardType: TextInputType.number,
-      isPassword: false,
-      enabled: true,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: Theme.of(context).dialogTheme.shape ?? RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      insetPadding: EdgeInsets.zero,
-      backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
-      child: SizedBox(
-        width: AppConfig.deviceWidth * 0.9,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Add New Fare',
-                    style: Theme.of(context).dialogTheme.titleTextStyle ??
-                        Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              SearchableDropdown(
-                label: 'Select Plaza',
-                value: viewModel.selectedPlazaIdString,
-                items: viewModel.plazaList,
-                onChanged: (dynamic selected) {
-                  if (selected != null) {
-                    viewModel.setSelectedPlaza(selected as Plaza);
-                  }
-                },
-                itemText: (item) => (item as Plaza).plazaName,
-                itemValue: (item) => (item as Plaza).plazaId!,
-                errorText: viewModel.validationErrors['plaza'],
-                enabled: false,
-              ),
-              const SizedBox(height: 16),
-              CustomDropDown.normalDropDown(
-                context: context,
-                label: 'Select Fare Type',
-                value: viewModel.selectedFareType,
-                items: viewModel.fareTypes,
-                onChanged: (value) => viewModel.setFareType(value!),
-                icon: Icons.payments_outlined,
-                errorText: viewModel.validationErrors['fareType'],
-              ),
-              const SizedBox(height: 16),
-              CustomDropDown.normalDropDown(
-                context: context,
-                label: 'Select Vehicle Type',
-                value: viewModel.selectedVehicleType,
-                items: viewModel.vehicleTypes,
-                onChanged: (value) => viewModel.setVehicleType(value!),
-                icon: Icons.directions_car_outlined,
-                errorText: viewModel.validationErrors['vehicleType'],
-              ),
-              const SizedBox(height: 16),
-              if (viewModel.isDailyFareVisible) ...[
-                _buildFareInputField(
-                  context: context,
-                  label: 'Daily Fare',
-                  controller: viewModel.dailyFareController,
-                  errorText: viewModel.validationErrors['dailyFare'],
-                ),
-                const SizedBox(height: 16),
-              ],
-              if (viewModel.isHourlyFareVisible) ...[
-                _buildFareInputField(
-                  context: context,
-                  label: 'Hourly Fare',
-                  controller: viewModel.hourlyFareController,
-                  errorText: viewModel.validationErrors['hourlyFare'],
-                ),
-                const SizedBox(height: 16),
-              ],
-              if (viewModel.isHourWiseCustomVisible) ...[
-                _buildFareInputField(
-                  context: context,
-                  label: 'Base Hours',
-                  controller: viewModel.baseHoursController,
-                  errorText: viewModel.validationErrors['baseHours'],
-                ),
-                const SizedBox(height: 16),
-                _buildFareInputField(
-                  context: context,
-                  label: 'Base Hourly Fare',
-                  controller: viewModel.baseHourlyFareController,
-                  errorText: viewModel.validationErrors['baseHourlyFare'],
-                ),
-                const SizedBox(height: 16),
-                _buildFareInputField(
-                  context: context,
-                  label: 'Discount for Extended Hours',
-                  controller: viewModel.discountController,
-                  errorText: viewModel.validationErrors['discount'],
-                ),
-                const SizedBox(height: 16),
-              ],
-              if (viewModel.isMonthlyFareVisible) ...[
-                _buildFareInputField(
-                  context: context,
-                  label: 'Monthly Fare',
-                  controller: viewModel.monthlyFareController,
-                  errorText: viewModel.validationErrors['monthlyFare'],
-                ),
-                const SizedBox(height: 16),
-              ],
-              _buildDateField(
-                label: 'Effective Start Date',
-                controller: viewModel.startDateController,
-                context: context,
-                firstDate: DateTime.now(),
-                errorText: viewModel.validationErrors['startDate'],
-              ),
-              const SizedBox(height: 16),
-              _buildDateField(
-                label: 'Effective End Date',
-                controller: viewModel.endDateController,
-                context: context,
-                firstDate: viewModel.startDateController.text.isNotEmpty
-                    ? DateTime.parse(viewModel.startDateController.text).add(const Duration(days: 1))
-                    : DateTime.now(),
-                errorText: viewModel.validationErrors['endDate'],
-              ),
-              const SizedBox(height: 24),
-              if (viewModel.validationErrors['duplicateFare'] != null) ...[
-                Text(
-                  viewModel.validationErrors['duplicateFare']!,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      "Cancel",
-                      style: Theme.of(context).textButtonTheme.style?.textStyle?.resolve({}),
                     ),
                   ),
-                  TextButton(
-                    onPressed: () async {
-                      final success = await viewModel.addFareToList(context);
-                      if (success && context.mounted) {
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: Text(
-                      "Save",
-                      style: Theme.of(context).textButtonTheme.style?.textStyle?.resolve({}),
-                    ),
+                ),
+          floatingActionButton: model.selectedPlaza != null
+              ? FloatingActionButton(
+                  onPressed: _showAddFareDialog,
+                  backgroundColor: Theme.of(context)
+                          .floatingActionButtonTheme
+                          .backgroundColor ??
+                      Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context)
+                          .floatingActionButtonTheme
+                          .foregroundColor ??
+                      Theme.of(context).colorScheme.onPrimary,
+                  elevation:
+                      Theme.of(context).floatingActionButtonTheme.elevation ??
+                          6.0,
+                  tooltip: strings.tooltipAddFare,
+                  child: const Icon(Icons.add),
+                )
+              : null,
+          bottomNavigationBar: model.temporaryFares.isNotEmpty
+              ? Padding(
+                  padding: EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    bottom: MediaQuery.of(context).padding.bottom + 16,
+                    top: 8,
                   ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+                  child: CustomButtons.primaryButton(
+                    height: 50,
+                    text: strings.buttonSubmitAllFares,
+                    onPressed: model.isLoading
+                        ? null
+                        : () => model.submitAllFares(context),
+                    context: context,
+                  ),
+                )
+              : null,
+        );
+      },
     );
   }
 }

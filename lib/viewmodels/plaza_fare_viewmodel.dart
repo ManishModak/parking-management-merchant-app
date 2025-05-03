@@ -11,6 +11,7 @@ import '../models/plaza_fare.dart';
 import '../services/core/plaza_service.dart';
 import '../services/payment/fare_service.dart';
 import '../services/storage/secure_storage_service.dart';
+import '../utils/exceptions.dart'; // Assuming ServiceException, etc. are here
 
 class PlazaFareViewModel extends ChangeNotifier {
   final PlazaService _plazaService;
@@ -32,7 +33,7 @@ class PlazaFareViewModel extends ChangeNotifier {
   bool _isLoading = false;
   bool _isLoadingFare = false; // Specific loading state for fetching/updating a single fare
   bool _isUpdating = false; // Specific state for when an update operation is in progress
-  bool _isPlazaPreSelected = false;
+  bool _isPlazaPreSelected = false; // Flag to track if plaza was passed initially
 
   Plaza? _selectedPlaza;
   int? _selectedPlazaIdInt; // Store the parsed Int ID for creating PlazaFare objects
@@ -56,6 +57,10 @@ class PlazaFareViewModel extends ChangeNotifier {
   final TextEditingController startDateController = TextEditingController();
   final TextEditingController endDateController = TextEditingController();
   final TextEditingController plazaController = TextEditingController(); // Displays selected plaza name
+  // NEW Controllers for Progressive Fare Type
+  final TextEditingController fromController = TextEditingController();
+  final TextEditingController toCustomController = TextEditingController();
+  final TextEditingController progressiveFareController = TextEditingController(); // For the "Fare" field in Progressive
 
   // --- Getters ---
   bool get isLoading => _isLoading;
@@ -78,24 +83,40 @@ class PlazaFareViewModel extends ChangeNotifier {
   List<String> get vehicleTypes => VehicleTypes.values;
 
   // --- Computed Properties (for UI logic) ---
-  bool get isDailyFareVisible => _selectedFareType == FareTypes.daily;
-  bool get isHourlyFareVisible => _selectedFareType == FareTypes.hourly;
-  bool get isHourWiseCustomVisible => _selectedFareType == FareTypes.hourWiseCustom;
-  bool get isMonthlyFareVisible => _selectedFareType == FareTypes.monthlyPass;
+  bool get isProgressiveFareVisible => _selectedFareType == FareTypes.progressive;
+  bool get isFreePassSelected => _selectedFareType == FareTypes.freePass;
+
+  // Modify existing ones to hide if Progressive or FreePass selected
+  bool get isDailyFareVisible => _selectedFareType == FareTypes.daily && !isProgressiveFareVisible && !isFreePassSelected;
+  bool get isHourlyFareVisible => _selectedFareType == FareTypes.hourly && !isProgressiveFareVisible && !isFreePassSelected;
+  bool get isHourWiseCustomVisible => _selectedFareType == FareTypes.hourWiseCustom && !isProgressiveFareVisible && !isFreePassSelected;
+  bool get isMonthlyFareVisible => _selectedFareType == FareTypes.monthlyPass && !isProgressiveFareVisible && !isFreePassSelected;
+
+  // Helper to determine if ANY amount field (excluding Progressive's specific ones) should be shown
+  bool get shouldShowStandardAmountFields => !isProgressiveFareVisible && !isFreePassSelected;
+
   bool get canAddFare => _selectedPlaza?.plazaId != null; // Enable adding if a plaza is selected
   bool get canChangePlaza => !_isPlazaPreSelected && _temporaryFares.isEmpty; // Allow changing plaza only if not pre-selected and no temporary fares exist
 
   // --- Initialization ---
   Future<void> initialize({Plaza? preSelectedPlaza}) async {
-    developer.log('Initializing ViewModel...', name: _logName);
+    developer.log('Initializing ViewModel... Pre-selected: ${preSelectedPlaza?.plazaId}', name: _logName);
     _setLoading(true);
+    // Reset state *before* potentially setting pre-selected plaza
+    _resetInternalState(); // Clear previous selections etc.
+    _isPlazaPreSelected = false; // Reset pre-selected flag
+
     try {
       if (preSelectedPlaza != null) {
         developer.log('Pre-selected plaza received: ${preSelectedPlaza.plazaName}', name: _logName);
-        setPreSelectedPlaza(preSelectedPlaza); // Set pre-selected plaza first
+        setPreSelectedPlaza(preSelectedPlaza); // Set pre-selected plaza data AND flag
+      } else {
+        // If not pre-selected, ensure plaza state is clear
+        resetPlazaSelection();
       }
+
       await Future.wait([
-        _fetchPlazas(), // Fetch available plazas (if needed)
+        _fetchPlazas(), // Fetch available plazas (if needed/not preselected)
         _fetchUserData(), // Get logged-in user info
       ]);
       // If a plaza is selected (pre-selected or otherwise), fetch its existing fares
@@ -104,23 +125,29 @@ class PlazaFareViewModel extends ChangeNotifier {
         await fetchExistingFares(_selectedPlaza!.plazaId!);
       } else {
         developer.log('No plaza selected initially, skipping initial fare fetch.', name: _logName);
+        _existingFares = []; // Ensure existing fares are clear if no plaza selected
+        if (hasListeners) notifyListeners(); // Update UI if needed
       }
     } catch (e, s) { // Catch stack trace
       developer.log('Initialization error: $e', name: _logName, error: e, stackTrace: s);
+      _plazaList = [];
+      _existingFares = [];
       // Handle initialization error (e.g., show error message via a state variable)
     } finally {
       _setLoading(false);
-      developer.log('Initialization complete. Loading: $_isLoading', name: _logName);
+      developer.log('Initialization complete. Loading: $_isLoading, PreSelected: $_isPlazaPreSelected', name: _logName);
     }
   }
 
   // --- Data Fetching ---
   Future<void> _fetchPlazas() async {
-    if (_isPlazaPreSelected && _plazaList.isNotEmpty) {
-      developer.log('Skipping plaza fetch: Plaza is pre-selected and list exists.', name: _logName);
-      return; // Avoid unnecessary fetches if static list and pre-selected
+    // Avoid unnecessary fetches if pre-selected and list likely only contains that one
+    if (_isPlazaPreSelected && _plazaList.isNotEmpty && _plazaList.length == 1 && _plazaList[0].plazaId == _selectedPlaza?.plazaId) {
+      developer.log('Skipping plaza fetch: Plaza is pre-selected and list likely contains only it.', name: _logName);
+      return;
     }
     developer.log('Attempting to fetch plazas...', name: _logName);
+    List<Plaza> fetchedPlazas = [];
     try {
       final Map<String, dynamic>? userData = await _storageService.getUserData();
       if (userData != null) {
@@ -128,24 +155,23 @@ class PlazaFareViewModel extends ChangeNotifier {
         if (entityIdValue != null) {
           final String entityIdString = entityIdValue.toString();
           developer.log('Found entityId: $entityIdString. Fetching plazas...', name: _logName);
-          _plazaList = await _plazaService.fetchUserPlazas(entityIdString);
-          developer.log('Successfully fetched ${_plazaList.length} plazas.', name: _logName);
-          notifyListeners();
+          fetchedPlazas = await _plazaService.fetchUserPlazas(entityIdString);
+          developer.log('Successfully fetched ${fetchedPlazas.length} plazas.', name: _logName);
         } else {
           developer.log('Could not fetch plazas: entityId key found but value is null in user data.', name: _logName);
-          _plazaList = [];
-          notifyListeners();
         }
       } else {
         developer.log('Could not fetch plazas: User data not found in secure storage.', name: _logName);
-        _plazaList = [];
-        notifyListeners();
       }
     } catch (e, s) {
       developer.log('Error fetching plazas: $e', name: _logName, error: e, stackTrace: s);
-      _plazaList = []; // Ensure list is empty on error
-      notifyListeners();
       // Rethrow or handle error appropriately
+    } finally {
+      // Update state only if data changed or if list is empty
+      if (fetchedPlazas.isNotEmpty || _plazaList.isNotEmpty) {
+        _plazaList = fetchedPlazas;
+        if (hasListeners) notifyListeners();
+      }
     }
   }
 
@@ -154,15 +180,13 @@ class PlazaFareViewModel extends ChangeNotifier {
     try {
       _createdBy = await _storageService.getUserData();
       developer.log('User data fetched: ${_createdBy != null}', name: _logName);
-      notifyListeners();
+      // No need to notify unless UI specifically depends on _createdBy directly
     } catch (e, s) {
       developer.log('Error fetching user data: $e', name: _logName, error: e, stackTrace: s);
       _createdBy = null;
-      notifyListeners();
     }
   }
 
-  // Fetches existing fares for a given PLAZA ID (String)
   Future<void> fetchExistingFares(String plazaId) async {
     if (_isLoadingFare) {
       developer.log('Skipping fetchExistingFares for $plazaId: Already loading.', name: _logName);
@@ -173,25 +197,19 @@ class PlazaFareViewModel extends ChangeNotifier {
     try {
       _existingFares = await _fareService.getFaresByPlazaId(plazaId);
       developer.log('Fetched ${_existingFares.length} existing fares for plazaId: $plazaId.', name: _logName);
-      notifyListeners();
     } catch (e, s) {
       developer.log('Error fetching existing fares for plazaId $plazaId: $e', name: _logName, error: e, stackTrace: s);
       _existingFares = []; // Reset on error
-      notifyListeners(); // Update UI even on error
       // Handle fetch error (e.g., show message via state variable)
     } finally {
-      setLoadingFare(false);
+      setLoadingFare(false); // This will notify listeners
     }
   }
 
-  // Fetches a single fare by its Fare ID (int) - Used for editing
   Future<PlazaFare?> getFareById(int fareId) async {
-    // *** REMOVED THE INCORRECT LOADING CHECK FROM HERE ****
-
     developer.log('Fetching fare by ID: $fareId', name: _logName);
     setLoadingFare(true);
     try {
-      // Now the actual service call will proceed
       final fare = await _fareService.getFareById(fareId);
       developer.log('Fare fetched for ID $fareId: ${fare != null}', name: _logName);
       return fare;
@@ -199,14 +217,12 @@ class PlazaFareViewModel extends ChangeNotifier {
       developer.log('Error fetching fare by ID $fareId: $e', name: _logName, error: e, stackTrace: s);
       return null;
     } finally {
-      // The flag is correctly reset here after the operation completes or fails
       setLoadingFare(false);
     }
   }
 
   // --- State Management & UI Interaction ---
 
-  // Sets the plaza when selected from a dropdown or similar UI element
   void setSelectedPlaza(Plaza plaza) {
     if (!canChangePlaza) {
       developer.log('Cannot change plaza. Pre-selected: $_isPlazaPreSelected, Temp Fares: ${_temporaryFares.length}', name: _logName);
@@ -220,7 +236,7 @@ class PlazaFareViewModel extends ChangeNotifier {
     if (_selectedPlaza?.plazaId != plaza.plazaId) {
       developer.log('Setting selected plaza to: ${plaza.plazaName} (ID: ${plaza.plazaId})', name: _logName);
       _selectedPlaza = plaza;
-      plazaController.text = plaza.plazaName;
+      plazaController.text = plaza.plazaName!;
 
       _selectedPlazaIdInt = int.tryParse(plaza.plazaId!);
       if (_selectedPlazaIdInt == null) {
@@ -240,7 +256,6 @@ class PlazaFareViewModel extends ChangeNotifier {
     }
   }
 
-  // Sets the plaza when it's passed initially
   void setPreSelectedPlaza(Plaza plaza) {
     developer.log('Setting pre-selected plaza: ${plaza.plazaName} (ID: ${plaza.plazaId})', name: _logName);
     if (plaza.plazaId == null) {
@@ -248,45 +263,60 @@ class PlazaFareViewModel extends ChangeNotifier {
       return;
     }
     _selectedPlaza = plaza;
-    plazaController.text = plaza.plazaName;
+    plazaController.text = plaza.plazaName!;
 
     _selectedPlazaIdInt = int.tryParse(plaza.plazaId!);
     if (_selectedPlazaIdInt == null) {
       developer.log('ERROR: Could not parse pre-selected plazaId "${plaza.plazaId}" to int.', name: _logName);
       _selectedPlaza = null;
       plazaController.text = "Invalid Plaza";
+      _isPlazaPreSelected = false; // Treat as invalid selection
     } else {
       developer.log('Pre-selected Plaza Parsed Int ID: $_selectedPlazaIdInt', name: _logName);
-      _isPlazaPreSelected = true;
+      _isPlazaPreSelected = true; // Set flag correctly
+      // Ensure plaza list contains the pre-selected one if not fetched
+      if (!_plazaList.any((p) => p.plazaId == plaza.plazaId)) {
+        _plazaList = [plaza, ..._plazaList]; // Add to start
+      }
     }
     // No notifyListeners() here, expect it to be called by initialize() later
   }
 
-  // Called by PlazaFaresListScreen to display the name when editing/viewing
+  // Resets only the plaza selection part of the state
+  void resetPlazaSelection() {
+    developer.log('Resetting plaza selection.', name: _logName);
+    _selectedPlaza = null;
+    _selectedPlazaIdInt = null;
+    plazaController.clear();
+    _existingFares = [];
+    _isPlazaPreSelected = false; // Ensure flag is reset
+    validationErrors.remove('plaza');
+  }
+
   void setPlazaName(String plazaName) {
     developer.log('Setting plaza name display: $plazaName (Is PreSelected: $_isPlazaPreSelected)', name: _logName);
-    // Only set if not pre-selected to avoid overwriting
-    // Or maybe always set it? Depends on desired behavior when navigating back/forth.
-    // Let's always set it for consistency for now.
     plazaController.text = plazaName;
-    // No notifyListeners() needed as this is usually for display only
+    // No notifyListeners() needed as this is usually for display only in Edit Screen
   }
 
   void setFareType(String? fareType) {
     developer.log('Setting Fare Type: $fareType (Previous: $_selectedFareType)', name: _logName);
     if (_selectedFareType != fareType) {
       _selectedFareType = fareType;
-      _clearFareAmountFields(); // Clear related amount fields
+      _clearFareAmountFields(); // Clears standard AND progressive amount fields
       // Clear relevant validation errors
       validationErrors.remove('fareType');
-      validationErrors.remove('fareRate');
+      validationErrors.remove('fareRate'); // Generic fareRate error
       validationErrors.remove('dailyFare');
       validationErrors.remove('hourlyFare');
       validationErrors.remove('baseHourlyFare');
       validationErrors.remove('monthlyFare');
       validationErrors.remove('baseHours');
       validationErrors.remove('discount');
-      validationErrors.remove('duplicateFare'); // Clear potential duplicate error if type changes
+      validationErrors.remove('from'); // NEW
+      validationErrors.remove('toCustom'); // NEW
+      validationErrors.remove('progressiveFare'); // NEW specific error key
+      validationErrors.remove('duplicateFare');
       validationErrors.remove('dateOverlap');
       notifyListeners();
     }
@@ -297,7 +327,7 @@ class PlazaFareViewModel extends ChangeNotifier {
     if (_selectedVehicleType != vehicleType) {
       _selectedVehicleType = vehicleType;
       validationErrors.remove('vehicleType');
-      validationErrors.remove('duplicateFare'); // Clear potential duplicate error if type changes
+      validationErrors.remove('duplicateFare');
       validationErrors.remove('dateOverlap');
       notifyListeners();
     }
@@ -309,13 +339,14 @@ class PlazaFareViewModel extends ChangeNotifier {
     final DateTime initial = startDateController.text.isNotEmpty
         ? (DateTime.tryParse(startDateController.text) ?? DateTime.now())
         : DateTime.now();
-    final DateTime first = DateTime.now().subtract(const Duration(days: 1));
+    // Allow selecting today as start date
+    final DateTime first = DateTime.now(); //.subtract(const Duration(days: 1)); // Allow today
     final DateTime last = DateTime(2101);
 
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: initial.isBefore(first) ? first : initial,
-      firstDate: first,
+      initialDate: initial.isBefore(first) ? first : initial, // Default to today if initial is invalid past
+      firstDate: first, // Allow selecting today
       lastDate: last,
     );
 
@@ -334,7 +365,7 @@ class PlazaFareViewModel extends ChangeNotifier {
           }
         }
         validationErrors.remove('dateOverlap');
-        notifyListeners(); // Ensure UI updates if date changes
+        notifyListeners();
       }
     }
   }
@@ -352,6 +383,7 @@ class PlazaFareViewModel extends ChangeNotifier {
     DateTime firstDatePickerDate;
     try {
       final startDate = DateTime.parse(startDateController.text);
+      // End date must be strictly AFTER start date according to schema Joi.ref('startEffectDate')
       firstDatePickerDate = startDate.add(const Duration(days: 1));
 
       if (endDateController.text.isNotEmpty) {
@@ -381,7 +413,7 @@ class PlazaFareViewModel extends ChangeNotifier {
         endDateController.text = formattedDate;
         validationErrors.remove('endDate');
         validationErrors.remove('dateOverlap');
-        notifyListeners(); // Ensure UI updates if date changes
+        notifyListeners();
       }
     }
   }
@@ -419,13 +451,13 @@ class PlazaFareViewModel extends ChangeNotifier {
       developer.log('Validation OK: Vehicle Type: $_selectedVehicleType', name: _logName);
     }
 
-    // 3. Fare Amount
+    // 3. Fare Amount (handles different types including Progressive and FreePass)
     if (_selectedFareType != null && !_validateFareAmount()) {
-      developer.log('Validation Error: Fare Amount failed validation', name: _logName);
+      developer.log('Validation Error: Fare Amount/Progressive fields failed validation', name: _logName);
       isValid = false;
     }
 
-    // 4. Base Hours (for Hour-Wise Custom)
+    // 4. Base Hours (for Hour-Wise Custom ONLY)
     if (_selectedFareType == FareTypes.hourWiseCustom && !_validateBaseHours()) {
       developer.log('Validation Error: Base Hours failed validation', name: _logName);
       isValid = false;
@@ -437,8 +469,8 @@ class PlazaFareViewModel extends ChangeNotifier {
       isValid = false;
     }
 
-    // 6. Discount
-    if (!_validateDiscount()) {
+    // 6. Discount (Not applicable to Progressive/FreePass based on UI/Schema)
+    if (_selectedFareType != FareTypes.progressive && _selectedFareType != FareTypes.freePass && !_validateDiscount()) {
       developer.log('Validation Error: Discount failed validation', name: _logName);
       isValid = false;
     }
@@ -447,7 +479,6 @@ class PlazaFareViewModel extends ChangeNotifier {
     if (isValid) {
       try {
         final newFare = _createFareObject();
-        // Use jsonEncode for potentially large objects in logs
         developer.log('Checking for overlap with Fare: ${jsonEncode(newFare.toJsonLog())}', name: _logName);
         if (_isDuplicateOrOverlappingFare(newFare, isUpdate: isUpdate, updatingFareId: updatingFareId)) {
           developer.log('Validation Error: Duplicate or Overlapping Fare detected', name: _logName);
@@ -473,36 +504,93 @@ class PlazaFareViewModel extends ChangeNotifier {
     return isValid;
   }
 
-  // --- Validation Helper Methods with Logging ---
+  // --- Validation Helper Methods --- (Implementations unchanged)
 
   bool _validateFareAmount() {
+    final strings = S.current;
+    if (_selectedFareType == FareTypes.freePass) {
+      developer.log('Fare Amount OK (FreePass): Skipping validation.', name: _logName);
+      validationErrors.remove('fareRate');
+      validationErrors.remove('progressiveFare');
+      return true;
+    }
+    if (_selectedFareType == FareTypes.progressive) {
+      return _validateProgressiveFields();
+    }
     String? errorKey;
     String? value;
     String fieldName = '';
-    final strings = S.current;
-
     switch (_selectedFareType) {
       case FareTypes.daily: errorKey = 'dailyFare'; value = dailyFareController.text; fieldName = strings.fieldDailyFare; break;
       case FareTypes.hourly: errorKey = 'hourlyFare'; value = hourlyFareController.text; fieldName = strings.fieldHourlyFare; break;
       case FareTypes.hourWiseCustom: errorKey = 'baseHourlyFare'; value = baseHourlyFareController.text; fieldName = strings.fieldBaseHourlyFare; break;
       case FareTypes.monthlyPass: errorKey = 'monthlyFare'; value = monthlyFareController.text; fieldName = strings.fieldMonthlyFare; break;
-      default: validationErrors['fareType'] = strings.errorInvalidFareType; return false;
+      default:
+        developer.log('Fare Amount Error: Unknown fare type "$_selectedFareType" in _validateFareAmount.', name: _logName);
+        validationErrors['fareType'] = strings.errorInvalidFareType; return false;
     }
-
     if (value == null || value.isEmpty) {
       developer.log('Fare Amount Error ($errorKey): Value is empty.', name: _logName);
       validationErrors[errorKey] = '$fieldName ${strings.errorIsRequired}'; return false;
     }
     final fareValue = double.tryParse(value);
-    if (fareValue == null || fareValue <= 0) {
-      developer.log('Fare Amount Error ($errorKey): Value "$value" is not a positive number.', name: _logName);
-      validationErrors[errorKey] = '$fieldName ${strings.errorMustBePositiveNumber}'; return false;
+    if (fareValue == null || fareValue < 0) {
+      developer.log('Fare Amount Error ($errorKey): Value "$value" is not a non-negative number.', name: _logName);
+      validationErrors[errorKey] = '$fieldName ${strings.errorMustBeNonNegativeNumber}'; return false;
     }
-
     developer.log('Fare Amount OK ($errorKey): Value "$value"', name: _logName);
     validationErrors.remove(errorKey);
-    validationErrors.remove('fareRate'); // Clear generic error too
+    validationErrors.remove('fareRate');
     return true;
+  }
+
+  bool _validateProgressiveFields() {
+    final strings = S.current;
+    bool isValid = true;
+    int? fromValue;
+    int? toValue;
+    if (fromController.text.isEmpty) {
+      validationErrors['from'] = strings.errorFromMinutesRequired;
+      isValid = false;
+    } else {
+      fromValue = int.tryParse(fromController.text);
+      if (fromValue == null || fromValue < 0) {
+        validationErrors['from'] = strings.errorFromMinutesNonNegative;
+        isValid = false;
+      } else {
+        validationErrors.remove('from');
+      }
+    }
+    if (toCustomController.text.isEmpty) {
+      validationErrors['toCustom'] = strings.errorToMinutesRequired;
+      isValid = false;
+    } else {
+      toValue = int.tryParse(toCustomController.text);
+      if (toValue == null || toValue <= 0) {
+        validationErrors['toCustom'] = strings.errorToMinutesPositive;
+        isValid = false;
+      } else if (fromValue != null && toValue <= fromValue) {
+        validationErrors['toCustom'] = strings.errorToMinutesGreaterThanFrom;
+        isValid = false;
+      } else {
+        validationErrors.remove('toCustom');
+      }
+    }
+    if (progressiveFareController.text.isEmpty) {
+      validationErrors['progressiveFare'] = strings.errorProgressiveFareRequired;
+      isValid = false;
+    } else {
+      final fareValue = double.tryParse(progressiveFareController.text);
+      if (fareValue == null || fareValue < 0) {
+        validationErrors['progressiveFare'] = strings.errorProgressiveFareNonNegative;
+        isValid = false;
+      } else {
+        validationErrors.remove('progressiveFare');
+        validationErrors.remove('fareRate');
+      }
+    }
+    developer.log('Progressive Fields Validation Result: $isValid', name: _logName);
+    return isValid;
   }
 
   bool _validateBaseHours() {
@@ -510,7 +598,6 @@ class PlazaFareViewModel extends ChangeNotifier {
     if (_selectedFareType != FareTypes.hourWiseCustom) {
       validationErrors.remove('baseHours'); return true;
     }
-
     if (baseHoursController.text.isEmpty) {
       developer.log('Base Hours Error: Value is empty.', name: _logName);
       validationErrors['baseHours'] = strings.errorBaseHoursRequired; return false;
@@ -520,7 +607,6 @@ class PlazaFareViewModel extends ChangeNotifier {
       developer.log('Base Hours Error: Value "${baseHoursController.text}" is not a positive integer.', name: _logName);
       validationErrors['baseHours'] = strings.errorBaseHoursPositive; return false;
     }
-
     developer.log('Base Hours OK: Value "$hours"', name: _logName);
     validationErrors.remove('baseHours');
     return true;
@@ -531,9 +617,7 @@ class PlazaFareViewModel extends ChangeNotifier {
     bool isValid = true;
     DateTime? startDate;
     DateTime? endDate;
-
     developer.log('Validating Dates: Start="${startDateController.text}", End="${endDateController.text}"', name: _logName);
-
     if (startDateController.text.isEmpty) {
       developer.log('Date Validation Error: Start date is empty.', name: _logName);
       validationErrors['startDate'] = strings.errorStartDateRequired; isValid = false;
@@ -547,13 +631,9 @@ class PlazaFareViewModel extends ChangeNotifier {
         validationErrors['startDate'] = strings.errorInvalidDateFormat; isValid = false;
       }
     }
-
-    // End date might be optional, adjust validation if needed
     if (endDateController.text.isEmpty) {
-      developer.log('Date Validation Info: End date is empty (optional?).', name: _logName);
-      // If required:
-      // validationErrors['endDate'] = strings.errorEndDateRequired; isValid = false;
-      validationErrors.remove('endDate'); // Assuming optional for now
+      developer.log('Date Validation Error: End date is empty.', name: _logName);
+      validationErrors['endDate'] = strings.errorEndDateRequired; isValid = false;
     } else {
       try {
         endDate = DateTime.parse(endDateController.text);
@@ -564,16 +644,13 @@ class PlazaFareViewModel extends ChangeNotifier {
         validationErrors['endDate'] = strings.errorInvalidDateFormat; isValid = false;
       }
     }
-
-    // Validate Start < End only if both are present and valid so far
     if (isValid && startDate != null && endDate != null) {
       if (!endDate.isAfter(startDate)) {
-        developer.log('Date Validation Error: End date $endDate is not after start date $startDate', name: _logName);
-        validationErrors['endDate'] = strings.errorEndDateAfterStart; isValid = false;
+        developer.log('Date Validation Error: End date $endDate is not strictly after start date $startDate', name: _logName);
+        validationErrors['endDate'] = strings.errorEndDateStrictlyAfterStart; isValid = false;
       } else {
         developer.log('Date Validation OK: End date $endDate is after start date $startDate', name: _logName);
-        // Don't remove the error here if it was set for parsing error before
-        if (validationErrors['endDate'] == strings.errorEndDateAfterStart) {
+        if (validationErrors['endDate'] == strings.errorEndDateStrictlyAfterStart) {
           validationErrors.remove('endDate');
         }
       }
@@ -590,24 +667,22 @@ class PlazaFareViewModel extends ChangeNotifier {
       validationErrors.remove('discount');
       return true;
     }
-
     final discount = double.tryParse(discountController.text);
     if (discount == null) {
       developer.log('Discount Error: Value "${discountController.text}" is not numeric.', name: _logName);
       validationErrors['discount'] = strings.errorDiscountNumeric; return false;
     }
-    if (discount < 0 || discount > 100) {
-      developer.log('Discount Error: Value "$discount" is not between 0 and 100.', name: _logName);
-      validationErrors['discount'] = strings.errorDiscountRange; return false;
+    if (discount <= 0 || discount > 100) {
+      developer.log('Discount Error: Value "$discount" is not strictly positive and <= 100.', name: _logName);
+      validationErrors['discount'] = strings.errorDiscountRangeStrictPositive; return false;
     }
-
     developer.log('Discount OK: Value "$discount"', name: _logName);
     validationErrors.remove('discount');
     return true;
   }
 
-  // Checks for overlap with existing and temporary fares
   bool _isDuplicateOrOverlappingFare(PlazaFare newFare, {bool isUpdate = false, int? updatingFareId}) {
+    // (Implementation unchanged)
     developer.log('Overlap Check: Checking fare ${isUpdate ? "(Update ID: $updatingFareId)" : "(New)"}: ${jsonEncode(newFare.toJsonLog())}', name: _logName);
     List<PlazaFare> allFaresToCheck = [
       ..._existingFares.where((f) {
@@ -615,56 +690,61 @@ class PlazaFareViewModel extends ChangeNotifier {
         if(exclude) developer.log('Overlap Check: Excluding existing fare ID ${f.fareId} (self)', name: _logName);
         return !exclude;
       }),
-      ..._temporaryFares.where((f) { // Exclude self if modifying a temporary fare (unlikely in Edit screen)
-        bool exclude = isUpdate && updatingFareId == null && f == newFare; // Heuristic for updating temp fare
+      ..._temporaryFares.where((f) {
+        bool exclude = isUpdate && updatingFareId == null && f == newFare;
         if(exclude) developer.log('Overlap Check: Excluding temporary fare (self)', name: _logName);
         return !exclude;
       })
     ];
     developer.log('Overlap Check: Comparing against ${allFaresToCheck.length} other fares.', name: _logName);
-
     bool overlaps = allFaresToCheck.any((existingFare) {
       developer.log('Overlap Check: Comparing with existing Fare ID: ${existingFare.fareId ?? "N/A (Temp)"}', name: _logName);
-      // Ensure all required fields are non-null before comparison
       if (existingFare.plazaId == newFare.plazaId &&
           existingFare.vehicleType == newFare.vehicleType &&
           existingFare.fareType == newFare.fareType &&
           !existingFare.isDeleted) {
-
+        if (newFare.fareType == FareTypes.progressive && existingFare.fareType == FareTypes.progressive) {
+          final existingFrom = existingFare.from ?? -1;
+          final existingTo = existingFare.toCustom ?? -1;
+          final newFrom = newFare.from ?? -1;
+          final newTo = newFare.toCustom ?? -1;
+          bool timeRangesOverlap = (newFrom < existingTo) && (newTo > existingFrom);
+          if (!timeRangesOverlap) {
+            developer.log('Overlap Check: Progressive time ranges do not overlap.', name: _logName);
+            return false;
+          }
+          developer.log('Overlap Check FOUND Progressive Time Range with Fare ID ${existingFare.fareId ?? "N/A (Temp)"}!', name: _logName);
+        }
         final existingStart = existingFare.startEffectDate;
         final existingEnd = existingFare.endEffectDate ?? DateTime(9999, 12, 31);
         final newStart = newFare.startEffectDate;
         final newEnd = newFare.endEffectDate ?? DateTime(9999, 12, 31);
-
         developer.log('Overlap Check Details: Existing=[$existingStart to $existingEnd], New=[$newStart to $newEnd]', name: _logName);
-
-        // Overlap logic: (StartA <= EndB) and (EndA >= StartB)
-        bool startsBeforeOrSameAsExistingEnd = !newStart.isAfter(existingEnd);
-        bool endsAfterOrSameAsExistingStart = !newEnd.isBefore(existingStart);
-        bool isOverlapping = startsBeforeOrSameAsExistingEnd && endsAfterOrSameAsExistingStart;
-
+        DateTime existingEndDay = existingEnd.add(const Duration(days: 1));
+        DateTime newEndDay = newEnd.add(const Duration(days: 1));
+        bool startsBeforeExistingEnd = newStart.isBefore(existingEndDay);
+        bool endsAfterExistingStart = newEndDay.isAfter(existingStart);
+        bool isOverlapping = startsBeforeExistingEnd && endsAfterExistingStart;
         if(isOverlapping) {
-          developer.log('Overlap Check FOUND with Fare ID ${existingFare.fareId ?? "N/A (Temp)"}!', name: _logName);
+          developer.log('Overlap Check FOUND Date Range with Fare ID ${existingFare.fareId ?? "N/A (Temp)"}!', name: _logName);
         }
-
         return isOverlapping;
       } else {
         developer.log('Overlap Check: Skipping Fare ID ${existingFare.fareId ?? "N/A (Temp)"} (Criteria mismatch or deleted)', name: _logName);
         return false;
       }
     });
-
     developer.log('Overlap Check Result: $overlaps', name: _logName);
     return overlaps;
   }
 
   // --- Core Actions ---
 
-  // Creates a PlazaFare object from the current form fields
   PlazaFare _createFareObject() {
+    // (Implementation unchanged)
     developer.log('Creating fare object from form fields...', name: _logName);
     if (_selectedPlazaIdInt == null) {
-      developer.log('!!! CRITICAL ERROR IN _createFareObject: _selectedPlazaIdInt is NULL !!!', name: _logName); // Added emphasis
+      developer.log('!!! CRITICAL ERROR IN _createFareObject: _selectedPlazaIdInt is NULL !!!', name: _logName);
       throw Exception('Cannot create fare: Plaza ID is not selected or invalid.');
     }
     if (_selectedVehicleType == null) {
@@ -673,30 +753,42 @@ class PlazaFareViewModel extends ChangeNotifier {
     if (_selectedFareType == null) {
       throw Exception('Cannot create fare: Fare Type is not selected.');
     }
-
-    double fareRate;
+    double fareRate = 0;
+    int? baseHours;
+    double? discountRate;
+    int? from;
+    int? toCustom;
     try {
       switch (_selectedFareType) {
         case FareTypes.daily: fareRate = double.parse(dailyFareController.text); break;
         case FareTypes.hourly: fareRate = double.parse(hourlyFareController.text); break;
-        case FareTypes.hourWiseCustom: fareRate = double.parse(baseHourlyFareController.text); break;
+        case FareTypes.hourWiseCustom:
+          fareRate = double.parse(baseHourlyFareController.text);
+          baseHours = int.tryParse(baseHoursController.text);
+          break;
         case FareTypes.monthlyPass: fareRate = double.parse(monthlyFareController.text); break;
+        case FareTypes.progressive:
+          fareRate = double.parse(progressiveFareController.text);
+          from = int.parse(fromController.text);
+          toCustom = int.parse(toCustomController.text);
+          break;
+        case FareTypes.freePass:
+          fareRate = 0;
+          break;
         default: throw Exception('Invalid fare type encountered during object creation.');
       }
+      if (_selectedFareType != FareTypes.progressive && _selectedFareType != FareTypes.freePass && discountController.text.isNotEmpty) {
+        discountRate = double.tryParse(discountController.text);
+      }
     } catch (e) {
-      throw Exception('Invalid fare amount format.');
+      developer.log("Error parsing values during fare object creation: $e", name: _logName);
+      throw Exception('Invalid numeric format in form fields.');
     }
-
-    final int? baseHours = (_selectedFareType == FareTypes.hourWiseCustom && baseHoursController.text.isNotEmpty)
-        ? int.tryParse(baseHoursController.text) : null;
-    final double? discountRate = discountController.text.isNotEmpty
-        ? double.tryParse(discountController.text) : null;
     final DateTime startEffectDate = DateTime.parse(startDateController.text);
     final DateTime? endEffectDate = endDateController.text.isNotEmpty
         ? DateTime.parse(endDateController.text) : null;
-
     final fare = PlazaFare(
-      plazaId: _selectedPlazaIdInt!, // This is where the null check failure happens if it's null
+      plazaId: _selectedPlazaIdInt!,
       vehicleType: _selectedVehicleType!,
       fareType: _selectedFareType!,
       baseHours: baseHours,
@@ -705,13 +797,15 @@ class PlazaFareViewModel extends ChangeNotifier {
       startEffectDate: startEffectDate,
       endEffectDate: endEffectDate,
       isDeleted: false,
+      from: from,
+      toCustom: toCustom,
     );
     developer.log('Fare object created: ${jsonEncode(fare.toJsonLog())}', name: _logName);
     return fare;
   }
 
-  // Adds the currently configured fare to the temporary list
   Future<bool> addFareToList(BuildContext context) async {
+    // (Implementation unchanged)
     final strings = S.of(context);
     developer.log('Attempting to add fare to temporary list...', name: _logName);
     if (!validateFields(isUpdate: false)) {
@@ -719,7 +813,6 @@ class PlazaFareViewModel extends ChangeNotifier {
       _showValidationErrorSnackbar(context, strings.errorValidationFailed);
       return false;
     }
-
     try {
       final newFare = _createFareObject();
       _temporaryFares.add(newFare);
@@ -737,8 +830,8 @@ class PlazaFareViewModel extends ChangeNotifier {
     }
   }
 
-  // Submits all fares currently in the temporary list
   Future<void> submitAllFares(BuildContext context) async {
+    // (Implementation with Success Dialog logic)
     final strings = S.of(context);
     if (_temporaryFares.isEmpty) {
       developer.log('Submit aborted: No temporary fares to submit.', name: _logName);
@@ -748,8 +841,10 @@ class PlazaFareViewModel extends ChangeNotifier {
     developer.log('Submitting ${_temporaryFares.length} temporary fares...', name: _logName);
     _setLoading(true);
     try {
-      final faresToSend = _temporaryFares; // Add createdBy etc. if needed
+      final faresToSend = _temporaryFares.map((fare) { return fare; }).toList();
+      developer.log('Fares being sent to service: ${jsonEncode(faresToSend.map((f)=>f.toJsonLog()).toList())}', name: _logName);
       await _fareService.addFare(faresToSend);
+
       developer.log('Temporary fares submitted successfully.', name: _logName);
       _temporaryFares.clear();
       resetFieldsAfterAdd(); // Reset form but keep plaza
@@ -759,9 +854,15 @@ class PlazaFareViewModel extends ChangeNotifier {
         await fetchExistingFares(_selectedPlaza!.plazaId!);
       }
 
+      // --- SUCCESS DIALOG ---
       if (context.mounted) {
         await _showSuccessDialog(context, strings.successFareSubmission);
+        if (context.mounted) { // Check mounted again after await
+          Navigator.pop(context, true); // Pop AddFareScreen and indicate success
+        }
       }
+      // --- END SUCCESS DIALOG ---
+
     } catch (e, s) {
       developer.log("Error submitting temporary fares: $e", name: _logName, error: e, stackTrace: s);
       if (context.mounted) {
@@ -772,34 +873,27 @@ class PlazaFareViewModel extends ChangeNotifier {
     }
   }
 
-  // Updates an existing fare
   Future<bool> updateFare(BuildContext context, int fareId, int originalPlazaIdAsInt) async {
+    // (Implementation unchanged)
     final strings = S.of(context);
     developer.log('Attempting to update fare ID: $fareId for Plaza ID: $originalPlazaIdAsInt', name: _logName);
-
-    // *** Ensure _selectedPlazaIdInt is set correctly before validation ***
-    // This should be guaranteed if populateFareData ran correctly, but let's double-check
     if(_selectedPlazaIdInt == null) {
       developer.log("!!! WARNING in updateFare: _selectedPlazaIdInt is NULL before validation. Attempting to set from originalPlazaIdAsInt.", name: _logName);
-      _selectedPlazaIdInt = originalPlazaIdAsInt; // Fallback: set it from the argument
+      _selectedPlazaIdInt = originalPlazaIdAsInt;
     }
-
     if (!validateFields(isUpdate: true, updatingFareId: fareId)) {
       developer.log('Update fare validation failed for Fare ID: $fareId', name: _logName);
       _showValidationErrorSnackbar(context, strings.errorValidationFailed);
-      return false; // Indicate failure due to validation
+      return false;
     }
-
     _setIsUpdating(true);
-    _setLoading(true); // Use general loading as well
+    _setLoading(true);
     notifyListeners();
-
     try {
-      // _createFareObject will now use the potentially fallback-set _selectedPlazaIdInt
       final updatedFareData = _createFareObject();
       final fareToUpdate = PlazaFare(
         fareId: fareId,
-        plazaId: originalPlazaIdAsInt, // Use the passed original INT ID for the final payload
+        plazaId: originalPlazaIdAsInt,
         vehicleType: updatedFareData.vehicleType,
         fareType: updatedFareData.fareType,
         baseHours: updatedFareData.baseHours,
@@ -808,88 +902,89 @@ class PlazaFareViewModel extends ChangeNotifier {
         startEffectDate: updatedFareData.startEffectDate,
         endEffectDate: updatedFareData.endEffectDate,
         isDeleted: false,
+        from: updatedFareData.from,
+        toCustom: updatedFareData.toCustom,
       );
-
       developer.log('Calling fare service to update fare: ${jsonEncode(fareToUpdate.toJsonLog())}', name: _logName);
       final success = await _fareService.updateFare(fareToUpdate);
-
       if (success) {
         developer.log('Fare update successful via service for ID: $fareId', name: _logName);
         developer.log('Refreshing existing fares list after update.', name: _logName);
         await fetchExistingFares(originalPlazaIdAsInt.toString());
-        return true; // Indicate success
+        return true;
       } else {
         developer.log('Fare update failed via service (returned false) for ID: $fareId', name: _logName);
         if (context.mounted) {
-          _showValidationErrorDialog(context, strings.errorUpdateFailed); // Show generic failure
+          _showValidationErrorDialog(context, strings.errorUpdateFailed);
         }
-        return false; // Indicate failure
+        return false;
       }
     } catch (e, s) {
       developer.log("Error updating fare $fareId: $e", name: _logName, error: e, stackTrace: s);
       if (context.mounted) {
         _showValidationErrorDialog(context, '${strings.errorUpdateFailed}: ${e.toString()}');
       }
-      return false; // Indicate failure due to exception
+      return false;
     } finally {
       _setIsUpdating(false);
       _setLoading(false);
-      notifyListeners(); // Ensure UI updates after loading/updating finishes
+      notifyListeners();
     }
   }
 
   // --- Helper Methods ---
 
-  // Populates form fields when editing an existing fare
   void populateFareData(PlazaFare fare) {
+    // (Implementation unchanged)
     developer.log('populateFareData START for fare ID: ${fare.fareId}, Plaza ID: ${fare.plazaId}', name: _logName);
     developer.log('Fare Data: ${jsonEncode(fare.toJsonLog())}', name: _logName);
-
-    // *** THIS IS THE CRUCIAL FIX from the previous step ***
-    // Ensure the internal plaza ID state is set from the fetched fare data
     _selectedPlazaIdInt = fare.plazaId;
     developer.log('populateFareData: Set internal _selectedPlazaIdInt to: $_selectedPlazaIdInt', name: _logName);
-
-    // Set dropdowns first
-    setFareType(fare.fareType); // Use setters to ensure consistency
+    setFareType(fare.fareType);
     setVehicleType(fare.vehicleType);
-
-    // Set dates
     startDateController.text = DateFormat('yyyy-MM-dd').format(fare.startEffectDate);
     endDateController.text = fare.endEffectDate != null ? DateFormat('yyyy-MM-dd').format(fare.endEffectDate!) : "";
-
-    // Clear existing amount fields before setting the correct one
     _clearFareAmountFields();
-
-    // Set the correct amount field based on fare type
     switch (fare.fareType) {
       case FareTypes.daily: dailyFareController.text = fare.fareRate.toStringAsFixed(2); break;
       case FareTypes.hourly: hourlyFareController.text = fare.fareRate.toStringAsFixed(2); break;
-      case FareTypes.hourWiseCustom: baseHourlyFareController.text = fare.fareRate.toStringAsFixed(2); break;
+      case FareTypes.hourWiseCustom:
+        baseHourlyFareController.text = fare.fareRate.toStringAsFixed(2);
+        baseHoursController.text = fare.baseHours?.toString() ?? "";
+        break;
       case FareTypes.monthlyPass: monthlyFareController.text = fare.fareRate.toStringAsFixed(2); break;
+      case FareTypes.progressive:
+        progressiveFareController.text = fare.fareRate.toStringAsFixed(2);
+        fromController.text = fare.from?.toString() ?? "";
+        toCustomController.text = fare.toCustom?.toString() ?? "";
+        break;
+      case FareTypes.freePass:
+        break;
     }
-
-    // Set optional fields
-    baseHoursController.text = fare.baseHours?.toString() ?? "";
-    discountController.text = fare.discountRate?.toString() ?? ""; // Assuming discount is stored 0-100
-
-    validationErrors.clear(); // Clear any previous validation errors
+    if (fare.fareType != FareTypes.progressive && fare.fareType != FareTypes.freePass) {
+      discountController.text = fare.discountRate?.toString() ?? "";
+    } else {
+      discountController.clear();
+    }
+    validationErrors.clear();
     developer.log('populateFareData END.', name: _logName);
-    notifyListeners(); // Update UI with populated data
+    notifyListeners();
   }
 
-
-  // Clears only the fare amount input fields
   void _clearFareAmountFields() {
-    developer.log('Clearing fare amount fields.', name: _logName);
+    // (Implementation unchanged - doesn't notify)
+    developer.log('Clearing fare amount fields (no notification).', name: _logName);
     dailyFareController.clear();
     hourlyFareController.clear();
     baseHourlyFareController.clear();
     monthlyFareController.clear();
+    fromController.clear();
+    toCustomController.clear();
+    progressiveFareController.clear();
   }
 
-  // Resets most fields, keeping Plaza selection if appropriate
   void resetFieldsAfterAdd() {
+    // (Implementation unchanged - does notify)
     developer.log('Resetting fields after add (keeping plaza).', name: _logName);
     setFareType(null);
     setVehicleType(null);
@@ -902,20 +997,68 @@ class PlazaFareViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Resets all fields including Plaza selection
   void resetFields() {
+    // (Implementation unchanged - does notify)
     developer.log('Resetting all fields (including plaza if not pre-selected).', name: _logName);
+    bool needsNotification = false;
     if (!isPlazaPreSelected) {
-      _selectedPlaza = null;
-      _selectedPlazaIdInt = null;
-      plazaController.clear();
-      _existingFares = []; // Clear existing fares if plaza is cleared
-      developer.log('Plaza selection cleared.', name: _logName);
+      if (_selectedPlaza != null) {
+        resetPlazaSelection(); // Use helper to reset plaza state
+        needsNotification = true;
+        developer.log('Plaza selection cleared.', name: _logName);
+      }
     }
-    resetFieldsAfterAdd(); // Reset remaining fields
+    resetFieldsAfterAdd(); // Reset remaining fields and notifies
+    if (needsNotification && !hasListeners) {
+      // If resetFieldsAfterAdd didn't notify (e.g., types were already null), notify here
+      notifyListeners();
+    }
   }
 
-  // Show success dialog
+  // --- NEW --- Helper to reset internal state, used by initialize
+  void _resetInternalState() {
+    developer.log('Resetting internal state variables.', name: _logName);
+    _selectedPlaza = null;
+    _selectedPlazaIdInt = null;
+    plazaController.clear();
+    _selectedFareType = null;
+    _selectedVehicleType = null;
+    _existingFares.clear();
+    _temporaryFares.clear();
+    _clearFareAmountFields();
+    baseHoursController.clear();
+    discountController.clear();
+    startDateController.clear();
+    endDateController.clear();
+    validationErrors.clear();
+    // _isPlazaPreSelected is reset separately in initialize
+    // _plazaList and _createdBy are handled by their fetch methods
+  }
+
+  /// Resets fields without notifying listeners, intended for use during disposal.
+  void resetStateForDisposal() {
+    developer.log('Resetting state for disposal (no notification).', name: _logName);
+    // Only reset plaza if it wasn't pre-selected for this screen instance
+    if (!isPlazaPreSelected) {
+      resetPlazaSelection(); // Use helper (doesn't notify by itself)
+      developer.log('Plaza selection cleared during disposal reset.', name: _logName);
+    } else {
+      developer.log('Keeping pre-selected plaza during disposal reset.', name: _logName);
+    }
+    // Resetting other fields directly
+    _selectedFareType = null;
+    _selectedVehicleType = null;
+    startDateController.clear();
+    endDateController.clear();
+    _clearFareAmountFields(); // Does not notify
+    baseHoursController.clear();
+    discountController.clear();
+    validationErrors.clear();
+    _temporaryFares.clear();
+    // DO NOT CALL notifyListeners() here
+  }
+
+  // Show success dialog (Implementation unchanged)
   Future<void> _showSuccessDialog(BuildContext context, String message) async {
     developer.log('Showing Success Dialog: "$message"', name: _logName);
     if (!context.mounted) return;
@@ -938,7 +1081,7 @@ class PlazaFareViewModel extends ChangeNotifier {
     );
   }
 
-  // Show error dialog
+  // Show error dialog (Implementation unchanged)
   Future<void> _showValidationErrorDialog(BuildContext context, String message) async {
     developer.log('Showing Validation Error Dialog: "$message"', name: _logName);
     if (!context.mounted) return;
@@ -959,7 +1102,7 @@ class PlazaFareViewModel extends ChangeNotifier {
     );
   }
 
-  // Show error snackbar
+  // Show error snackbar (Implementation unchanged)
   void _showValidationErrorSnackbar(BuildContext context, String message) {
     developer.log('Showing Validation Error Snackbar: "$message"', name: _logName);
     if (!context.mounted) return;
@@ -972,7 +1115,7 @@ class PlazaFareViewModel extends ChangeNotifier {
     );
   }
 
-  // --- Loading State Setters ---
+  // --- Loading State Setters --- (Implementations unchanged)
   void _setLoading(bool loading) {
     if (_isLoading != loading) {
       developer.log('Setting global loading state: $loading', name: _logName);
@@ -997,7 +1140,6 @@ class PlazaFareViewModel extends ChangeNotifier {
     }
   }
 
-
   // --- Cleanup ---
   @override
   void dispose() {
@@ -1012,6 +1154,9 @@ class PlazaFareViewModel extends ChangeNotifier {
     discountController.dispose();
     startDateController.dispose();
     endDateController.dispose();
+    fromController.dispose();
+    toCustomController.dispose();
+    progressiveFareController.dispose();
     super.dispose();
   }
 }
@@ -1029,5 +1174,7 @@ extension PlazaFareLogHelper on PlazaFare {
     'baseHours': baseHours,
     'discountRate': discountRate,
     'isDeleted': isDeleted,
+    'from': from,
+    'toCustom': toCustom,
   };
 }

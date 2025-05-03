@@ -8,6 +8,7 @@ import 'package:merchant_app/utils/components/button.dart';
 import 'package:merchant_app/viewmodels/auth_viewmodel.dart';
 import 'package:provider/provider.dart';
 import '../../generated/l10n.dart';
+import 'dart:developer' as developer;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -30,7 +31,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin(BuildContext context) async {
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
     authVM.resetErrors(); // Reset errors before validation
-    final success = await authVM.login(context, _userIdController.text.trim(), _passwordController.text);
+    final success = await authVM.login(
+        context, _userIdController.text.trim(), _passwordController.text);
 
     if (success) {
       _clearControllers(authVM);
@@ -62,32 +64,62 @@ class _LoginScreenState extends State<LoginScreen> {
     Color backgroundColor = AppColors.error;
     String message = errorMessage;
 
-    if (errorMessage.contains('No internet')) {
+    // Log the error message for debugging
+    developer.log('[LoginScreen] Showing SnackBar for error: $errorMessage',
+        name: 'LoginScreen');
+
+    // Handle specific error cases (case-insensitive matching)
+    if (errorMessage.toLowerCase().contains('no internet')) {
       message = strings.errorNoInternet;
       backgroundColor = AppColors.warning;
-    } else if (errorMessage.contains('timed out')) {
+    } else if (errorMessage.toLowerCase().contains('timed out') ||
+        errorMessage.contains(
+            'Request timed out. The server is taking too long to respond.')) {
       message = strings.errorTimeout;
       backgroundColor = AppColors.warning;
-    } else if (errorMessage.contains('Connection refused') || errorMessage.contains('ServerConnectionException')) {
+    } else if (errorMessage.toLowerCase().contains('connection refused') ||
+        errorMessage
+            .toLowerCase()
+            .contains('failed to connect to the authentication server')) {
+      message = strings.errorServerConnectionRefused;
+      backgroundColor = AppColors.error;
+    } else if (errorMessage
+        .toLowerCase()
+        .contains('serverconnectionexception')) {
       message = strings.errorServerUnavailable;
       backgroundColor = AppColors.error;
-    } else if (errorMessage.contains('Server error')) {
+    } else if (errorMessage.toLowerCase().contains('server error') ||
+        errorMessage.toLowerCase().contains('500')) {
       message = strings.errorServer;
       backgroundColor = AppColors.error;
-    } else if (errorMessage.contains('reach user service')) {
+    } else if (errorMessage.toLowerCase().contains('reach user service') ||
+        errorMessage.toLowerCase().contains('502')) {
       message = strings.errorServiceUnavailable;
       backgroundColor = AppColors.error;
-    } else if (errorMessage.contains('Invalid credentials')) {
+    } else if (errorMessage.toLowerCase().contains('invalid credentials') ||
+        errorMessage.toLowerCase().contains('401')) {
       message = strings.errorInvalidCredentials;
-    } else if (errorMessage.contains('User not found')) {
+    } else if (errorMessage.toLowerCase().contains('user not found') ||
+        errorMessage.toLowerCase().contains('404')) {
       message = strings.errorUserNotFound;
+    } else if (errorMessage.toLowerCase().contains('access denied') ||
+        errorMessage.toLowerCase().contains('403')) {
+      message = strings.errorAccessDenied;
+    } else if (errorMessage.toLowerCase().contains('invalid request data') ||
+        errorMessage.toLowerCase().contains('400')) {
+      message = strings.errorInvalidRequest;
     } else {
+      // Fallback for truly unexpected errors
       message = strings.errorUnexpected;
+      backgroundColor = AppColors.error;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: TextStyle(color: context.textPrimaryColor)),
+        content: Text(
+          message,
+          style: TextStyle(color: context.textPrimaryColor),
+        ),
         backgroundColor: backgroundColor,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 3),
@@ -129,12 +161,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 40),
                       Consumer<AuthViewModel>(
-                        builder: (context, authVM, _) => CustomFormFields.normalSizedTextFormField(
+                        builder: (context, authVM, _) =>
+                            CustomFormFields.normalSizedTextFormField(
                           label: strings.labelEmailAndMobileNo,
                           controller: _userIdController,
                           keyboardType: TextInputType.emailAddress,
                           isPassword: false,
-                          enabled: true,
+                          enabled: !authVM.isLoading,
+                          // Disable during loading
                           errorText: authVM.getError('username'),
                           onChanged: (_) => authVM.clearError('username'),
                           context: context,
@@ -142,12 +176,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       Consumer<AuthViewModel>(
-                        builder: (context, authVM, _) => CustomFormFields.normalSizedTextFormField(
+                        builder: (context, authVM, _) =>
+                            CustomFormFields.normalSizedTextFormField(
                           label: strings.labelPassword,
                           controller: _passwordController,
                           keyboardType: TextInputType.visiblePassword,
                           isPassword: true,
-                          enabled: true,
+                          enabled: !authVM.isLoading,
+                          // Disable during loading
                           errorText: authVM.getError('password'),
                           onChanged: (_) => authVM.clearError('password'),
                           context: context,
@@ -155,31 +191,48 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 8),
                       TextButton(
-                        onPressed: () {
-                          authVM.resetErrors(); // Reset errors when navigating to forgot password
-                          Navigator.pushNamed(context, AppRoutes.forgotPassword);
-                        },
-                        style: TextButton.styleFrom(foregroundColor: Theme.of(context).primaryColor),
-                        child: Text(strings.actionForgotPassword, style: Theme.of(context).textTheme.bodySmall),
+                        onPressed: authVM.isLoading
+                            ? null
+                            : () {
+                                authVM
+                                    .resetErrors(); // Reset errors when navigating to forgot password
+                                Navigator.pushNamed(
+                                    context, AppRoutes.forgotPassword);
+                              },
+                        style: TextButton.styleFrom(
+                            foregroundColor: Theme.of(context).primaryColor),
+                        child: Text(strings.actionForgotPassword,
+                            style: Theme.of(context).textTheme.bodySmall),
                       ),
                       const SizedBox(height: 8),
                       Consumer<AuthViewModel>(
-                        builder: (context, authVM, _) => CustomButtons.primaryButton(
+                        builder: (context, authVM, _) =>
+                            CustomButtons.primaryButton(
                           height: 50,
-                          text: strings.buttonLogin,
-                          onPressed: authVM.isLoading ? () {} : () => _handleLogin(context),
+                          text: authVM.isLoading
+                              ? strings.loggingIn
+                              : strings.buttonLogin,
+                          onPressed: authVM.isLoading
+                              ? null
+                              : () => _handleLogin(context),
                           context: context,
                         ),
                       ),
                       const SizedBox(height: 16),
                       TextButton(
-                        onPressed: () {
-                          authVM.resetErrors(); // Reset errors when switching to register screen
-                          _clearControllers(authVM);
-                          Navigator.pushReplacementNamed(context, AppRoutes.register);
-                        },
-                        style: TextButton.styleFrom(foregroundColor: Theme.of(context).primaryColor),
-                        child: Text(strings.actionCreateAccount, style: Theme.of(context).textTheme.bodyMedium),
+                        onPressed: authVM.isLoading
+                            ? null
+                            : () {
+                                authVM
+                                    .resetErrors(); // Reset errors when switching to register screen
+                                _clearControllers(authVM);
+                                Navigator.pushReplacementNamed(
+                                    context, AppRoutes.register);
+                              },
+                        style: TextButton.styleFrom(
+                            foregroundColor: Theme.of(context).primaryColor),
+                        child: Text(strings.actionCreateAccount,
+                            style: Theme.of(context).textTheme.bodyMedium),
                       ),
                     ],
                   ),

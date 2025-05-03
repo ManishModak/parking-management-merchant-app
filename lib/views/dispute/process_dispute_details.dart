@@ -15,10 +15,12 @@ class ProcessDisputeDetailsScreen extends StatefulWidget {
   const ProcessDisputeDetailsScreen({super.key, required this.ticketId});
 
   @override
-  State<ProcessDisputeDetailsScreen> createState() => _ProcessDisputeDetailsScreenState();
+  State<ProcessDisputeDetailsScreen> createState() =>
+      _ProcessDisputeDetailsScreenState();
 }
 
-class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScreen> {
+class _ProcessDisputeDetailsScreenState
+    extends State<ProcessDisputeDetailsScreen> {
   int _currentImagePage = 0;
   bool _isImagesExpanded = false;
 
@@ -31,7 +33,8 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
   }
 
   Future<void> _fetchDisputeDetails() async {
-    final viewModel = Provider.of<ProcessDisputeViewModel>(context, listen: false);
+    final viewModel =
+        Provider.of<ProcessDisputeViewModel>(context, listen: false);
     try {
       await viewModel.fetchDisputeDetails(widget.ticketId);
     } catch (e) {
@@ -69,7 +72,8 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
                   fit: BoxFit.contain,
                   placeholder: (context, url) => _buildShimmerPlaceholder(),
                   errorWidget: (context, url, error) => const Center(
-                    child: Icon(Icons.broken_image_outlined, size: 48, color: Colors.red),
+                    child: Icon(Icons.broken_image_outlined,
+                        size: 48, color: Colors.red),
                   ),
                 ),
               ),
@@ -88,7 +92,8 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
     );
   }
 
-  Widget _buildShimmerPlaceholder({double width = double.infinity, double height = 20}) {
+  Widget _buildShimmerPlaceholder(
+      {double width = double.infinity, double height = 20}) {
     return Shimmer.fromColors(
       baseColor: Colors.grey.shade300,
       highlightColor: Colors.grey.shade100,
@@ -110,7 +115,8 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
         Card(
           elevation: 2,
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           color: AppColors.formBackground,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -170,7 +176,8 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
                   children: [
                     _buildShimmerPlaceholder(width: 130, height: 16),
                     const SizedBox(height: 6),
-                    _buildShimmerPlaceholder(width: double.infinity, height: 18),
+                    _buildShimmerPlaceholder(
+                        width: double.infinity, height: 18),
                   ],
                 ),
               ],
@@ -180,7 +187,8 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
         Card(
           elevation: 2,
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           color: AppColors.formBackground,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -198,7 +206,8 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
                       return Padding(
                         padding: const EdgeInsets.only(right: 8.0),
                         child: _buildShimmerPlaceholder(
-                          width: (AppConfig.deviceWidth - 64) / 3 + (index % 2 == 0 ? 15 : -15),
+                          width: (AppConfig.deviceWidth - 64) / 3 +
+                              (index % 2 == 0 ? 15 : -15),
                           height: 160,
                         ),
                       );
@@ -236,7 +245,10 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
           children: [
             const Text(
               'Uploaded Documents',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: AppColors.textPrimary),
+              style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: AppColors.textPrimary),
             ),
             if (viewModel.capturedImageUrls != null)
               Container(
@@ -247,13 +259,17 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
                 ),
                 child: Text(
                   '${viewModel.capturedImageUrls!.length}',
-                  style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w500),
                 ),
               ),
           ],
         ),
         initiallyExpanded: true,
-        onExpansionChanged: (expanded) => setState(() => _isImagesExpanded = expanded),
+        onExpansionChanged: (expanded) =>
+            setState(() => _isImagesExpanded = expanded),
         shape: const RoundedRectangleBorder(side: BorderSide.none),
         tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         children: [
@@ -262,16 +278,20 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (viewModel.capturedImageUrls == null || viewModel.capturedImageUrls!.isEmpty)
+                if (viewModel.capturedImageUrls == null ||
+                    viewModel.capturedImageUrls!.isEmpty)
                   SizedBox(
                     height: 150,
                     child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.image_not_supported, size: 48, color: AppColors.primary),
+                          Icon(Icons.image_not_supported,
+                              size: 48, color: AppColors.primary),
                           const SizedBox(height: 8),
-                          const Text('No Images Available', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                          const Text('No Images Available',
+                              style:
+                                  TextStyle(color: Colors.grey, fontSize: 16)),
                         ],
                       ),
                     ),
@@ -300,9 +320,13 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
                                 child: CachedNetworkImage(
                                   imageUrl: imageUrl,
                                   fit: BoxFit.cover,
-                                  placeholder: (context, url) => _buildShimmerPlaceholder(width: imageWidth, height: 150),
-                                  errorWidget: (context, url, error) => const Center(
-                                    child: Icon(Icons.broken_image_outlined, size: 32, color: Colors.grey),
+                                  placeholder: (context, url) =>
+                                      _buildShimmerPlaceholder(
+                                          width: imageWidth, height: 150),
+                                  errorWidget: (context, url, error) =>
+                                      const Center(
+                                    child: Icon(Icons.broken_image_outlined,
+                                        size: 32, color: Colors.grey),
                                   ),
                                 ),
                               ),
@@ -319,26 +343,38 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
                       children: [
                         IconButton(
                           icon: const Icon(Icons.arrow_back_ios, size: 18),
-                          color: _currentImagePage > 0 ? AppColors.primary : Colors.grey,
-                          onPressed: _currentImagePage > 0 ? () => setState(() => _currentImagePage--) : null,
+                          color: _currentImagePage > 0
+                              ? AppColors.primary
+                              : Colors.grey,
+                          onPressed: _currentImagePage > 0
+                              ? () => setState(() => _currentImagePage--)
+                              : null,
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
                             color: AppColors.primary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             'Page ${_currentImagePage + 1} of ${_getTotalPages(viewModel)}',
-                            style: const TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w500),
                           ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.arrow_forward_ios, size: 18),
-                          color: _currentImagePage < _getTotalPages(viewModel) - 1 ? AppColors.primary : Colors.grey,
-                          onPressed: _currentImagePage < _getTotalPages(viewModel) - 1
-                              ? () => setState(() => _currentImagePage++)
-                              : null,
+                          color:
+                              _currentImagePage < _getTotalPages(viewModel) - 1
+                                  ? AppColors.primary
+                                  : Colors.grey,
+                          onPressed:
+                              _currentImagePage < _getTotalPages(viewModel) - 1
+                                  ? () => setState(() => _currentImagePage++)
+                                  : null,
                         ),
                       ],
                     ),
@@ -352,12 +388,13 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
     );
   }
 
-  void _showAuditDetailsDialog(ProcessDisputeViewModel viewModel) {
+  void _showAuditDetailsDialog(Map<String, dynamic> displayData) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Container(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -376,7 +413,8 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: AppColors.textPrimary),
+                      icon:
+                          const Icon(Icons.close, color: AppColors.textPrimary),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
@@ -385,19 +423,19 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
                 const SizedBox(height: 4),
                 _buildDetailItem(
                   title: 'Dispute Raised By',
-                  value: 'User1@mail.com', // Add this field to Dispute if needed
+                  value: displayData['disputeRaisedBy'] ?? 'N/A',
                 ),
                 _buildDetailItem(
                   title: 'Dispute Raised Date',
-                  value: '30-01-2025  10:20:28',
+                  value: displayData['disputeRaisedDate'] ?? 'N/A',
                 ),
                 _buildDetailItem(
                   title: 'Dispute Processed By',
-                  value: 'Admin1@mail.com', // Add this field to Dispute if needed
+                  value: displayData['disputeProcessedBy'] ?? 'N/A',
                 ),
                 _buildDetailItem(
                   title: 'Dispute Processed Date',
-                  value: '31-01-2025  15:20:28', // Add this field to Dispute if needed
+                  value: displayData['disputeProcessedDate'] ?? 'N/A',
                 ),
                 const SizedBox(height: 8),
                 Align(
@@ -406,7 +444,8 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
                     onPressed: () => Navigator.of(context).pop(),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                     ),
                     child: const Text(
                       'Close',
@@ -422,17 +461,19 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
     );
   }
 
-  Widget _buildDisputeDetailWithAuditLink(ProcessDisputeViewModel viewModel) {
+  Widget _buildDisputeDetailWithAuditLink(Map<String, dynamic> displayData) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         const Text(
           'Dispute Information',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary),
+          style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: AppColors.textPrimary),
         ),
-        SizedBox(width: 36),
         GestureDetector(
-          onTap: () => _showAuditDetailsDialog(viewModel),
+          onTap: () => _showAuditDetailsDialog(displayData),
           child: const Text(
             'Audit Details',
             style: TextStyle(
@@ -448,15 +489,18 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
   }
 
   List<String> _getCurrentImages(ProcessDisputeViewModel viewModel) {
-    if (viewModel.capturedImageUrls == null || viewModel.capturedImageUrls!.isEmpty) return [];
+    if (viewModel.capturedImageUrls == null ||
+        viewModel.capturedImageUrls!.isEmpty) return [];
     final totalImages = viewModel.capturedImageUrls!.length;
     final startIndex = _currentImagePage * 3;
-    final endIndex = (startIndex + 3) > totalImages ? totalImages : (startIndex + 3);
+    final endIndex =
+        (startIndex + 3) > totalImages ? totalImages : (startIndex + 3);
     return viewModel.capturedImageUrls!.sublist(startIndex, endIndex);
   }
 
   int _getTotalPages(ProcessDisputeViewModel viewModel) {
-    if (viewModel.capturedImageUrls == null || viewModel.capturedImageUrls!.isEmpty) return 0;
+    if (viewModel.capturedImageUrls == null ||
+        viewModel.capturedImageUrls!.isEmpty) return 0;
     return (viewModel.capturedImageUrls!.length / 3).ceil();
   }
 
@@ -482,34 +526,43 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
           const SizedBox(height: 4),
           isBadge
               ? Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: value.toLowerCase() == 'open' ? Colors.green.withOpacity(0.1) : AppColors.error.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: value.toLowerCase() == 'open' ? Colors.green : AppColors.error,
-                width: 1,
-              ),
-            ),
-            child: Text(
-              value,
-              style: TextStyle(
-                color: value.toLowerCase() == 'open' ? Colors.green : AppColors.error,
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
-              ),
-            ),
-          )
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: value.toLowerCase() == 'open'
+                        ? Colors.green.withOpacity(0.1)
+                        : AppColors.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: value.toLowerCase() == 'open'
+                          ? Colors.green
+                          : AppColors.error,
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      color: value.toLowerCase() == 'open'
+                          ? Colors.green
+                          : AppColors.error,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                )
               : Text(
-            value.isEmpty ? 'N/A' : value,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
-              color: highlight
-                  ? (value.toLowerCase() == 'open' ? Colors.green : Colors.red)
-                  : AppColors.textPrimary.withOpacity(0.9),
-            ),
-          ),
+                  value.isEmpty ? 'N/A' : value,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
+                    color: highlight
+                        ? (value.toLowerCase() == 'open'
+                            ? Colors.green
+                            : Colors.red)
+                        : AppColors.textPrimary.withOpacity(0.9),
+                  ),
+                ),
         ],
       ),
     );
@@ -550,8 +603,7 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
       return const SizedBox.shrink();
     }
 
-    // Assuming disputeRaised can be inferred from disputeStatus or another field
-    final bool disputeRaised = viewModel.dispute!.disputeStatus.toLowerCase() == 'open';
+    final bool canProcess = viewModel.dispute!.status?.toLowerCase() == 'open';
 
     return Card(
       elevation: 2,
@@ -559,7 +611,7 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       color: AppColors.formBackground,
       child: InkWell(
-        onTap: () => _handleActionButtonTap(disputeRaised),
+        onTap: canProcess ? () => _handleActionButtonTap(viewModel) : null,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -569,24 +621,24 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
               Row(
                 children: [
                   Icon(
-                    disputeRaised ? Icons.fact_check_outlined : Icons.report_problem_outlined,
-                    color: AppColors.primary,
+                    Icons.fact_check_outlined,
+                    color: canProcess ? AppColors.primary : Colors.grey,
                     size: 24,
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    disputeRaised ? 'Process Dispute' : 'View Details',
-                    style: const TextStyle(
+                    'Process Dispute',
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
+                      color: canProcess ? AppColors.primary : Colors.grey,
                     ),
                   ),
                 ],
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right,
-                color: AppColors.primary,
+                color: canProcess ? AppColors.primary : Colors.grey,
                 size: 24,
               ),
             ],
@@ -596,48 +648,58 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
     );
   }
 
-  void _handleActionButtonTap(bool disputeRaised) {
+  void _handleActionButtonTap(ProcessDisputeViewModel viewModel) {
     developer.log('Showing dispute dialog', name: 'Navigation');
     showDialog(
       context: context,
-      builder: (context) => ChangeNotifierProvider(
-        create: (_) => ProcessDisputeViewModel()..fetchDisputeDetails(widget.ticketId),
+      builder: (context) => ChangeNotifierProvider.value(
+        value: viewModel,
         child: ProcessDisputeDialog(ticketId: widget.ticketId),
       ),
     );
   }
 
   PreferredSizeWidget _buildCustomAppBar(ProcessDisputeViewModel viewModel) {
+    final displayData = viewModel.getDisputeDisplayData();
     return CustomAppBar.appBarWithNavigation(
       screenTitle: viewModel.dispute == null
           ? "Processing Dispute\nLoading..."
-          : "Ticket #${viewModel.dispute!.ticketId}\nStatus: ${viewModel.dispute!.disputeStatus}",
+          : "Ticket #${displayData['ticketId']}\nStatus: ${displayData['disputeStatus']}",
       onPressed: () => Navigator.pop(context),
       darkBackground: true,
       fontSize: 18,
-      centreTitle: false, context: context,
+      centreTitle: false,
+      context: context,
     );
   }
 
   Widget _buildDisputeDetails(ProcessDisputeViewModel viewModel) {
-    if (viewModel.dispute == null) return const SizedBox.shrink();
+    if (viewModel.dispute == null) {
+      return const Center(child: Text('No dispute data available'));
+    }
+
+    final displayData = viewModel.getDisputeDisplayData();
+
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
         _buildActionButton(viewModel),
         _buildCompactSection(
-          title: _buildDisputeDetailWithAuditLink(viewModel),
+          title: _buildDisputeDetailWithAuditLink(displayData),
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: _getStatusColor(viewModel.dispute!.disputeStatus).withOpacity(0.2),
+              color: _getStatusColor(displayData['disputeStatus'])
+                  .withOpacity(0.2),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _getStatusColor(viewModel.dispute!.disputeStatus), width: 1.5),
+              border: Border.all(
+                  color: _getStatusColor(displayData['disputeStatus']),
+                  width: 1.5),
             ),
             child: Text(
-              viewModel.dispute!.disputeStatus,
+              displayData['disputeStatus'],
               style: TextStyle(
-                color: _getStatusColor(viewModel.dispute!.disputeStatus),
+                color: _getStatusColor(displayData['disputeStatus']),
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
               ),
@@ -646,49 +708,88 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
           children: [
             Row(
               children: [
-                Expanded(child: _buildDetailItem(title: 'Ticket ID', value: viewModel.dispute!.ticketId)),
-                Expanded(child: _buildDetailItem(title: 'Plaza Name', value: viewModel.dispute!.plazaName ?? 'N/A')),
+                Expanded(
+                    child: _buildDetailItem(
+                        title: 'Ticket ID', value: displayData['ticketId'])),
+                Expanded(
+                    child: _buildDetailItem(
+                        title: 'Plaza Name', value: displayData['plazaName'])),
               ],
             ),
             Row(
               children: [
-                Expanded(child: _buildDetailItem(title: 'Vehicle Number', value: viewModel.dispute!.vehicleNumber ?? 'N/A')),
-                Expanded(child: _buildDetailItem(title: 'Vehicle Type', value: viewModel.dispute!.vehicleType ?? 'N/A')),
+                Expanded(
+                    child: _buildDetailItem(
+                        title: 'Vehicle Number',
+                        value: displayData['vehicleNumber'])),
+                Expanded(
+                    child: _buildDetailItem(
+                        title: 'Vehicle Type',
+                        value: displayData['vehicleType'])),
               ],
             ),
             Row(
               children: [
-                Expanded(child: _buildDetailItem(title: 'Entry Time', value: viewModel.dispute!.vehicleEntryTime ?? 'N/A')),
-                Expanded(child: _buildDetailItem(title: 'Exit Time', value: viewModel.dispute!.vehicleExitTime ?? 'N/A')),
+                Expanded(
+                    child: _buildDetailItem(
+                        title: 'Entry Time',
+                        value: displayData['vehicleEntryTime'])),
+                Expanded(
+                    child: _buildDetailItem(
+                        title: 'Exit Time',
+                        value: displayData['vehicleExitTime'])),
               ],
             ),
             Row(
               children: [
-                Expanded(child: _buildDetailItem(title: 'Parking Duration', value: viewModel.dispute!.parkingDuration ?? 'N/A')),
-                Expanded(child: _buildDetailItem(title: 'Payment Amount', value: '₹${viewModel.dispute!.paymentAmount ?? 0}')),
+                Expanded(
+                    child: _buildDetailItem(
+                        title: 'Parking Duration',
+                        value: displayData['parkingDuration'])),
+                Expanded(
+                    child: _buildDetailItem(
+                        title: 'Payment Amount',
+                        value: displayData['paymentAmount'])),
               ],
             ),
             Row(
               children: [
-                Expanded(child: _buildDetailItem(title: 'Fare Type', value: viewModel.dispute!.fareType ?? 'N/A')),
-                Expanded(child: _buildDetailItem(title: 'Fare Amount', value: '₹${viewModel.dispute!.fareAmount ?? 0}')),
+                Expanded(
+                    child: _buildDetailItem(
+                        title: 'Fare Type', value: displayData['fareType'])),
+                Expanded(
+                    child: _buildDetailItem(
+                        title: 'Fare Amount',
+                        value: displayData['fareAmount'])),
               ],
             ),
             Row(
               children: [
-                Expanded(child: _buildDetailItem(title: 'Payment Date', value: viewModel.dispute!.paymentDate ?? 'N/A')),
-                Expanded(child: _buildDetailItem(title: 'Expiry Date', value: viewModel.dispute!.disputeExpiryDate ?? 'N/A')),
+                Expanded(
+                    child: _buildDetailItem(
+                        title: 'Payment Date',
+                        value: displayData['paymentDate'])),
+                Expanded(
+                    child: _buildDetailItem(
+                        title: 'Expiry Date',
+                        value: displayData['disputeExpiryDate'])),
               ],
             ),
             Row(
               children: [
-                Expanded(child: _buildDetailItem(title: 'Dispute Reason', value: viewModel.dispute!.disputeReason ?? 'N/A')),
-                Expanded(child: _buildDetailItem(title: 'Dispute Amount', value: '₹${viewModel.dispute!.disputeAmount ?? 0}')),
+                Expanded(
+                    child: _buildDetailItem(
+                        title: 'Dispute Reason',
+                        value: displayData['disputeReason'])),
+                Expanded(
+                    child: _buildDetailItem(
+                        title: 'Dispute Amount',
+                        value: displayData['disputeAmount'])),
               ],
             ),
             _buildDetailItem(
               title: 'Dispute Remark',
-              value: viewModel.dispute!.disputeRemark?.isEmpty ?? true ? 'N/A' : viewModel.dispute!.disputeRemark!,
+              value: displayData['disputeRemark'],
             ),
           ],
         ),
@@ -701,8 +802,10 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
     switch (status.toLowerCase()) {
       case 'open':
         return Colors.green;
-      case 'pending':
+      case 'inprogress':
         return Colors.orange;
+      case 'accepted':
+        return Colors.blue;
       case 'rejected':
         return Colors.red;
       default:
@@ -718,7 +821,7 @@ class _ProcessDisputeDetailsScreenState extends State<ProcessDisputeDetailsScree
           appBar: _buildCustomAppBar(viewModel),
           body: RefreshIndicator(
             onRefresh: _fetchDisputeDetails,
-            child: viewModel.isLoading || viewModel.dispute == null
+            child: viewModel.isLoading
                 ? _buildLoadingState()
                 : _buildDisputeDetails(viewModel),
           ),

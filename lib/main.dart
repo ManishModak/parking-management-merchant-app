@@ -9,6 +9,7 @@ import 'package:merchant_app/viewmodels/dispute/view_dispute_viewmodel.dart';
 import 'package:merchant_app/viewmodels/plaza/lane_details_viewmodel.dart';
 import 'package:merchant_app/viewmodels/plaza/plaza_list_viewmodel.dart';
 import 'package:merchant_app/viewmodels/plaza/plaza_modification_viewmodel.dart';
+import 'package:merchant_app/viewmodels/settings_viewmodel.dart';
 import 'package:merchant_app/viewmodels/ticket/open_ticket_viewmodel.dart';
 import 'package:merchant_app/viewmodels/ticket/reject_ticket_viewmodel.dart';
 import 'package:merchant_app/viewmodels/ticket/ticket_history_viewmodel.dart';
@@ -56,6 +57,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => TicketHistoryViewModel()),
         ChangeNotifierProvider(create: (_) => OpenTicketViewModel()),
         ChangeNotifierProvider(create: (_) => RejectTicketViewModel ()),
+        ChangeNotifierProvider(create: (_) => SettingsViewModel()),
       ],
       child: MyApp(routeObserver: routeObserver),
     ),

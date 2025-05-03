@@ -1,6 +1,8 @@
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:merchant_app/config/app_routes.dart';
+import 'package:merchant_app/services/storage/secure_storage_service.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -9,10 +11,10 @@ import 'package:merchant_app/config/app_config.dart';
 import 'package:merchant_app/utils/components/button.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../generated/l10n.dart';
+import '../../../models/ticket.dart';
 import '../../../viewmodels/dispute/raise_dispute_viewmodel.dart';
 import '../../../viewmodels/ticket/ticket_history_viewmodel.dart';
 import '../../dispute/raise_dispute/raise_dispute_dialog.dart';
-import 'package:merchant_app/config/app_theme.dart'; // Import AppTheme
 
 class ViewTicketScreen extends StatefulWidget {
   final String ticketId;
@@ -26,6 +28,7 @@ class ViewTicketScreen extends StatefulWidget {
 class _ViewTicketScreenState extends State<ViewTicketScreen> {
   int _currentImagePage = 0;
   bool _isImagesExpanded = false;
+  final _secureStorage = SecureStorageService();
 
   @override
   void initState() {
@@ -428,12 +431,13 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
   }
 
   Widget _buildActionButton(TicketHistoryViewModel viewModel, S strings) {
-    if (viewModel.ticket == null) return const SizedBox.shrink();
+    if (viewModel.ticket == null || viewModel.ticket!.status != Status.Completed) {
+      return const SizedBox.shrink();
+    }
 
-    final bool disputeRaised = true;
-    //final bool disputeRaised = viewModel.ticket!.disputeRaised ?? false;
-    developer.log('Dispute Raised: $disputeRaised', name: 'ActionButton');
-
+    final bool disputeRaised = viewModel.ticket!.disputeStatus == 'Raised';
+    developer.log('Dispute Raised: $disputeRaised for ticket ${viewModel.ticket!.ticketId}',
+        name: 'ViewTicketScreen.ActionButton');
 
     return Card(
       elevation: Theme.of(context).cardTheme.elevation,
@@ -441,17 +445,47 @@ class _ViewTicketScreenState extends State<ViewTicketScreen> {
       shape: Theme.of(context).cardTheme.shape,
       color: Theme.of(context).cardColor,
       child: InkWell(
-        onTap: () {
+        onTap: () async {
           if (disputeRaised) {
-            developer.log('Navigating to view dispute screen', name: 'Navigation');
-            Navigator.pushNamed(context, AppRoutes.disputeDetail, arguments: {'ticketId': widget.ticketId});
+            developer.log('Navigating to view dispute screen for ticketId: ${widget.ticketId}',
+                name: 'ViewTicketScreen.Navigation');
+            Navigator.pushNamed(context, AppRoutes.disputeDetail,
+                arguments: {'ticketId': widget.ticketId});
           } else {
-            developer.log('Navigating to raise dispute screen', name: 'Navigation');
+            developer.log('Preparing to raise dispute for ticketId: ${widget.ticketId}',
+                name: 'ViewTicketScreen.Navigation');
+            // Await the userId from secure storage
+            final userIdStr = await _secureStorage.getUserId();
+            final userId = int.tryParse(userIdStr ?? '') ?? 1;
+            // Format ticketCreationTime without milliseconds
+            final dateFormat = DateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            final ticketCreationTime = viewModel.ticket!.createdTime != null
+                ? dateFormat.format(viewModel.ticket!.createdTime!.toUtc())
+                : dateFormat.format(DateTime.now().toUtc());
+            final ticketData = {
+              'userId': userId,
+              'plazaId': viewModel.ticket!.plazaId ?? 0,
+              'ticketCreationTime': ticketCreationTime,
+              'vehicleNumber': viewModel.ticket!.vehicleNumber ?? 'UNKNOWN',
+              'vehicleType': viewModel.ticket!.vehicleType ?? 'Unknown',
+              'parkingDuration': viewModel.ticket!.parkingDuration?.toString() ?? 'Unknown',
+              'fareAmount': viewModel.ticket!.fareAmount ?? 0.0,
+              'totalCharges': viewModel.ticket!.totalCharges ?? 0.0,
+              'exitTime': viewModel.ticket!.exitTime != null
+                  ? dateFormat.format(viewModel.ticket!.exitTime!.toUtc())
+                  : null,
+              'paymentMode': viewModel.ticket!.paymentMode ?? 'Unknown',
+            };
+            developer.log('Ticket Data for RaiseDisputeDialog: $ticketData',
+                name: 'ViewTicketScreen.TicketData');
             showDialog(
               context: context,
               builder: (context) => ChangeNotifierProvider(
                 create: (_) => RaiseDisputeViewModel(),
-                child: RaiseDisputeDialog(ticketId: widget.ticketId),
+                child: RaiseDisputeDialog(
+                  ticketId: widget.ticketId,
+                  ticketData: ticketData,
+                ),
               ),
             );
           }

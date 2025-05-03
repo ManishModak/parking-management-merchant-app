@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:merchant_app/config/api_config.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
@@ -9,6 +10,7 @@ import '../../../../config/app_colors.dart';
 import '../../../../config/app_config.dart';
 import '../../../../utils/components/appbar.dart';
 import '../../../../utils/components/button.dart';
+import '../../../services/payment/payment_service.dart';
 import '../../../viewmodels/ticket/mark_exit_viewmodel.dart';
 import '../../../../generated/l10n.dart';
 
@@ -30,12 +32,16 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    // Schedule post-frame callback to mark ticket as exited, check NFC status, and initialize Socket.IO
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _markTicketAsExited();
       _checkNfcStatus();
+      final viewModel = Provider.of<MarkExitViewModel>(context, listen: false);
+      viewModel.initializeSocket('user-${widget.ticketId}', ApiConfig.baseUrl);
     });
   }
 
+  // Check NFC availability and update state
   Future<void> _checkNfcStatus() async {
     final isAvailable = await NfcManager.instance.isAvailable();
     setState(() {
@@ -45,6 +51,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     developer.log(isAvailable ? 'NFC is supported and enabled' : 'NFC not supported or disabled', name: 'NFC Check');
   }
 
+  // Mark ticket as exited using the view model
   Future<void> _markTicketAsExited() async {
     final viewModel = Provider.of<MarkExitViewModel>(context, listen: false);
     await viewModel.markTicketAsExited(widget.ticketId);
@@ -55,8 +62,9 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     super.dispose();
   }
 
+  // Display a zoomable image dialog for QR code or ticket images
   void _showZoomableImageDialog(String imageUrl) {
-    developer.log('[MarkExitDetailsScreen] Showing zoomable image dialog for URL: $imageUrl');
+    developer.log('[MarkExitDetailsScreen] Showing zoomable image dialog for URL: $imageUrl', name: 'MarkExitDetailsScreen');
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -95,6 +103,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
+  // Build a shimmer placeholder for loading states
   Widget _buildShimmerPlaceholder({double width = double.infinity, double height = 20}) {
     return Shimmer.fromColors(
       baseColor: AppColors.shimmerBaseLight,
@@ -110,6 +119,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
+  // Build the image section for ticket images
   Widget _buildImageSection(MarkExitViewModel viewModel, S strings) {
     final capturedImageUrls = viewModel.ticketDetails?['captured_images'] as List<String>? ?? [];
     return Card(
@@ -273,6 +283,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
+  // Get current images for pagination
   List<String> _getCurrentImages(List<String> capturedImageUrls) {
     if (capturedImageUrls.isEmpty) return [];
     final startIndex = _currentImagePage * 3;
@@ -280,11 +291,13 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     return capturedImageUrls.sublist(startIndex, endIndex);
   }
 
+  // Calculate total pages for image pagination
   int _getTotalPages(List<String> capturedImageUrls) {
     if (capturedImageUrls.isEmpty) return 0;
     return (capturedImageUrls.length / 3).ceil();
   }
 
+  // Build error state UI
   Widget _buildErrorState(MarkExitViewModel viewModel, S strings) {
     return Center(
       child: SingleChildScrollView(
@@ -322,6 +335,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
+  // Build detail item for ticket details
   Widget _buildDetailItem({
     required String title,
     required String value,
@@ -346,7 +360,9 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
               ? Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: value.toLowerCase() == 'open' ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+              color: value.toLowerCase() == 'open'
+                  ? Colors.green.withOpacity(0.1)
+                  : Colors.orange.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: value.toLowerCase() == 'open' ? Colors.green : Colors.orange,
@@ -366,7 +382,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
               color: highlight
-                  ? (value.toLowerCase() == 'open' ? Colors.green : Colors.orange)
+                  ? (value.toLowerCase() == 'success' ? Colors.green : Colors.red)
                   : Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
             ),
           ),
@@ -375,6 +391,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
+  // Build ticket details UI
   Widget _buildTicketDetails(MarkExitViewModel viewModel, S strings) {
     final ticketData = viewModel.ticketDetails ?? {};
     return SingleChildScrollView(
@@ -460,7 +477,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                         ),
                         _buildDetailItem(
                           title: 'Fare Type',
-                          value: ticketData['fare_type'] ?? 'Pending',
+                          value: ticketData['fare_type']?.toString() ?? 'Pending',
                           strings: strings,
                         ),
                         _buildDetailItem(
@@ -471,6 +488,12 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                         _buildDetailItem(
                           title: 'Total Charges',
                           value: ticketData['total_charges']?.toString() ?? 'Pending',
+                          strings: strings,
+                        ),
+                        _buildDetailItem(
+                          title: 'Payment Status',
+                          value: viewModel.paymentStatus?.toString() ?? 'Pending',
+                          highlight: true,
                           strings: strings,
                         ),
                       ],
@@ -487,12 +510,15 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
+  // Build action buttons for payment options
   Widget _buildActionButton(MarkExitViewModel viewModel, S strings) {
     final ticketData = viewModel.ticketDetails ?? {};
     final totalChargesStr = ticketData['total_charges']?.toString() ?? '0';
     final totalCharges = double.tryParse(totalChargesStr) ?? 0.0;
 
-    void initiateRazorpayPayment() {
+    // Initiate UPI payment by generating and displaying a QR code
+    void initiateUpiPayment() async {
+      // Validate the payment amount to ensure it's positive
       if (totalCharges <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Invalid amount for payment')),
@@ -500,43 +526,55 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
         return;
       }
 
-      var options = {
-        'key': 'rzp_test_v4QApxVP1vzbl7', // Replace with your Razorpay test/live key
-        'amount': (totalCharges * 100).toInt(), // Amount in paise (₹1 = 100 paise)
-        'name': 'Parking Payment',
-        'description': 'Payment for Ticket #${ticketData['ticket_ref_id']}',
-        'prefill': {
-          'contact': "9356384431" ?? '', // Optional: Replace with user contact if available
-          'email': 'user@example.com', // Optional: Replace with user email if available
-        },
-        'external': {
-          'wallets': ['paytm', 'googlepay', 'phonepe'] // Optional: Add supported wallets
-        },
-        'method': {
-          'upi': true, // Enable UPI payment method (QR code will be shown by UPI apps)
-          'card': false, // Disable other methods if not needed
-          'netbanking': false,
-          'wallet': false,
-        },
-      };
-
       try {
-        //_razorpay.open(options);
+        // Initialize PaymentService to call the createOrderQrCode method
+        final paymentService = PaymentService();
+
+        // Log the attempt to generate the QR code
+        developer.log('[MarkExitDetailsScreen] Generating QR code for ticket: ${widget.ticketId}',
+            name: 'MarkExitDetailsScreen');
+
+        // Call the createOrderQrCode method with the ticket ID
+        final qrCodeResponse = await paymentService.createOrderQrCode(widget.ticketId);
+
+        // Log the response for debugging
+        developer.log('[MarkExitDetailsScreen] QR Code Response: $qrCodeResponse',
+            name: 'MarkExitDetailsScreen');
+
+        // Extract the QR code URL (backend returns 'qrUrl')
+        final qrCodeUrl = qrCodeResponse['qrUrl']?.toString() ?? '';
+
+        // Check if QR code URL is valid
+        if (qrCodeUrl.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to retrieve QR code URL')),
+          );
+          return;
+        }
+
+        // Display the QR code in a dialog
+        _showZoomableImageDialog(qrCodeUrl);
       } catch (e) {
-        developer.log('Error initiating Razorpay payment: $e', name: 'MarkExitDetailsScreen');
+        // Log any errors during QR code generation
+        developer.log('Error generating QR code: $e', name: 'MarkExitDetailsScreen');
+
+        // Show error message to the user
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error initiating payment: $e')),
+          SnackBar(content: Text('Error generating QR code: $e')),
         );
       }
     }
 
+    // Initiate NFC card payment
     void initiateNfcCardPayment() async {
+      // Check if NFC is supported
       if (!_isNfcSupported) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('This device does not support NFC')),
         );
         return;
       }
+      // Check if NFC is enabled
       if (!_isNfcEnabled) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please enable NFC in Settings')),
@@ -544,6 +582,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
         return;
       }
       try {
+        // Start NFC session to detect card
         await NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
           if (tag.data.containsKey('isodep') || tag.data.containsKey('nfca')) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -557,24 +596,30 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
           await NfcManager.instance.stopSession();
         });
       } catch (e) {
+        // Handle NFC errors
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('NFC Error: $e')));
         await NfcManager.instance.stopSession();
       }
     }
 
+    // Initiate cash payment
     void initiateCashPayment() {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please pay cash at the exit gate')));
+      // Notify user to pay cash
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please pay cash at the exit gate')));
+      // Update ticket status to cash pending
       viewModel.markTicketAsCashPending(widget.ticketId);
     }
 
+    // Build the payment options card
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             InkWell(
-              onTap: initiateRazorpayPayment,
-              child: _buildOptionRow('Pay via UPI (Razorpay)', Icons.qr_code),
+              onTap: initiateUpiPayment,
+              child: _buildOptionRow('Pay via UPI', Icons.qr_code),
             ),
             if (_isNfcSupported)
               InkWell(
@@ -591,6 +636,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
+  // Build a row for payment options
   Widget _buildOptionRow(String text, IconData icon) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -616,6 +662,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
+  // Build custom app bar with ticket reference ID
   PreferredSizeWidget _buildCustomAppBar(MarkExitViewModel viewModel, S strings) {
     final ticketRefId = viewModel.ticketDetails?['ticket_ref_id'] ?? 'N/A';
     return CustomAppBar.appBarWithNavigation(
@@ -628,6 +675,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
+  // Format date-time string
   String _formatDateTime(String? dateTimeStr) {
     if (dateTimeStr == null || dateTimeStr.isEmpty) return 'N/A';
     try {
@@ -638,11 +686,25 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     }
   }
 
+  // Build the main scaffold
   @override
   Widget build(BuildContext context) {
     final strings = S.of(context);
     return Consumer<MarkExitViewModel>(
       builder: (context, viewModel, child) {
+        // Show SnackBar when payment status changes
+        if (viewModel.paymentStatus != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Payment Status: ${viewModel.paymentStatus}'),
+                backgroundColor: viewModel.paymentStatus?.toLowerCase() == 'success'
+                    ? Colors.green
+                    : Colors.red,
+              ),
+            );
+          });
+        }
         return Scaffold(
           appBar: _buildCustomAppBar(viewModel, strings),
           body: Stack(

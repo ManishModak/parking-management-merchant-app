@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
@@ -11,8 +12,11 @@ import '../../../../utils/components/button.dart';
 import '../../../../utils/components/form_field.dart';
 import '../../../../utils/components/pagination_controls.dart';
 import '../../../generated/l10n.dart';
+import '../../../models/ticket.dart';
 import '../../../utils/components/pagination_mixin.dart';
 import '../../../utils/exceptions.dart';
+import '../../../viewmodels/ticket/open_ticket_viewmodel.dart';
+import '../open_ticket/view_open_ticket.dart';
 import 'view_ticket.dart';
 import '../../../viewmodels/ticket/ticket_history_viewmodel.dart';
 
@@ -32,10 +36,12 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
   String _searchQuery = '';
   int _currentPage = 1;
   Timer? _debounce;
+  bool _isInitialized = false;
 
   Set<String> _selectedStatuses = {};
   Set<String> _selectedVehicleTypes = {};
   Set<String> _selectedPlazaNames = {};
+  Set<String> _selectedDisputeStatuses = {};
   DateTimeRange? _selectedDateRange;
 
   @override
@@ -43,7 +49,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
     super.initState();
     _viewModel = Provider.of<TicketHistoryViewModel>(context, listen: false);
     _setDefaultDateRange();
-    _loadInitialData();
+
     _searchController.addListener(() {
       if (_debounce?.isActive ?? false) _debounce?.cancel();
       _debounce = Timer(const Duration(milliseconds: 300), () {
@@ -53,6 +59,46 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
         });
       });
     });
+
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _loadInitialData();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _routeObserver = Provider.of<RouteObserver<ModalRoute>>(context);
+    _routeObserver.subscribe(this, ModalRoute.of(context)!);
+
+    if (!_isInitialized) {
+      final route = ModalRoute.of(context);
+      final args = route?.settings.arguments;
+      developer.log(
+        'Route details: name=${route?.settings.name}, args=$args, context=$context',
+        name: 'TicketHistoryScreen',
+      );
+      if (args is Map<String, dynamic>?) {
+        if (args?['statusFilter'] == 'complete') {
+          _selectedStatuses.add('completed'); // Match Status.Completed
+          developer.log('Preselected status filter: completed', name: 'TicketHistoryScreen');
+        }
+        if (args?['disputeStatusFilter'] == 'not raised') {
+          _selectedDisputeStatuses.add('not raised');
+          developer.log('Preselected dispute status filter: not raised', name: 'TicketHistoryScreen');
+        }
+        if (_selectedStatuses.isNotEmpty || _selectedDisputeStatuses.isNotEmpty) {
+          _currentPage = 1;
+          developer.log('Filters set, resetting page to 1 and refreshing data', name: 'TicketHistoryScreen');
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            _refreshData();
+          });
+        }
+      } else {
+        developer.log('Unexpected arguments type: ${args.runtimeType}', name: 'TicketHistoryScreen');
+      }
+      _isInitialized = true;
+    }
   }
 
   void _setDefaultDateRange() {
@@ -65,17 +111,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
 
   Future<void> _loadInitialData() async {
     if (!mounted) return;
-    // Defer fetch until after the first frame to avoid build-time state changes
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _viewModel.fetchTicketHistory();
-    });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _routeObserver = Provider.of<RouteObserver<ModalRoute>>(context);
-    _routeObserver.subscribe(this, ModalRoute.of(context)!);
+    await _viewModel.fetchTicketHistory();
   }
 
   @override
@@ -84,7 +120,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
     _routeObserver.unsubscribe(this);
     _scrollController.dispose();
     _searchController.dispose();
-    super.dispose(); // ViewModel disposal handled by Provider
+    super.dispose();
   }
 
   @override
@@ -92,38 +128,51 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
 
   Future<void> _refreshData() async {
     if (!mounted) return;
+    developer.log('Refreshing ticket history data', name: 'TicketHistoryScreen');
     await _viewModel.fetchTicketHistory();
   }
 
   List<Map<String, dynamic>> _getFilteredTickets(List<Map<String, dynamic>> tickets) {
     return tickets.where((ticket) {
+      final entryTime = ticket['entryTime'] is DateTime
+          ? ticket['entryTime'] as DateTime
+          : ticket['entryTime'] != null
+          ? DateTime.parse(ticket['entryTime'])
+          : null;
+      final entryTimeString = entryTime != null ? DateFormat('dd MMM yyyy, hh:mm a').format(entryTime) : '';
+
       final matchesSearch = _searchQuery.isEmpty ||
           (ticket['ticketId']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
           (ticket['plazaId']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
           (ticket['vehicleNumber']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
           (ticket['vehicleType']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
           (ticket['plazaName']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          (ticket['ticketStatus']?.toString().toLowerCase().contains(_searchQuery) ?? false);
+          (ticket['ticketStatus']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
+          (ticket['disputeStatus']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
+          entryTimeString.toLowerCase().contains(_searchQuery);
 
-      final matchesStatus =
-          _selectedStatuses.isEmpty || _selectedStatuses.contains(ticket['ticketStatus']?.toString().toLowerCase());
+      // Normalize ticketStatus to match _selectedStatuses
+      final ticketStatus = ticket['ticketStatus'] is Status
+          ? ticket['ticketStatus'].toString().split('.').last.toLowerCase() // e.g., 'Status.Completed' -> 'completed'
+          : ticket['ticketStatus']?.toString().toLowerCase() ?? '';
+      final matchesStatus = _selectedStatuses.isEmpty || _selectedStatuses.contains(ticketStatus);
+
+      final disputeStatus = ticket['disputeStatus']?.toString().toLowerCase() ?? '';
+      final matchesDisputeStatus = _selectedDisputeStatuses.isEmpty || _selectedDisputeStatuses.contains(disputeStatus);
 
       final matchesVehicleType = _selectedVehicleTypes.isEmpty ||
           _selectedVehicleTypes.contains(ticket['vehicleType']?.toString().toLowerCase());
-
       final matchesPlazaName =
           _selectedPlazaNames.isEmpty || _selectedPlazaNames.contains(ticket['plazaName']?.toString().toLowerCase());
 
-      final entryTime = DateTime.tryParse(ticket['entryTime'] ?? '');
       final matchesDate = _selectedDateRange == null ||
           (entryTime != null &&
               entryTime.isAfter(_selectedDateRange!.start.subtract(const Duration(days: 1))) &&
               entryTime.isBefore(_selectedDateRange!.end.add(const Duration(days: 1))));
 
-      return matchesSearch && matchesStatus && matchesVehicleType && matchesPlazaName && matchesDate;
+      return matchesSearch && matchesStatus && matchesVehicleType && matchesPlazaName && matchesDisputeStatus && matchesDate;
     }).toList();
   }
-
 
   void _updatePage(int newPage) {
     final filteredTickets = _getFilteredTickets(_viewModel.tickets);
@@ -185,7 +234,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
 
   Widget _buildMoreFiltersChip(S strings) {
     final hasActiveFilters =
-        _selectedStatuses.isNotEmpty || _selectedVehicleTypes.isNotEmpty || _selectedPlazaNames.isNotEmpty;
+        _selectedStatuses.isNotEmpty || _selectedVehicleTypes.isNotEmpty || _selectedPlazaNames.isNotEmpty || _selectedDisputeStatuses.isNotEmpty;
     final textColor = context.textPrimaryColor;
 
     return GestureDetector(
@@ -223,6 +272,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
       ..._selectedStatuses.map((s) => '${strings.statusLabel}: ${s.capitalize()}'),
       ..._selectedVehicleTypes.map((v) => '${strings.vehicleLabel}: ${v.capitalize()}'),
       ..._selectedPlazaNames.map((p) => '${strings.plazaLabel}: $p'),
+      ..._selectedDisputeStatuses.map((d) => '${strings.disputeStatusLabel}: ${d.capitalize()}'),
     ];
     final textColor = context.textPrimaryColor;
 
@@ -241,6 +291,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
                       _selectedStatuses.clear();
                       _selectedVehicleTypes.clear();
                       _selectedPlazaNames.clear();
+                      _selectedDisputeStatuses.clear();
                       _selectedDateRange = null;
                       _currentPage = 1;
                     });
@@ -280,6 +331,8 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
                             _selectedVehicleTypes.remove(filter.split(': ')[1].toLowerCase());
                           } else if (filter.startsWith('${strings.plazaLabel}:')) {
                             _selectedPlazaNames.remove(filter.split(': ')[1]);
+                          } else if (filter.startsWith('${strings.disputeStatusLabel}:')) {
+                            _selectedDisputeStatuses.remove(filter.split(': ')[1].toLowerCase());
                           }
                         });
                       },
@@ -354,9 +407,8 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
                           title: strings.ticketStatusLabel,
                           options: [
                             {'key': 'open', 'label': strings.openTicketsLabel},
-                            {'key': 'pending', 'label': strings.pendingTicketsLabel},
-                            {'key': 'complete', 'label': strings.completedTicketsLabel},
-                            {'key': 'rejected', 'label': strings.rejectedTicketsLabel}
+                            {'key': 'rejected', 'label': strings.rejectedTicketsLabel},
+                            {'key': 'completed', 'label': strings.completedTicketsLabel},
                           ],
                           selectedItems: _selectedStatuses,
                           onChanged: (value, isSelected) {
@@ -386,6 +438,23 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
                                 _selectedVehicleTypes.add(value);
                               } else {
                                 _selectedVehicleTypes.remove(value);
+                              }
+                            });
+                          },
+                        ),
+                        _buildFilterSection(
+                          title: strings.disputeStatusLabel,
+                          options: [
+                            {'key': 'not raised', 'label': strings.notRaisedLabel},
+                            {'key': 'raised', 'label': strings.raisedLabel},
+                          ],
+                          selectedItems: _selectedDisputeStatuses,
+                          onChanged: (value, isSelected) {
+                            setDialogState(() {
+                              if (isSelected) {
+                                _selectedDisputeStatuses.add(value);
+                              } else {
+                                _selectedDisputeStatuses.remove(value);
                               }
                             });
                           },
@@ -420,6 +489,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
                                 _selectedStatuses.clear();
                                 _selectedVehicleTypes.clear();
                                 _selectedPlazaNames.clear();
+                                _selectedDisputeStatuses.clear();
                               });
                             },
                             context: context,
@@ -912,7 +982,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? textColor : Colors.grey[400],
+            color: isSelected ? AppColors.primary : textColor,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
@@ -952,68 +1022,113 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
     DateTime createdTime = DateTime.parse(ticket['ticketCreationTime'] ?? DateTime.now().toIso8601String());
     String formattedCreatedTime = DateFormat('dd MMM, hh:mm a').format(createdTime);
     Color statusColor;
-    switch (ticket['ticketStatus'].toString().toLowerCase()) {
+    final ticketStatus = ticket['ticketStatus'] is Status
+        ? ticket['ticketStatus'].toString().split('.').last.toLowerCase()
+        : ticket['ticketStatus']?.toString().toLowerCase() ?? '';
+    switch (ticketStatus) {
       case 'open':
         statusColor = Colors.green;
         break;
       case 'rejected':
         statusColor = Colors.red;
         break;
-      case 'complete':
+      case 'completed':
         statusColor = Colors.blue;
         break;
-      case 'pending':
       default:
         statusColor = Colors.orange;
     }
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       elevation: Theme.of(context).cardTheme.elevation,
       color: context.secondaryCardColor,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         side: BorderSide(color: statusColor.withOpacity(0.2), width: 1),
       ),
-      child: ListTile(
-        title: Text(
-          '${ticket['plazaName']?.toString() ?? strings.naLabel} | ${ticket['entryLaneId']?.toString() ?? strings.naLabel}',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textPrimaryColor),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              ticket['ticketRefId']?.toString() ?? strings.naLabel,
-              style: TextStyle(color: context.textPrimaryColor),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${ticket['vehicleNumber']?.toString() ?? strings.naLabel} | ${ticket['vehicleType']?.toString() ?? strings.naLabel} | $formattedCreatedTime',
-              style: TextStyle(color: context.textPrimaryColor),
-            ),
-            if (ticket['remarks']?.isNotEmpty ?? false)
-              Text(
-                ticket['remarks'],
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: context.textPrimaryColor),
-              ),
-          ],
-        ),
-        trailing: Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color),
+      child: InkWell(
         onTap: () {
           developer.log('Ticket card tapped: ${ticket['ticketId']}', name: 'TicketHistory');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChangeNotifierProvider<TicketHistoryViewModel>.value(
-                value: _viewModel,
-                child: ViewTicketScreen(ticketId: ticket['ticketId'].toString()),
+          if (ticketStatus == 'open') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ChangeNotifierProvider<OpenTicketViewModel>.value(
+                  value: Provider.of<OpenTicketViewModel>(context, listen: false),
+                  child: ViewOpenTicketScreen(ticketId: ticket['ticketId'].toString()),
+                ),
               ),
-            ),
-          ).then((_) => _refreshData());
+            ).then((_) => _refreshData());
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ChangeNotifierProvider<TicketHistoryViewModel>.value(
+                  value: _viewModel,
+                  child: ViewTicketScreen(ticketId: ticket['ticketId'].toString()),
+                ),
+              ),
+            ).then((_) => _refreshData());
+          }
         },
+        child: Padding(
+          padding: const EdgeInsets.only(left: 8.0, right: 4, top: 8, bottom: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${ticket['plazaName']?.toString() ?? strings.naLabel} | ${ticket['entryLaneId']?.toString() ?? strings.naLabel} | ${ticket['ticketRefId']?.toString() ?? strings.naLabel}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textPrimaryColor),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${ticket['vehicleNumber']?.toString() ?? strings.naLabel} | ${ticket['vehicleType']?.toString() ?? strings.naLabel} | $formattedCreatedTime',
+                      style: TextStyle(color: context.textPrimaryColor, fontSize: 14),
+                    ),
+                    if (ticket['remarks']?.isNotEmpty ?? false)
+                      Text(
+                        ticket['remarks'],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: context.textPrimaryColor, fontSize: 14),
+                      ),
+                  ],
+                ),
+              ),
+
+              SizedBox(
+                width: 75,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        ticketStatus.capitalize(),
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color, size: 20),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1068,29 +1183,50 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
     if (error != null) {
       developer.log('Error occurred: $error', name: 'TicketHistory');
       switch (error.runtimeType) {
-        case NoInternetException _:
+        case NoInternetException:
           errorTitle = strings.errorNoInternet;
           errorMessage = strings.errorNoInternetMessage;
           break;
-        case RequestTimeoutException _:
+        case RequestTimeoutException:
           errorTitle = strings.errorRequestTimeout;
           errorMessage = strings.errorRequestTimeoutMessage;
           break;
-        case HttpException _:
+        case HttpException:
           final httpError = error as HttpException;
           errorTitle = strings.errorServerError;
           errorMessage = strings.errorServerErrorMessage;
           switch (httpError.statusCode) {
-            case 400: errorTitle = strings.errorInvalidRequest; errorMessage = strings.errorInvalidRequestMessage; break;
-            case 401: errorTitle = strings.errorUnauthorized; errorMessage = strings.errorUnauthorizedMessage; break;
-            case 403: errorTitle = strings.errorAccessDenied; errorMessage = strings.errorAccessDeniedMessage; break;
-            case 404: errorTitle = strings.errorNotFound; errorMessage = strings.errorNotFoundMessage; break;
-            case 500: errorTitle = strings.errorServerIssue; errorMessage = strings.errorServerIssueMessage; break;
-            case 502: errorTitle = strings.errorServiceUnavailable; errorMessage = strings.errorServiceUnavailableMessage; break;
-            case 503: errorTitle = strings.errorServiceOverloaded; errorMessage = strings.errorServiceOverloadedMessage; break;
+            case 400:
+              errorTitle = strings.errorInvalidRequest;
+              errorMessage = strings.errorInvalidRequestMessage;
+              break;
+            case 401:
+              errorTitle = strings.errorUnauthorized;
+              errorMessage = strings.errorUnauthorizedMessage;
+              break;
+            case 403:
+              errorTitle = strings.errorAccessDenied;
+              errorMessage = strings.errorAccessDeniedMessage;
+              break;
+            case 404:
+              errorTitle = strings.errorNotFound;
+              errorMessage = strings.errorNotFoundMessage;
+              break;
+            case 500:
+              errorTitle = strings.errorServerIssue;
+              errorMessage = strings.errorServerIssueMessage;
+              break;
+            case 502:
+              errorTitle = strings.errorServiceUnavailable;
+              errorMessage = strings.errorServiceUnavailableMessage;
+              break;
+            case 503:
+              errorTitle = strings.errorServiceOverloaded;
+              errorMessage = strings.errorServiceOverloadedMessage;
+              break;
           }
           break;
-        case ServiceException _:
+        case ServiceException:
           errorTitle = strings.errorUnexpected;
           errorMessage = strings.errorUnexpectedMessage;
           break;

@@ -18,6 +18,7 @@ import '../../services/utils/pdf_export_service.dart';
 import '../../utils/components/pagination_mixin.dart';
 import '../../utils/exceptions.dart';
 import 'user_info.dart';
+import 'user_registration.dart'; // Added for navigation to UserRegistrationScreen
 
 class UserListScreen extends StatefulWidget {
   const UserListScreen({super.key});
@@ -37,35 +38,25 @@ class _UserListScreenState extends State<UserListScreen>
   int _currentPage = 1;
   final Set<String> _selectedRoles = {};
   Timer? _debounce;
+  bool _isInitialized = false; // Added to prevent multiple initializations
 
   @override
   void initState() {
     super.initState();
     _viewModel = Provider.of<UserViewModel>(context, listen: false);
     developer.log('UserListScreen initialized', name: 'UserList');
-    _loadInitialData();
+    // Removed _loadInitialData call from initState
     _searchController.addListener(() {
       if (_debounce?.isActive ?? false) _debounce?.cancel();
       _debounce = Timer(const Duration(milliseconds: 300), () {
         setState(() {
           _searchQuery = _searchController.text.toLowerCase();
           _currentPage = 1;
-          developer.log('Search query updated: $_searchQuery', name: 'UserList');
+          developer.log('Search query updated: $_searchQuery',
+              name: 'UserList');
         });
       });
     });
-  }
-
-  Future<void> _loadInitialData() async {
-    if (!mounted) return;
-    final userData = await _secureStorage.getUserData();
-    if (userData != null && userData['entityId'] != null) {
-      final entityId = userData['entityId'].toString();
-      developer.log('Loading initial user list for entityId: $entityId', name: 'UserList');
-      await _viewModel.fetchUserList(entityId);
-    } else {
-      developer.log('No entityId found in userData', name: 'UserList');
-    }
   }
 
   @override
@@ -73,6 +64,33 @@ class _UserListScreenState extends State<UserListScreen>
     super.didChangeDependencies();
     _routeObserver = Provider.of<RouteObserver<ModalRoute>>(context);
     _routeObserver.subscribe(this, ModalRoute.of(context)!);
+    // Load initial data only once
+    if (!_isInitialized) {
+      _loadInitialData();
+      _isInitialized = true;
+    }
+  }
+
+  Future<void> _loadInitialData() async {
+    if (!mounted) return;
+    final strings = S.of(context);
+    final userData = await _secureStorage.getUserData();
+    if (userData != null && userData['entityId'] != null) {
+      final entityId = userData['entityId'].toString();
+      developer.log('Loading initial user list for entityId: $entityId',
+          name: 'UserList');
+      await _viewModel.fetchUserList(entityId);
+    } else {
+      developer.log('No entityId found in userData', name: 'UserList');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(strings.errorNoEntityId),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -89,17 +107,29 @@ class _UserListScreenState extends State<UserListScreen>
 
   Future<void> _refreshData() async {
     if (!mounted) return;
+    final strings = S.of(context);
     final userId = await _secureStorage.getUserId();
     if (userId != null) {
-      developer.log('Refreshing user list for userId: $userId', name: 'UserList');
+      developer.log('Refreshing user list for userId: $userId',
+          name: 'UserList');
       await _viewModel.fetchUserList(userId);
+    } else {
+      developer.log('No userId found for refresh', name: 'UserList');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(strings.errorNoUserId),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
   List<User> _getFilteredUsers(List<User> users) {
     return users.where((user) {
       final matchesSearch = _searchQuery.isEmpty ||
-          user.id.toString().contains(_searchQuery) ||
+          user.id.toLowerCase().contains(_searchQuery) ||
           user.name.toLowerCase().contains(_searchQuery) ||
           user.role.toLowerCase().contains(_searchQuery) ||
           user.mobileNumber.toLowerCase().contains(_searchQuery);
@@ -112,7 +142,7 @@ class _UserListScreenState extends State<UserListScreen>
   }
 
   void _updatePage(int newPage) {
-    final filteredUsers = _getFilteredUsers(_viewModel.operators);
+    final filteredUsers = _getFilteredUsers(_viewModel.users);
     updatePage(newPage, filteredUsers, (page) {
       setState(() => _currentPage = page);
       developer.log('Page updated to: $_currentPage', name: 'UserList');
@@ -175,7 +205,8 @@ class _UserListScreenState extends State<UserListScreen>
                     });
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: context.secondaryCardColor,
                       borderRadius: BorderRadius.circular(12),
@@ -200,7 +231,8 @@ class _UserListScreenState extends State<UserListScreen>
                     label: Text(filter),
                     onDeleted: () {
                       setState(() {
-                        _selectedRoles.remove(filter.split(': ')[1].toLowerCase());
+                        _selectedRoles
+                            .remove(filter.split(': ')[1].toLowerCase());
                       });
                     },
                     deleteIcon: const Icon(Icons.close, size: 16),
@@ -244,7 +276,8 @@ class _UserListScreenState extends State<UserListScreen>
               strings.filtersLabel,
               style: TextStyle(
                 color: textColor,
-                fontWeight: hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
+                fontWeight:
+                hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ],
@@ -255,7 +288,7 @@ class _UserListScreenState extends State<UserListScreen>
 
   void _showAllFiltersDialog() {
     final strings = S.of(context);
-    final roles = _viewModel.operators
+    final roles = _viewModel.users
         .map((u) => u.role.toLowerCase())
         .where((role) => role.isNotEmpty)
         .toSet()
@@ -290,7 +323,8 @@ class _UserListScreenState extends State<UserListScreen>
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       strings.advancedFiltersLabel,
                       style: TextStyle(
@@ -305,7 +339,8 @@ class _UserListScreenState extends State<UserListScreen>
                         _buildFilterSection(
                           title: strings.labelRole,
                           options: roles
-                              .map((role) => {'key': role, 'label': role.capitalize()})
+                              .map((role) =>
+                          {'key': role, 'label': role.capitalize()})
                               .toList(),
                           selectedItems: _selectedRoles,
                           onChanged: (value, isSelected) {
@@ -326,27 +361,26 @@ class _UserListScreenState extends State<UserListScreen>
                     child: Row(
                       children: [
                         Expanded(
-                            child: CustomButtons.secondaryButton(
-                                height: 40,
-                                text: strings.clearAllLabel,
-                                onPressed: () {
-                                  setDialogState(() {
-                                    _selectedRoles.clear();
-                                  });
-                                },
-                                context: context)),
+                          child: CustomButtons.secondaryButton(
+                            height: 40,
+                            text: strings.clearAllLabel,
+                            onPressed: () =>
+                                setDialogState(() => _selectedRoles.clear()),
+                            context: context,
+                          ),
+                        ),
                         const SizedBox(width: 16),
                         Expanded(
-                            child: CustomButtons.primaryButton(
-                                height: 40,
-                                text: strings.applyLabel,
-                                context: context,
-                                onPressed: () {
-                                  setState(() {
-                                    _currentPage = 1;
-                                  });
-                                  Navigator.pop(context);
-                                })),
+                          child: CustomButtons.primaryButton(
+                            height: 40,
+                            text: strings.applyLabel,
+                            onPressed: () {
+                              setState(() => _currentPage = 1);
+                              Navigator.pop(context);
+                            },
+                            context: context,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -390,9 +424,7 @@ class _UserListScreenState extends State<UserListScreen>
               return FilterChip(
                 label: Text(option['label'] ?? ''),
                 selected: isSelected,
-                onSelected: (bool value) {
-                  onChanged(option['key']!, value);
-                },
+                onSelected: (bool value) => onChanged(option['key']!, value),
                 selectedColor: Theme.of(context).brightness == Brightness.light
                     ? Colors.grey
                     : Colors.black,
@@ -425,7 +457,8 @@ class _UserListScreenState extends State<UserListScreen>
       child: ListTile(
         title: Text(user.name),
         subtitle: Text('${user.email}\n${user.mobileNumber}'),
-        trailing: Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color),
+        trailing:
+        Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color),
         onTap: () {
           developer.log('User card tapped: ${user.id}', name: 'UserList');
           Navigator.push(
@@ -443,7 +476,7 @@ class _UserListScreenState extends State<UserListScreen>
     return ListView.builder(
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: itemsPerPage,
+      itemCount: 5,
       itemBuilder: (context, index) {
         return Shimmer.fromColors(
           baseColor: Theme.of(context).brightness == Brightness.light
@@ -464,11 +497,20 @@ class _UserListScreenState extends State<UserListScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(width: 150, height: 18, color: context.backgroundColor),
+                        Container(
+                            width: 150,
+                            height: 18,
+                            color: context.backgroundColor),
                         const SizedBox(height: 4),
-                        Container(width: 100, height: 14, color: context.backgroundColor),
+                        Container(
+                            width: 100,
+                            height: 14,
+                            color: context.backgroundColor),
                         const SizedBox(height: 4),
-                        Container(width: 120, height: 14, color: context.backgroundColor),
+                        Container(
+                            width: 120,
+                            height: 14,
+                            color: context.backgroundColor),
                       ],
                     ),
                   ),
@@ -500,7 +542,7 @@ class _UserListScreenState extends State<UserListScreen>
         case HttpException:
           final httpError = error as HttpException;
           errorTitle = strings.errorTitleServer;
-          errorMessage = httpError.toString(); // Adjust based on HttpException properties
+          errorMessage = httpError.serverMessage ?? strings.errorMessageServer;
           break;
         case ServiceException:
           errorTitle = strings.errorUnexpected;
@@ -518,18 +560,28 @@ class _UserListScreenState extends State<UserListScreen>
         children: [
           Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
           const SizedBox(height: 16),
-          Text(errorTitle, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.textPrimaryColor)),
+          Text(
+            errorTitle,
+            style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: context.textPrimaryColor),
+          ),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(errorMessage, style: TextStyle(fontSize: 16, color: context.textPrimaryColor), textAlign: TextAlign.center),
+            child: Text(
+              errorMessage,
+              style: TextStyle(fontSize: 16, color: context.textPrimaryColor),
+              textAlign: TextAlign.center,
+            ),
           ),
           const SizedBox(height: 24),
           CustomButtons.primaryButton(
             height: 40,
             width: 150,
             text: strings.buttonRetry,
-            onPressed: _refreshData,
+            onPressed: () => _refreshData(),
             context: context,
           ),
         ],
@@ -542,7 +594,7 @@ class _UserListScreenState extends State<UserListScreen>
     final strings = S.of(context);
     return Consumer<UserViewModel>(
       builder: (context, viewModel, _) {
-        final filteredUsers = _getFilteredUsers(viewModel.operators);
+        final filteredUsers = _getFilteredUsers(viewModel.users);
         final totalPages = getTotalPages(filteredUsers);
         final paginatedUsers = getPaginatedItems(filteredUsers, _currentPage);
 
@@ -559,26 +611,30 @@ class _UserListScreenState extends State<UserListScreen>
                   onPressed: () async {
                     developer.log('Download button pressed', name: 'UserList');
                     try {
-                      await PdfExportService.exportUserList(viewModel.operators);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(strings.messagePdfSuccess,
-                              style: TextStyle(color: context.textPrimaryColor)),
-                          backgroundColor: AppColors.success,
-                        ),
-                      );
+                      await PdfExportService.exportUserList(viewModel.users);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(strings.messagePdfSuccess),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      }
                     } catch (e) {
-                      developer.log('PDF export failed: $e', name: 'UserList', error: e);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${strings.messagePdfFailed}: $e',
-                              style: TextStyle(color: context.textPrimaryColor)),
-                          backgroundColor: AppColors.error,
-                        ),
-                      );
+                      developer.log('PDF export failed: $e',
+                          name: 'UserList', error: e);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${strings.messagePdfFailed}: $e'),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                      }
                     }
                   },
-                  darkBackground: Theme.of(context).brightness == Brightness.dark,
+                  darkBackground:
+                  Theme.of(context).brightness == Brightness.dark,
                   context: context,
                 ),
               ),
@@ -605,18 +661,21 @@ class _UserListScreenState extends State<UserListScreen>
                               height: MediaQuery.of(context).size.height * 0.6,
                               child: _buildErrorState(viewModel, strings),
                             )
-                          else if (filteredUsers.isEmpty && !viewModel.isLoading)
+                          else if (filteredUsers.isEmpty &&
+                              !viewModel.isLoading)
                             SizedBox(
                               height: MediaQuery.of(context).size.height * 0.6,
                               child: Center(
                                 child: Text(
                                   strings.messageNoUsersFound,
-                                  style: TextStyle(color: context.textPrimaryColor),
+                                  style: TextStyle(
+                                      color: context.textPrimaryColor),
                                 ),
                               ),
                             )
                           else if (!viewModel.isLoading)
-                              ...paginatedUsers.map((user) => _buildUserCard(user)),
+                              ...paginatedUsers
+                                  .map((user) => _buildUserCard(user)),
                         ],
                       ),
                       if (viewModel.isLoading)
@@ -630,7 +689,7 @@ class _UserListScreenState extends State<UserListScreen>
               ),
             ],
           ),
-          bottomNavigationBar: filteredUsers.isNotEmpty && !viewModel.isLoading
+          bottomNavigationBar: !viewModel.isLoading
               ? Container(
             color: Theme.of(context).scaffoldBackgroundColor,
             padding: const EdgeInsets.all(4.0),
@@ -642,7 +701,7 @@ class _UserListScreenState extends State<UserListScreen>
               ),
             ),
           )
-              : null,
+              : null
         );
       },
     );

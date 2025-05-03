@@ -29,6 +29,16 @@ class SecureStorageService {
     return await _storage.read(key: userIdKey);
   }
 
+  Future<String?> getUserRole() async {
+    final data = await getUserData();
+    return data?['role'] as String?;
+  }
+
+  Future<String?> getEntityId() async {
+    final data = await getUserData();
+    return data?['entityId'] as String?;
+  }
+
   Future<void> storeUserData(Map<String, dynamic> userData) async {
     await _storage.write(key: userDataKey, value: json.encode(userData));
   }

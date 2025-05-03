@@ -2,10 +2,10 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:merchant_app/viewmodels/plaza/plaza_form_validation.dart';
+import 'package:merchant_app/viewmodels/plaza/plaza_form_validation.dart'; // Uses updated validation
 import 'package:permission_handler/permission_handler.dart';
 import 'package:merchant_app/generated/l10n.dart';
-import 'package:merchant_app/models/plaza.dart';
+import 'package:merchant_app/models/plaza.dart'; // Uses updated model
 import 'package:merchant_app/services/core/plaza_service.dart';
 import 'package:merchant_app/utils/components/snackbar.dart';
 import 'package:merchant_app/utils/exceptions.dart';
@@ -13,12 +13,17 @@ import 'package:merchant_app/services/utils/navigation_service.dart';
 
 class BasicDetailsViewModel extends ChangeNotifier {
   final PlazaService _plazaService = PlazaService();
-  final PlazaFormValidation _validator = PlazaFormValidation();
+  final PlazaFormValidation _validator =
+      PlazaFormValidation(); // Uses updated validation
 
+  // --- Controllers ---
+  // *** ADDED plazaIdController ***
+  final TextEditingController plazaIdController = TextEditingController();
+
+  // --- End Added ---
   final TextEditingController plazaNameController = TextEditingController();
-  final TextEditingController plazaOwnerController = TextEditingController();
-  final TextEditingController plazaOperatorNameController =
-      TextEditingController();
+  final TextEditingController plazaOwnerController =
+      TextEditingController(); // Often disabled, shows owner info
   final TextEditingController mobileNumberController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
@@ -43,21 +48,26 @@ class BasicDetailsViewModel extends ChangeNotifier {
       TextEditingController(text: '00:00');
   final TextEditingController plazaClosingTimeController =
       TextEditingController(text: '23:59');
+  final TextEditingController companyNameController = TextEditingController();
+  final TextEditingController plazaOrgIdController = TextEditingController();
 
+  // --- State ---
   Map<String, dynamic> basicDetails = {};
   Map<String, String?> errors = {};
   bool _isFirstTime = true;
-  bool _isEditable = true;
+  bool _isEditable = true; // Controls if fields are editable
   bool _isLoading = false;
-  String? _plazaId;
+  String? _createdPlazaId; // Stores the ID *after* successful creation
 
+  // --- Getters ---
   bool get isFirstTime => _isFirstTime;
 
   bool get isEditable => _isEditable;
 
   bool get isLoading => _isLoading;
 
-  String? get plazaId => _plazaId;
+  // Expose the ID that was *created* or being *modified* (null during initial creation)
+  String? get plazaId => _createdPlazaId;
 
   BasicDetailsViewModel() {
     _initializeMap();
@@ -69,10 +79,12 @@ class BasicDetailsViewModel extends ChangeNotifier {
 
   void _initializeMap() {
     basicDetails = {
+      // *** ADDED plazaId map entry ***
+      'plazaId': null, // For user input during creation
+      // --- End Added ---
       'plazaName': null,
-      'plazaOwner': null,
-      'plazaOwnerId': null,
-      'plazaOperatorName': null,
+      'plazaOwner': null, // Usually set by setOwnerDetails
+      'plazaOwnerId': null, // Usually set by setOwnerDetails
       'mobileNumber': null,
       'email': null,
       'address': null,
@@ -89,17 +101,20 @@ class BasicDetailsViewModel extends ChangeNotifier {
       'capacityBus': null,
       'capacityTruck': null,
       'capacityHeavyMachinaryVehicle': null,
-      'plazaOpenTimings': plazaOpenTimingsController.text,
-      'plazaClosingTime': plazaClosingTimeController.text,
+      'plazaOpenTimings': plazaOpenTimingsController.text, // Default
+      'plazaClosingTime': plazaClosingTimeController.text, // Default
       'plazaCategory': null,
       'plazaSubCategory': null,
       'structureType': null,
       'plazaStatus': Plaza.validPlazaStatuses.firstWhere(
           (s) => s.toLowerCase() == 'active',
-          orElse: () => Plaza.validPlazaStatuses.first),
+          orElse: () => Plaza.validPlazaStatuses.first), // Default
       'priceCategory': null,
-      'freeParking': false,
-      'isDeleted': false,
+      'freeParking': false, // Default
+      'isDeleted': false, // Default
+      'companyName': null,
+      'companyType': Plaza.validCompanyTypes.first, // Default
+      'plazaOrgId': null,
     };
   }
 
@@ -110,8 +125,10 @@ class BasicDetailsViewModel extends ChangeNotifier {
         final newValue = controller.text;
         if (currentValue != newValue) {
           basicDetails[key] = newValue;
+          // Auto-clear error for the field when user types
           if (errors.containsKey(key)) {
             errors.remove(key);
+            // Clear general error only if no other specific field errors remain
             if (!errors.keys.any((k) => k != 'general' && errors[k] != null)) {
               errors.remove('general');
             }
@@ -121,8 +138,10 @@ class BasicDetailsViewModel extends ChangeNotifier {
       });
     }
 
+    // *** ADDED listener for plazaIdController ***
+    setupListener(plazaIdController, 'plazaId');
+    // --- End Added ---
     setupListener(plazaNameController, 'plazaName');
-    setupListener(plazaOperatorNameController, 'plazaOperatorName');
     setupListener(mobileNumberController, 'mobileNumber');
     setupListener(emailController, 'email');
     setupListener(addressController, 'address');
@@ -142,8 +161,12 @@ class BasicDetailsViewModel extends ChangeNotifier {
         'capacityHeavyMachinaryVehicle');
     setupListener(plazaOpenTimingsController, 'plazaOpenTimings');
     setupListener(plazaClosingTimeController, 'plazaClosingTime');
+    setupListener(companyNameController, 'companyName');
+    setupListener(plazaOrgIdController, 'plazaOrgId');
+    // Note: plazaOwnerController listener is not needed as it's usually set programmatically
   }
 
+  // --- Update Methods for Dropdowns, Booleans, Time (Unchanged) ---
   void updateDropdownValue(String key, String? value) {
     if (basicDetails[key] != value) {
       basicDetails[key] = value;
@@ -162,13 +185,11 @@ class BasicDetailsViewModel extends ChangeNotifier {
 
   void updateTimeValue(String key, String value) {
     if (key == 'plazaOpenTimings') {
-      if (plazaOpenTimingsController.text != value) {
+      if (plazaOpenTimingsController.text != value)
         plazaOpenTimingsController.text = value;
-      }
     } else if (key == 'plazaClosingTime') {
-      if (plazaClosingTimeController.text != value) {
+      if (plazaClosingTimeController.text != value)
         plazaClosingTimeController.text = value;
-      }
     }
     if (basicDetails[key] != value) {
       basicDetails[key] = value;
@@ -177,12 +198,18 @@ class BasicDetailsViewModel extends ChangeNotifier {
     }
   }
 
+  // --- Owner Details ---
   void setOwnerDetails({required String ownerId, String? ownerName}) {
     basicDetails['plazaOwnerId'] = ownerId;
     basicDetails['plazaOwner'] = ownerName;
+    // Update display controller if needed
+    if (plazaOwnerController.text != (ownerName ?? '')) {
+      plazaOwnerController.text = ownerName ?? '';
+    }
     notifyListeners();
   }
 
+  // --- Error Handling ---
   void clearError(String key) {
     if (errors.containsKey(key)) {
       errors.remove(key);
@@ -193,30 +220,38 @@ class BasicDetailsViewModel extends ChangeNotifier {
     }
   }
 
+  // --- Edit Mode Control ---
   void toggleEditable() {
+    // This might be less relevant in pure registration, but kept for consistency
     if (_isFirstTime || _isLoading) return;
     _isEditable = !_isEditable;
     notifyListeners();
   }
 
   void resetToEditableState() {
+    // Used when starting fresh or resetting
     _isEditable = true;
-    _isFirstTime = true;
+    _isFirstTime = true; // Allow edits on reset
     errors.clear();
+    // No notify here, usually called before building UI
   }
 
+  // --- Populate for Modification (Less relevant for pure creation, but good practice) ---
   void populateForModification(Plaza existingPlazaData) {
-    _plazaId = existingPlazaData.plazaId;
+    _createdPlazaId = existingPlazaData.plazaId; // Store the ID being modified
 
-    plazaNameController.text = existingPlazaData.plazaName;
-    plazaOperatorNameController.text = existingPlazaData.plazaOperatorName;
-    mobileNumberController.text = existingPlazaData.mobileNumber.toString();
-    emailController.text = existingPlazaData.email;
-    addressController.text = existingPlazaData.address;
-    cityController.text = existingPlazaData.city;
-    districtController.text = existingPlazaData.district;
-    stateController.text = existingPlazaData.state;
-    pincodeController.text = existingPlazaData.pincode.toString();
+    // *** ADDED: Populate plazaIdController ***
+    plazaIdController.text =
+        existingPlazaData.plazaId ?? ''; // Populate input field
+    // --- End Added ---
+    plazaNameController.text = existingPlazaData.plazaName!;
+    mobileNumberController.text = existingPlazaData.mobileNumber!;
+    emailController.text = existingPlazaData.email!;
+    addressController.text = existingPlazaData.address!;
+    cityController.text = existingPlazaData.city!;
+    districtController.text = existingPlazaData.district!;
+    stateController.text = existingPlazaData.state!;
+    pincodeController.text = existingPlazaData.pincode!;
     geoLatitudeController.text = existingPlazaData.geoLatitude.toString();
     geoLongitudeController.text = existingPlazaData.geoLongitude.toString();
     noOfParkingSlotsController.text =
@@ -230,11 +265,21 @@ class BasicDetailsViewModel extends ChangeNotifier {
     capacityTruckController.text = existingPlazaData.capacityTruck.toString();
     capacityHeavyMachinaryVehicleController.text =
         existingPlazaData.capacityHeavyMachinaryVehicle.toString();
-    plazaOpenTimingsController.text = existingPlazaData.plazaOpenTimings;
-    plazaClosingTimeController.text = existingPlazaData.plazaClosingTime;
+    plazaOpenTimingsController.text = existingPlazaData.plazaOpenTimings!;
+    plazaClosingTimeController.text = existingPlazaData.plazaClosingTime!;
+    companyNameController.text = existingPlazaData.companyName!;
+    plazaOrgIdController.text = existingPlazaData.plazaOrgId!;
 
-    basicDetails['plazaOwnerId'] = existingPlazaData.plazaOwnerId;
-    basicDetails['plazaOwner'] = existingPlazaData.plazaOwner;
+    // Set owner details in map and controller
+    setOwnerDetails(
+        ownerId: existingPlazaData.plazaOwnerId!,
+        ownerName: existingPlazaData.plazaOwner);
+
+    // Populate map details (dropdowns, booleans etc.)
+    basicDetails['plazaId'] = existingPlazaData.plazaId; // Also update map
+    basicDetails['companyName'] = existingPlazaData.companyName;
+    basicDetails['companyType'] = existingPlazaData.companyType;
+    basicDetails['plazaOrgId'] = existingPlazaData.plazaOrgId;
     basicDetails['plazaCategory'] = existingPlazaData.plazaCategory;
     basicDetails['plazaSubCategory'] = existingPlazaData.plazaSubCategory;
     basicDetails['structureType'] = existingPlazaData.structureType;
@@ -243,15 +288,19 @@ class BasicDetailsViewModel extends ChangeNotifier {
     basicDetails['freeParking'] = existingPlazaData.freeParking;
     basicDetails['isDeleted'] = existingPlazaData.isDeleted;
 
-    _isEditable = false;
+    // Set state after populating
+    _isEditable = false; // Start in non-editable mode for modification view
     _isFirstTime = false;
     _isLoading = false;
     errors.clear();
+    // Don't notify here, assumes this is called during init before build
   }
 
+  // --- Validation ---
   bool _validateForm(BuildContext context) {
     errors.clear();
-    _syncMapWithControllers();
+    _syncMapWithControllers(); // Ensure map has latest controller values BEFORE validation
+    // Validation uses the updated PlazaFormValidation
     final String? validationErrorSummary =
         _validator.validateBasicDetails(context, basicDetails, errors);
 
@@ -268,15 +317,16 @@ class BasicDetailsViewModel extends ChangeNotifier {
           type: SnackbarType.error,
         );
       }
-      notifyListeners();
+      notifyListeners(); // Update UI to show errors
       return false;
     }
     return true;
   }
 
   void _syncMapWithControllers() {
+    // Sync all text controllers to the basicDetails map
+    basicDetails['plazaId'] = plazaIdController.text; // *** ADDED ***
     basicDetails['plazaName'] = plazaNameController.text;
-    basicDetails['plazaOperatorName'] = plazaOperatorNameController.text;
     basicDetails['mobileNumber'] = mobileNumberController.text;
     basicDetails['email'] = emailController.text;
     basicDetails['address'] = addressController.text;
@@ -296,8 +346,13 @@ class BasicDetailsViewModel extends ChangeNotifier {
         capacityHeavyMachinaryVehicleController.text;
     basicDetails['plazaOpenTimings'] = plazaOpenTimingsController.text;
     basicDetails['plazaClosingTime'] = plazaClosingTimeController.text;
+    basicDetails['companyName'] = companyNameController.text;
+    basicDetails['plazaOrgId'] = plazaOrgIdController.text;
+    // Note: plazaOwnerController might not need syncing if always disabled/programmatically set
+    // basicDetails['plazaOwner'] = plazaOwnerController.text;
   }
 
+  // --- Save Logic ---
   Future<bool> saveBasicDetails(BuildContext context) async {
     if (!_validateForm(context)) {
       _setLoading(false);
@@ -315,13 +370,22 @@ class BasicDetailsViewModel extends ChangeNotifier {
     _setLoading(true);
 
     try {
+      // Prepare payload AFTER validation and owner check
+      // _syncMapWithControllers(); // Ensure map is up-to-date (already called in _validateForm)
       final Map<String, dynamic> payload = _preparePayload();
+
+      // *** CRITICAL CHANGE: Create Plaza object including plazaId from the map ***
       final Plaza plaza = Plaza(
-        plazaId: _plazaId,
+        // Use the user-provided ID from the map for creation
+        plazaId: payload['plazaId']?.toString(),
+        // Get ID from payload
         plazaName: payload['plazaName'],
         plazaOwner: basicDetails['plazaOwner'],
+        // Get owner name from map state
         plazaOwnerId: payload['plazaOwnerId'],
-        plazaOperatorName: payload['plazaOperatorName'],
+        companyName: payload['companyName'],
+        companyType: payload['companyType'],
+        plazaOrgId: payload['plazaOrgId'],
         mobileNumber: payload['mobileNumber']!.toString(),
         address: payload['address'],
         email: payload['email'],
@@ -329,14 +393,14 @@ class BasicDetailsViewModel extends ChangeNotifier {
         district: payload['district'],
         state: payload['state'],
         pincode: payload['pincode']!.toString(),
-        geoLatitude: (payload['geoLatitude'] as double?)!,
-        geoLongitude: (payload['geoLongitude'] as double?)!,
+        geoLatitude: (payload['geoLatitude'] as double),
+        geoLongitude: (payload['geoLongitude'] as double),
         plazaCategory: payload['plazaCategory'],
         plazaSubCategory: payload['plazaSubCategory'],
         structureType: payload['structureType'],
         plazaStatus: payload['plazaStatus'],
         priceCategory: payload['priceCategory'],
-        freeParking: (payload['freeParking'] as bool?)!,
+        freeParking: (payload['freeParking'] as bool),
         noOfParkingSlots: (payload['noOfParkingSlots'] as int?) ?? 0,
         capacityBike: (payload['capacityBike'] as int?) ?? 0,
         capacity3Wheeler: (payload['capacity3Wheeler'] as int?) ?? 0,
@@ -351,48 +415,97 @@ class BasicDetailsViewModel extends ChangeNotifier {
       );
 
       bool success = false;
-      bool isUpdate = _plazaId != null && _plazaId!.isNotEmpty;
+      // Determine if it's an update or create based on whether _createdPlazaId is set
+      bool isUpdate = _createdPlazaId != null && _createdPlazaId!.isNotEmpty;
 
       if (!isUpdate) {
-        String newPlazaId = await _plazaService.addPlaza(plaza);
-        if (newPlazaId.isNotEmpty) {
-          _plazaId = newPlazaId;
+        developer.log(
+            '[BasicDetailsViewModel] Attempting to add new plaza with provided ID: ${plaza.plazaId}',
+            name: 'BasicDetailsViewModel.saveBasicDetails');
+        // Call addPlaza - backend now expects plazaId in the body
+        String createdIdResponse = await _plazaService.addPlaza(plaza);
+        // The backend *should* ideally still return the ID it accepted/used
+        if (createdIdResponse.isNotEmpty &&
+            createdIdResponse == plaza.plazaId) {
+          _createdPlazaId = createdIdResponse; // Store the successfully used ID
           success = true;
+          developer.log(
+              '[BasicDetailsViewModel] Plaza added successfully with ID: $_createdPlazaId',
+              name: 'BasicDetailsViewModel.saveBasicDetails');
         } else {
+          developer.log(
+              '[BasicDetailsViewModel] Add plaza failed: Service returned empty or mismatched ID. Expected: ${plaza.plazaId}, Got: $createdIdResponse',
+              name: 'BasicDetailsViewModel.saveBasicDetails',
+              level: 1000);
+          // Handle potential mismatch or empty return even if status was 201
           throw PlazaException(
-              "Failed to create plaza: Service did not return a valid ID.");
+              "Failed to create plaza: Service response inconsistent. Expected ID ${plaza.plazaId}, received ${createdIdResponse.isEmpty ? 'nothing' : createdIdResponse}.");
         }
       } else {
-        success = await _plazaService.updatePlaza(plaza, _plazaId!);
+        // Update logic remains the same, using _createdPlazaId for the URL param
+        developer.log(
+            '[BasicDetailsViewModel] Attempting to update plaza ID: $_createdPlazaId',
+            name: 'BasicDetailsViewModel.saveBasicDetails');
+        // Ensure the plaza object being sent has the correct _createdPlazaId
+        final plazaForUpdate = plaza.copyWith(plazaId: _createdPlazaId);
+        success =
+            await _plazaService.updatePlaza(plazaForUpdate, _createdPlazaId!);
         if (!success) {
+          developer.log(
+              '[BasicDetailsViewModel] Update plaza failed: Service returned false.',
+              name: 'BasicDetailsViewModel.saveBasicDetails',
+              level: 1000);
           throw PlazaException(
               "Plaza update failed: Service indicated failure.");
         }
+        developer.log('[BasicDetailsViewModel] Plaza updated successfully.',
+            name: 'BasicDetailsViewModel.saveBasicDetails');
       }
 
+      // If successful, transition state
       _isFirstTime = false;
-      _isEditable = false;
+      _isEditable = false; // Make non-editable after save
       errors.clear();
       _setLoading(false);
       notifyListeners();
       return true;
     } on HttpException catch (e) {
+      developer.log(
+          '[BasicDetailsViewModel] HttpException saving details: ${e.message} (Code: ${e.statusCode})',
+          error: e,
+          name: 'BasicDetailsViewModel.saveBasicDetails');
       _handleServiceError(context, e, S.of(context).apiErrorGeneric);
       _setLoading(false);
       return false;
     } on PlazaException catch (e) {
+      developer.log(
+          '[BasicDetailsViewModel] PlazaException saving details: ${e.message}',
+          error: e,
+          name: 'BasicDetailsViewModel.saveBasicDetails');
       _handleServiceError(context, e, S.of(context).messageErrorSavingPlaza);
       _setLoading(false);
       return false;
     } on RequestTimeoutException catch (e) {
+      developer.log(
+          '[BasicDetailsViewModel] RequestTimeoutException saving details',
+          error: e,
+          name: 'BasicDetailsViewModel.saveBasicDetails');
       _handleServiceError(context, e, S.of(context).errorTimeout);
       _setLoading(false);
       return false;
     } on NoInternetException catch (e) {
+      developer.log(
+          '[BasicDetailsViewModel] NoInternetException saving details',
+          error: e,
+          name: 'BasicDetailsViewModel.saveBasicDetails');
       _handleServiceError(context, e, S.of(context).errorNoInternet);
       _setLoading(false);
       return false;
     } on ServerConnectionException catch (e) {
+      developer.log(
+          '[BasicDetailsViewModel] ServerConnectionException saving details',
+          error: e,
+          name: 'BasicDetailsViewModel.saveBasicDetails');
       _handleServiceError(context, e, S.of(context).errorServerConnection);
       _setLoading(false);
       return false;
@@ -410,8 +523,10 @@ class BasicDetailsViewModel extends ChangeNotifier {
   }
 
   Map<String, dynamic> _preparePayload() {
+    // Start with a fresh copy of basicDetails which should be synced
     final Map<String, dynamic> payload = Map.from(basicDetails);
 
+    // Convert numeric strings -> numbers
     final numericKeysInt = [
       'mobileNumber',
       'pincode',
@@ -427,60 +542,60 @@ class BasicDetailsViewModel extends ChangeNotifier {
       final valueStr = payload[key]?.toString().trim();
       payload[key] = (valueStr != null && valueStr.isNotEmpty)
           ? int.tryParse(valueStr)
-          : null;
+          : null; // Allow nulls if optional/validated
     }
-
     final numericKeysDouble = ['geoLatitude', 'geoLongitude'];
     for (var key in numericKeysDouble) {
       final valueStr = payload[key]?.toString().trim();
       payload[key] = (valueStr != null && valueStr.isNotEmpty)
           ? double.tryParse(valueStr)
-          : null;
+          : null; // Allow nulls if optional/validated
     }
 
+    // Ensure booleans have defaults
     payload['freeParking'] ??= false;
     payload['isDeleted'] ??= false;
 
+    // Trim relevant string fields
     final stringKeys = [
-      'plazaName',
-      'plazaOperatorName',
-      'email',
-      'address',
-      'city',
-      'district',
-      'state',
-      'plazaOpenTimings',
-      'plazaClosingTime'
+      'plazaId', // *** ADDED ***
+      'plazaName', 'companyName', 'plazaOrgId', 'email', 'address', 'city',
+      'district', 'state', 'plazaOpenTimings', 'plazaClosingTime'
+      // Dropdown values usually don't need trimming
     ];
     for (var key in stringKeys) {
       if (payload[key] is String) {
         payload[key] = payload[key].toString().trim();
       }
     }
-    payload['plazaOwnerId'] = basicDetails['plazaOwnerId'];
 
+    // Ensure essential IDs are present (ownerId is critical)
+    payload['plazaOwnerId'] = basicDetails['plazaOwnerId'];
+    // Ensure plazaId from user input is included (needed for backend create)
+    payload['plazaId'] = basicDetails['plazaId']; // *** ENSURED ***
+
+    developer.log('[BasicDetailsViewModel] Prepared payload: $payload',
+        name: 'BasicDetailsViewModel._preparePayload');
     return payload;
   }
 
+  // --- Location Methods (Unchanged, but ensure they update map) ---
   Future<void> getCurrentLocation(BuildContext context) async {
     final currentContext =
         NavigationService.navigatorKey.currentContext ?? context;
     if (!currentContext.mounted) return;
-
     final scaffoldMessenger = ScaffoldMessenger.of(currentContext);
     final strings = S.of(currentContext);
-
     _setLoading(true);
     try {
+      // ... (Permission checks remain the same) ...
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        if (currentContext.mounted) {
+        if (currentContext.mounted)
           _showLocationServiceDisabledDialog(currentContext);
-        }
         _setLoading(false);
         return;
       }
-
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -492,17 +607,20 @@ class BasicDetailsViewModel extends ChangeNotifier {
         }
       }
       if (permission == LocationPermission.deniedForever) {
-        if (currentContext.mounted) {
+        if (currentContext.mounted)
           _showPermissionDeniedForeverDialog(currentContext);
-        }
         _setLoading(false);
         return;
       }
 
-      Position position = await Geolocator.getCurrentPosition();
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      // Update Controllers
       geoLatitudeController.text = position.latitude.toStringAsFixed(6);
       geoLongitudeController.text = position.longitude.toStringAsFixed(6);
-
+      // *** Update Map State Directly ***
+      basicDetails['geoLatitude'] = geoLatitudeController.text;
+      basicDetails['geoLongitude'] = geoLongitudeController.text;
       clearError('geoLatitude');
       clearError('geoLongitude');
 
@@ -517,10 +635,9 @@ class BasicDetailsViewModel extends ChangeNotifier {
           stackTrace: stackTrace,
           name: 'BasicDetailsViewModel.getCurrentLocation',
           level: 1000);
-      if (context.mounted) {
+      if (context.mounted)
         _showPermissionDeniedSnackbar(
             scaffoldMessenger, strings.errorFetchingLocation);
-      }
     } finally {
       _setLoading(false);
     }
@@ -536,15 +653,21 @@ class BasicDetailsViewModel extends ChangeNotifier {
           await placemarkFromCoordinates(latitude, longitude);
       if (placemarks.isNotEmpty && context.mounted) {
         Placemark place = placemarks[0];
-        final addressLine = [place.street, place.subLocality]
+        final addressLine = [place.name, place.thoroughfare, place.subLocality]
             .where((s) => s != null && s.isNotEmpty)
             .join(', ');
+        // Update Controllers
         addressController.text = addressLine;
         cityController.text = place.locality ?? '';
         districtController.text = place.subAdministrativeArea ?? '';
         stateController.text = place.administrativeArea ?? '';
         pincodeController.text = place.postalCode ?? '';
-
+        // *** Update Map State Directly ***
+        basicDetails['address'] = addressController.text;
+        basicDetails['city'] = cityController.text;
+        basicDetails['district'] = districtController.text;
+        basicDetails['state'] = stateController.text;
+        basicDetails['pincode'] = pincodeController.text;
         clearError('address');
         clearError('city');
         clearError('district');
@@ -560,14 +683,15 @@ class BasicDetailsViewModel extends ChangeNotifier {
           stackTrace: stackTrace,
           name: 'BasicDetailsViewModel._getAddressFromLatLng',
           level: 1000);
-      if (context.mounted) {
+      if (context.mounted)
         _showPermissionDeniedSnackbar(
             scaffoldMessenger, strings.errorFetchingAddress);
-      }
     }
   }
 
+  // --- Dialog/Snackbar Helpers (Unchanged) ---
   void _showLocationServiceDisabledDialog(BuildContext context) {
+    /* ... unchanged ... */
     if (!context.mounted) return;
     final strings = S.of(context);
     showDialog(
@@ -593,6 +717,7 @@ class BasicDetailsViewModel extends ChangeNotifier {
   }
 
   void _showPermissionDeniedForeverDialog(BuildContext context) {
+    /* ... unchanged ... */
     if (!context.mounted) return;
     final strings = S.of(context);
     showDialog(
@@ -609,7 +734,7 @@ class BasicDetailsViewModel extends ChangeNotifier {
             child: Text(strings.buttonSettings),
             onPressed: () async {
               Navigator.of(dialogContext).pop();
-              await openAppSettings();
+              await openAppSettings(); // From permission_handler
             },
           ),
         ],
@@ -619,13 +744,14 @@ class BasicDetailsViewModel extends ChangeNotifier {
 
   void _showPermissionDeniedSnackbar(
       ScaffoldMessengerState messenger, String message) {
+    /* ... unchanged ... */
     try {
       messenger.showSnackBar(
         SnackBar(
           content: Text(message),
           backgroundColor: Colors.orangeAccent,
           duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
+          behavior: SnackBarBehavior.floating, // Or fixed based on design
         ),
       );
     } catch (e) {
@@ -634,33 +760,37 @@ class BasicDetailsViewModel extends ChangeNotifier {
     }
   }
 
+  // --- Error Handling and State (Unchanged) ---
   void _handleServiceError(
       BuildContext context, Exception e, String defaultMessage) {
+    /* ... unchanged ... */
     String errorMessage = defaultMessage;
     if (e is HttpException) {
       errorMessage = e.serverMessage ?? e.message;
-    } else if (e is ServiceException)
+    } else if (e is ServiceException) {
       errorMessage = e.serverMessage ?? e.message;
-    else if (e is PlazaException)
+    } else if (e is PlazaException) {
       errorMessage = e.serverMessage ?? e.message;
-    else if (e is RequestTimeoutException)
+    } else if (e is RequestTimeoutException) {
       errorMessage = S.of(context).errorTimeout;
-    else if (e is NoInternetException)
+    } else if (e is NoInternetException) {
       errorMessage = S.of(context).errorNoInternet;
-    else if (e is ServerConnectionException)
+    } else if (e is ServerConnectionException) {
       errorMessage = S.of(context).errorServerConnection;
-    else
+    } else {
       errorMessage = S.of(context).errorUnexpected;
+    }
 
     errors['general'] = errorMessage;
     if (context.mounted) {
       AppSnackbar.showSnackbar(
           context: context, message: errorMessage, type: SnackbarType.error);
     }
-    notifyListeners();
+    notifyListeners(); // Ensure UI updates with the error
   }
 
   void _handleGenericError(BuildContext context, dynamic e) {
+    /* ... unchanged ... */
     final message = S.of(context).errorUnexpected;
     errors['general'] = message;
     if (context.mounted) {
@@ -671,6 +801,7 @@ class BasicDetailsViewModel extends ChangeNotifier {
   }
 
   void _setLoading(bool value) {
+    /* ... unchanged ... */
     if (_isLoading != value) {
       _isLoading = value;
       if (_isLoading && errors.containsKey('general')) {
@@ -680,10 +811,13 @@ class BasicDetailsViewModel extends ChangeNotifier {
     }
   }
 
+  // --- Reset ---
   void clearFieldsAndNotify() {
+    // *** ADDED: Clear plazaIdController ***
+    plazaIdController.clear();
+    // --- End Added ---
     plazaNameController.clear();
     plazaOwnerController.clear();
-    plazaOperatorNameController.clear();
     mobileNumberController.clear();
     emailController.clear();
     addressController.clear();
@@ -702,25 +836,40 @@ class BasicDetailsViewModel extends ChangeNotifier {
     capacityHeavyMachinaryVehicleController.clear();
     plazaOpenTimingsController.text = '00:00';
     plazaClosingTimeController.text = '23:59';
+    companyNameController.clear();
+    plazaOrgIdController.clear();
 
+    // Preserve owner details
     final ownerId = basicDetails['plazaOwnerId'];
     final ownerName = basicDetails['plazaOwner'];
-    _initializeMap();
+
+    _initializeMap(); // Re-initialize map to defaults (includes plazaId: null)
+
+    // Restore owner details
     basicDetails['plazaOwnerId'] = ownerId;
     basicDetails['plazaOwner'] = ownerName;
+    if (plazaOwnerController.text != (ownerName ?? '')) {
+      plazaOwnerController.text = ownerName ?? '';
+    }
 
+    // Reset state variables
     errors.clear();
-    _plazaId = null;
+    _createdPlazaId = null; // Reset the stored ID
     _isFirstTime = true;
     _isEditable = true;
     _isLoading = false;
+
+    notifyListeners();
   }
 
+  // --- Dispose ---
   @override
   void dispose() {
+    // *** ADDED: Dispose plazaIdController ***
+    plazaIdController.dispose();
+    // --- End Added ---
     plazaNameController.dispose();
     plazaOwnerController.dispose();
-    plazaOperatorNameController.dispose();
     mobileNumberController.dispose();
     emailController.dispose();
     addressController.dispose();
@@ -739,6 +888,8 @@ class BasicDetailsViewModel extends ChangeNotifier {
     capacityHeavyMachinaryVehicleController.dispose();
     plazaOpenTimingsController.dispose();
     plazaClosingTimeController.dispose();
+    companyNameController.dispose();
+    plazaOrgIdController.dispose();
     super.dispose();
   }
 }

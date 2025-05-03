@@ -5,7 +5,6 @@ import '../../services/core/dispute_service.dart';
 import '../../services/core/ticket_service.dart';
 
 class DisputeListViewModel extends ChangeNotifier{
-  final DisputeService _disputeService;
   final TicketService _ticketService;
 
   bool isLoading = false;
@@ -13,10 +12,8 @@ class DisputeListViewModel extends ChangeNotifier{
   List<Map<String, dynamic>> tickets = [];
 
   DisputeListViewModel({
-    DisputeService? disputeService,
     TicketService? ticketService,
-  }) : _disputeService = disputeService ?? DisputeService(),
-        _ticketService = ticketService ?? TicketService();
+  }) :_ticketService = ticketService ?? TicketService();
 
   Future<void> fetchOpenTickets() async {
     try {

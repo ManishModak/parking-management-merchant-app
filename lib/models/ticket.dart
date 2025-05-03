@@ -1,15 +1,115 @@
+import 'package:merchant_app/config/api_config.dart';
+
 enum Status {
-  open,
-  rejected,
-  complete,
-  pending
+  Open,
+  Rejected,
+  Completed,
+}
+
+class TicketPayment {
+  final int? id;
+  final String? ticketId;
+  final int? plazaId;
+  final String? orderId;
+  final String? ticketRefId;
+  final String? transactionId;
+  final String? transactionStatus;
+  final double? transactionAmount;
+  final double? charges;
+  final double? gstAmount;
+  final double? totalTransaction;
+  final double? fareAmount;
+  final String? paymentId;
+  final DateTime? paymentTime;
+  final String? paymentMethod;
+  final String? paymentStatus;
+  final String? paymentRemark;
+  final String? instrumentNo;
+  final String? instrumentType;
+  final String? instrumentSubtype;
+  final String? vehicleNumber;
+  final DateTime? entryTime;
+  final DateTime? exitTime;
+  final int? duration;
+  final String? fareType;
+  final String? createdBy;
+
+  TicketPayment({
+    this.id,
+    this.ticketId,
+    this.plazaId,
+    this.orderId,
+    this.ticketRefId,
+    this.transactionId,
+    this.transactionStatus,
+    this.transactionAmount,
+    this.charges,
+    this.gstAmount,
+    this.totalTransaction,
+    this.fareAmount,
+    this.paymentId,
+    this.paymentTime,
+    this.paymentMethod,
+    this.paymentStatus,
+    this.paymentRemark,
+    this.instrumentNo,
+    this.instrumentType,
+    this.instrumentSubtype,
+    this.vehicleNumber,
+    this.entryTime,
+    this.exitTime,
+    this.duration,
+    this.fareType,
+    this.createdBy,
+  });
+
+  factory TicketPayment.fromJson(Map<String, dynamic> json) {
+    double? _parseDouble(dynamic value) {
+      if (value == null) return null;
+      if (value is num) return value.toDouble();
+      if (value is String) {
+        if (value.trim().isEmpty) return null;
+        return double.tryParse(value);
+      }
+      return null;
+    }
+
+    return TicketPayment(
+      id: json['id'] as int?,
+      ticketId: json['ticket_id'] as String?,
+      plazaId: json['plazaId'] as int?,
+      orderId: json['order_id'] as String?,
+      ticketRefId: json['ticket_ref_id'] as String?,
+      transactionId: json['transaction_id'] as String?,
+      transactionStatus: json['transaction_status'] as String?,
+      transactionAmount: _parseDouble(json['transaction_amount']),
+      charges: _parseDouble(json['charges']),
+      gstAmount: _parseDouble(json['gst_amount']),
+      totalTransaction: _parseDouble(json['total_transaction']),
+      fareAmount: _parseDouble(json['fare_amount']),
+      paymentId: json['payment_id'] as String?,
+      paymentTime: json['payment_time'] != null ? DateTime.parse(json['payment_time'] as String) : null,
+      paymentMethod: json['payment_method'] as String?,
+      paymentStatus: json['payment_status'] as String?,
+      paymentRemark: json['payment_remark'] as String?,
+      instrumentNo: json['instrument_no'] as String?,
+      instrumentType: json['instrument_type'] as String?,
+      instrumentSubtype: json['instrument_subtype'] as String?,
+      vehicleNumber: json['vehicle_number'] as String?,
+      entryTime: json['entry_time'] != null ? DateTime.parse(json['entry_time'] as String) : null,
+      exitTime: json['exit_time'] != null ? DateTime.parse(json['exit_time'] as String) : null,
+      duration: json['duration'] as int?,
+      fareType: json['fare_type'] as String?,
+      createdBy: json['created_by'] as String?,
+    );
+  }
 }
 
 class Ticket {
   final String? ticketId;
   final String? ticketRefId;
-  final String? plazaId;       // Kept nullable
-  final String? plazaName;     // <-- NEW FIELD: Added plaza name (optional)
+  final int? plazaId;
+  final String? plazaName;
   final int? fareId;
   final String entryLaneId;
   final String? entryLaneDirection;
@@ -19,7 +119,7 @@ class Ticket {
   final String? vehicleType;
   final String createdBy;
   final DateTime createdTime;
-  final String? entryTime;
+  final DateTime? entryTime;
   final DateTime? exitTime;
   final Status? status;
   final List<String>? capturedImages;
@@ -30,17 +130,18 @@ class Ticket {
   final double? fareAmount;
   final double? totalCharges;
   final int? parkingDuration;
-  final int? disputeRaised;
-  final String? channelId;
-  final String? requestType;
-  final String? cameraId;
-  final String? cameraReadTime;
+  final String? disputeStatus;
+  final String? disputeId;
+  final String? paymentMode;
+  final List<TicketPayment>? payments;
+  final String? geoLatitude; // New field
+  final String? geoLongitude; // New field
 
   Ticket({
     this.ticketId,
     this.ticketRefId,
     this.plazaId,
-    this.plazaName, // <-- NEW FIELD: Added to constructor
+    this.plazaName,
     this.fareId,
     required this.entryLaneId,
     this.entryLaneDirection,
@@ -61,30 +162,32 @@ class Ticket {
     this.fareAmount,
     this.totalCharges,
     this.parkingDuration,
-    this.disputeRaised = 1,
-    this.channelId,
-    this.requestType,
-    this.cameraId,
-    this.cameraReadTime,
+    this.disputeStatus = 'Not Raised',
+    this.disputeId,
+    this.paymentMode,
+    this.payments,
+    this.geoLatitude,
+    this.geoLongitude,
   })  : createdBy = createdBy ?? 'System',
         createdTime = createdTime ?? DateTime.now();
 
   factory Ticket.fromJson(Map<String, dynamic> json) {
-    // --- Robust plazaId parsing for nullable field ---
-    final dynamic plazaIdValue = json['plazaId'];
-    final String? plazaIdString = plazaIdValue?.toString();
+    final paymentsList = (json['payments'] as List<dynamic>?)
+        ?.map((p) => TicketPayment.fromJson(p as Map<String, dynamic>))
+        .toList();
+    TicketPayment? successfulPayment;
+    if (paymentsList != null && paymentsList.isNotEmpty) {
+      successfulPayment = paymentsList.firstWhere(
+            (p) => p.paymentStatus == 'Paid',
+        orElse: () => paymentsList.first,
+      );
+    }
 
-    // --- Parsing for other potentially non-string fields ---
-    final dynamic floorIdValue = json['floor_id'];
-    final String? floorIdString = floorIdValue?.toString();
-
-    final dynamic slotIdValue = json['slot_id'];
-    final String? slotIdString = slotIdValue?.toString();
-
-    // --- Parsing helpers ---
     double? parseDouble(dynamic value) {
       if (value == null) return null;
-      return double.tryParse(value.toString());
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value);
+      return null;
     }
 
     int? parseInt(dynamic value) {
@@ -103,11 +206,9 @@ class Ticket {
       return parsed ?? DateTime.now();
     }
 
-    List<String>? parseImages(dynamic imagesJson, dynamic imageJson) {
-      if (imagesJson != null && imagesJson is List) {
-        return imagesJson.map((item) => item?.toString()).where((item) => item != null).cast<String>().toList();
-      } else if (imageJson != null) {
-        return [imageJson.toString()];
+    List<String>? parseImages(dynamic capturedImagesJson) {
+      if (capturedImagesJson != null && capturedImagesJson is List) {
+        return List<String>.from(capturedImagesJson);
       }
       return null;
     }
@@ -115,44 +216,42 @@ class Ticket {
     return Ticket(
       ticketId: json['ticket_id'] as String?,
       ticketRefId: json['ticket_ref_id'] as String?,
-      plazaId: plazaIdString,
-      // <-- NEW FIELD: Attempt to read plaza name (might be null) -->
-      // Check for both common casing conventions
+      plazaId: parseInt(json['plazaId']),
       plazaName: json['plazaName'] as String? ?? json['plaza_name'] as String?,
-      // <-- END NEW FIELD -->
       fareId: parseInt(json['fareId']),
       entryLaneId: json['entry_lane_id'] as String? ?? 'UNKNOWN_LANE',
       entryLaneDirection: json['entry_lane_direction'] as String?,
-      floorId: floorIdString,
-      slotId: slotIdString,
+      floorId: json['floor_id'] as String?,
+      slotId: json['slot_id'] as String?,
       vehicleNumber: json['vehicle_number'] as String?,
       vehicleType: json['vehicle_type'] as String?,
       createdBy: json['created_by'] as String? ?? 'System',
       createdTime: parseCreatedTime(json['created_time']),
-      entryTime: json['entry_time'] as String?,
-      exitTime: parseDateTime(json['exit_time']),
+      entryTime: parseDateTime(json['entry_time']),
+      exitTime: successfulPayment?.exitTime ?? parseDateTime(json['exit_time']),
       status: _parseStatus(json['status'] as String?),
-      capturedImages: parseImages(json['captured_images'], json['captured_image']),
+      capturedImages: parseImages(json['captured_images']),
       modifiedBy: json['modified_by'] as String?,
       modificationTime: parseDateTime(json['modification_time']),
       remarks: json['remarks'] as String?,
-      fareType: json['fare_type'] as String?,
-      fareAmount: parseDouble(json['fare_amount']),
-      totalCharges: parseDouble(json['total_transaction']),
-      parkingDuration: parseInt(json['duration']),
-      disputeRaised: parseInt(json['dispute_raised']) ?? 1,
-      channelId: json['channel_id'] as String?,
-      requestType: json['request_type'] as String?,
-      cameraId: json['camera_id'] as String?,
-      cameraReadTime: json['cameraReadTime'] as String?,
+      fareType: successfulPayment?.fareType ?? json['fare_type'] as String?,
+      fareAmount: successfulPayment?.fareAmount ?? parseDouble(json['fare_amount']),
+      totalCharges: successfulPayment?.totalTransaction ?? parseDouble(json['total_transaction']),
+      parkingDuration: successfulPayment?.duration ?? parseInt(json['duration']),
+      disputeStatus: json['dispute_status'] as String? ?? 'Not Raised',
+      disputeId: json['disputeId'] as String?,
+      paymentMode: successfulPayment?.paymentMethod ?? json['payment_method'] as String?,
+      payments: paymentsList,
+      geoLatitude: json['geo_latitude'] as String?,
+      geoLongitude: json['geo_longitude'] as String?,
     );
   }
 
   Ticket copyWith({
     String? ticketId,
     String? ticketRefId,
-    String? plazaId,
-    String? plazaName, // <-- NEW FIELD: Added to copyWith
+    int? plazaId,
+    String? plazaName,
     int? fareId,
     String? entryLaneId,
     String? entryLaneDirection,
@@ -162,7 +261,7 @@ class Ticket {
     String? vehicleType,
     String? createdBy,
     DateTime? createdTime,
-    String? entryTime,
+    DateTime? entryTime,
     DateTime? exitTime,
     Status? status,
     List<String>? capturedImages,
@@ -173,17 +272,18 @@ class Ticket {
     double? fareAmount,
     double? totalCharges,
     int? parkingDuration,
-    int? disputeRaised,
-    String? channelId,
-    String? requestType,
-    String? cameraId,
-    String? cameraReadTime,
+    String? disputeStatus,
+    String? disputeId,
+    String? paymentMode,
+    List<TicketPayment>? payments,
+    String? geoLatitude,
+    String? geoLongitude,
   }) {
     return Ticket(
       ticketId: ticketId ?? this.ticketId,
       ticketRefId: ticketRefId ?? this.ticketRefId,
       plazaId: plazaId ?? this.plazaId,
-      plazaName: plazaName ?? this.plazaName, // <-- NEW FIELD: Handle copyWith
+      plazaName: plazaName ?? this.plazaName,
       fareId: fareId ?? this.fareId,
       entryLaneId: entryLaneId ?? this.entryLaneId,
       entryLaneDirection: entryLaneDirection ?? this.entryLaneDirection,
@@ -204,11 +304,12 @@ class Ticket {
       fareAmount: fareAmount ?? this.fareAmount,
       totalCharges: totalCharges ?? this.totalCharges,
       parkingDuration: parkingDuration ?? this.parkingDuration,
-      disputeRaised: disputeRaised ?? this.disputeRaised,
-      channelId: channelId ?? this.channelId,
-      requestType: requestType ?? this.requestType,
-      cameraId: cameraId ?? this.cameraId,
-      cameraReadTime: cameraReadTime ?? this.cameraReadTime,
+      disputeStatus: disputeStatus ?? this.disputeStatus,
+      disputeId: disputeId ?? this.disputeId,
+      paymentMode: paymentMode ?? this.paymentMode,
+      payments: payments ?? this.payments,
+      geoLatitude: geoLatitude ?? this.geoLatitude,
+      geoLongitude: geoLongitude ?? this.geoLongitude,
     );
   }
 
@@ -216,8 +317,8 @@ class Ticket {
     final Map<String, dynamic> json = {
       'ticket_id': ticketId,
       'ticket_ref_id': ticketRefId,
-      'plaza_id': plazaId,
-      'plaza_name': plazaName, // <-- NEW FIELD: Add to JSON output (will be null if not set)
+      'plazaId': plazaId,
+      'plaza_name': plazaName,
       'fareId': fareId,
       'entry_lane_id': entryLaneId,
       'entry_lane_direction': entryLaneDirection,
@@ -227,7 +328,7 @@ class Ticket {
       'vehicle_type': vehicleType,
       'created_by': createdBy,
       'created_time': createdTime.toIso8601String(),
-      'entry_time': entryTime,
+      'entry_time': entryTime?.toIso8601String(),
       'exit_time': exitTime?.toIso8601String(),
       'status': status?.toString().split('.').last,
       'captured_images': capturedImages,
@@ -238,45 +339,67 @@ class Ticket {
       'fare_amount': fareAmount,
       'total_transaction': totalCharges,
       'duration': parkingDuration,
-      'dispute_raised': disputeRaised,
-      'channel_id': channelId,
-      'request_type': requestType,
-      'camera_id': cameraId,
-      'cameraReadTime': cameraReadTime,
+      'dispute_status': disputeStatus,
+      'disputeId': disputeId,
+      'payment_method': paymentMode,
+      'geo_latitude': geoLatitude, // New field
+      'geo_longitude': geoLongitude, // New field
+      'payments': payments?.map((p) => {
+        'id': p.id,
+        'ticket_id': p.ticketId,
+        'plazaId': p.plazaId,
+        'order_id': p.orderId,
+        'ticket_ref_id': p.ticketRefId,
+        'transaction_id': p.transactionId,
+        'transaction_status': p.transactionStatus,
+        'transaction_amount': p.transactionAmount,
+        'charges': p.charges,
+        'gst_amount': p.gstAmount,
+        'total_transaction': p.totalTransaction,
+        'fare_amount': p.fareAmount,
+        'payment_id': p.paymentId,
+        'payment_time': p.paymentTime?.toIso8601String(),
+        'payment_method': p.paymentMethod,
+        'payment_status': p.paymentStatus,
+        'payment_remark': p.paymentRemark,
+        'instrument_no': p.instrumentNo,
+        'instrument_type': p.instrumentType,
+        'instrument_subtype': p.instrumentSubtype,
+        'vehicle_number': p.vehicleNumber,
+        'entry_time': p.entryTime?.toIso8601String(),
+        'exit_time': p.exitTime?.toIso8601String(),
+        'duration': p.duration,
+        'fare_type': p.fareType,
+        'created_by': p.createdBy,
+      }).toList(),
     };
-    // json.removeWhere((key, value) => value == null); // Optional: remove nulls
     return json;
   }
 
   Map<String, dynamic> toCreateRequest() {
     final Map<String, dynamic> json = {
-      'plaza_id': plazaId,
-      // Note: Typically plaza_name is not sent *in* a create request,
-      // it's usually derived data based on plaza_id. Included here just in case.
-      'plaza_name': plazaName, // <-- NEW FIELD: Included (might often be null)
+      'plazaId': plazaId,
+      'plaza_name': plazaName,
       'entry_lane_id': entryLaneId,
-      'entry_time': entryTime ?? DateTime.now().toIso8601String(),
-      'channel_id': channelId ?? '3',
-      'request_type': requestType ?? '0',
-      'camera_id': cameraId,
-      'cameraReadTime': cameraReadTime,
+      'entry_time': entryTime?.toIso8601String() ?? DateTime.now().toIso8601String(),
       if (vehicleNumber != null) 'vehicle_number': vehicleNumber,
       if (vehicleType != null) 'vehicle_type': vehicleType,
       if (floorId != null) 'floor_id': floorId,
       if (slotId != null) 'slot_id': slotId,
-      'status': Status.pending.toString().split('.').last,
+      'status': Status.Open.toString().split('.').last,
+      'entry_lane_direction': entryLaneDirection ?? 'Unknown',
       if (capturedImages != null && capturedImages!.isNotEmpty) 'captured_images': capturedImages,
       'remarks': remarks ?? '',
+      'geo_latitude': geoLatitude, // New field
+      'geo_longitude': geoLongitude, // New field
     };
-    // json.removeWhere((key, value) => value == null); // Optional: remove nulls
     return json;
   }
 
   Map<String, dynamic> toModifyRequest() {
     final Map<String, dynamic> json = {
-      'plaza_id': plazaId,
-      // Note: plaza_name is unlikely to be part of a modify request payload
-      'plaza_name': plazaName, // <-- NEW FIELD: Included (might often be null/ignored by API)
+      'plazaId': plazaId,
+      'plaza_name': plazaName,
       'entry_lane_id': entryLaneId,
       if (vehicleNumber != null) 'vehicle_number': vehicleNumber,
       if (vehicleType != null) 'vehicle_type': vehicleType,
@@ -284,7 +407,8 @@ class Ticket {
       if (slotId != null) 'slot_id': slotId,
       'modified_by': modifiedBy ?? 'System',
       'modification_time': DateTime.now().toIso8601String(),
-      'status': status?.toString().split('.').last ?? Status.pending.toString().split('.').last,
+      'status': status?.toString().split('.').last ?? Status.Open.toString().split('.').last,
+      'entry_lane_direction': entryLaneDirection ?? 'Unknown',
       if (capturedImages != null && capturedImages!.isNotEmpty) 'captured_images': capturedImages,
       'remarks': remarks ?? '',
     };
@@ -292,34 +416,31 @@ class Ticket {
     return json;
   }
 
-
   @override
   String toString() {
-    // Updated toString to include plazaName
-    return 'Ticket{ticketId: $ticketId, ticketRefId: $ticketRefId, plazaId: $plazaId, plazaName: $plazaName, fareId: $fareId, ' // <-- Added plazaName
+    return 'Ticket{ticketId: $ticketId, ticketRefId: $ticketRefId, plazaId: $plazaId, plazaName: $plazaName, fareId: $fareId, '
         'entryLaneId: $entryLaneId, entryLaneDirection: $entryLaneDirection, '
         'floorId: $floorId, slotId: $slotId, vehicleNumber: $vehicleNumber, '
         'vehicleType: $vehicleType, createdBy: $createdBy, createdTime: $createdTime, entryTime: $entryTime, exitTime: $exitTime, '
         'status: $status, capturedImages: $capturedImages, modifiedBy: $modifiedBy, modificationTime: $modificationTime, '
         'remarks: $remarks, fareType: $fareType, fareAmount: $fareAmount, totalCharges: $totalCharges, '
-        'parkingDuration: $parkingDuration, disputeRaised: $disputeRaised, '
-        'channelId: $channelId, requestType: $requestType, cameraId: $cameraId, cameraReadTime: $cameraReadTime}';
+        'parkingDuration: $parkingDuration, disputeStatus: $disputeStatus, disputeId: $disputeId, '
+        'paymentMode: $paymentMode, payments: $payments}';
   }
 
-  // Helper function to parse Status enum safely from a String
   static Status _parseStatus(String? statusStr) {
-    if (statusStr == null) return Status.pending;
+    if (statusStr == null) return Status.Open;
     try {
       return Status.values.firstWhere(
-              (e) => e.toString().split('.').last.toLowerCase() == statusStr.toLowerCase(),
-          orElse: () {
-            print("Warning: Unknown status string '$statusStr' received. Defaulting to 'pending'.");
-            return Status.pending;
-          }
+            (e) => e.toString().split('.').last.toLowerCase() == statusStr.toLowerCase(),
+        orElse: () {
+          print("Warning: Unknown status string '$statusStr' received. Defaulting to 'Open'.");
+          return Status.Open;
+        },
       );
     } catch (e) {
-      print("Error parsing status '$statusStr': $e. Defaulting to 'pending'.");
-      return Status.pending;
+      print("Error parsing status '$statusStr': $e. Defaulting to 'Open'.");
+      return Status.Open;
     }
   }
 }

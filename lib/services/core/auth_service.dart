@@ -21,13 +21,11 @@ class AuthService {
 
   Future<bool> login(String emailOrMobile, String password) async {
     try {
-      // First check device connectivity
       if (!(await _connectivityService.isConnected())) {
         developer.log('[AUTH] No internet connection detected before login attempt', name: 'AuthService');
         throw NoInternetException('No internet connection available. Please check your network settings.');
       }
 
-      // Then try to reach the server
       final serverUrl = Uri.parse(ApiConfig.getFullUrl(AuthApi.login));
       if (!(await _connectivityService.canReachServer(serverUrl.host))) {
         developer.log('[AUTH] Server unreachable: ${serverUrl.host}', name: 'AuthService');
@@ -47,7 +45,7 @@ class AuthService {
           Uri.parse(url),
           headers: {'Content-Type': 'application/json'},
           body: body,
-        ).timeout(const Duration(seconds: 20));
+        ).timeout(const Duration(seconds: 30));
 
         developer.log('[AUTH] Response: ${response.statusCode} - ${response.body}', name: 'AuthService');
 
@@ -102,7 +100,6 @@ class AuthService {
         rethrow;
       }
     } catch (e) {
-      // Add extra logging here to capture any errors in the outer try-catch
       developer.log('[AUTH] Outer catch block: $e', name: 'AuthService');
       rethrow;
     }
@@ -118,13 +115,18 @@ class AuthService {
     required String city,
     required String state,
     required String pincode,
+    required String companyName,
+    required String companyType,
+    String? aadhaarNumber,
+    String? panNumber,
+    String? bankName,
+    String? accountNumber,
+    String? ifscCode,
   }) async {
-    // Check device connectivity
     if (!(await _connectivityService.isConnected())) {
       throw NoInternetException('No internet connection available. Please check your network settings.');
     }
 
-    // Then try to reach the server
     final serverUrl = Uri.parse(ApiConfig.getFullUrl(AuthApi.createOwner));
     if (!(await _connectivityService.canReachServer(serverUrl.host))) {
       developer.log('[AUTH] Server unreachable: ${serverUrl.host}', name: 'AuthService');
@@ -143,6 +145,13 @@ class AuthService {
       'city': city,
       'state': state,
       'pincode': pincode,
+      'companyName': companyName,
+      'companyType': companyType,
+      'aadharNumber': aadhaarNumber,
+      'panNumber': panNumber,
+      'bankName': bankName,
+      'accountNumber': accountNumber,
+      'ifscCode': ifscCode,
     });
     developer.log('[AUTH] Registering Plaza Owner at: $url', name: 'AuthService');
     developer.log('[AUTH] Request body: $body', name: 'AuthService');
@@ -152,7 +161,7 @@ class AuthService {
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: body,
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 30));
 
       developer.log('[AUTH] Response: ${response.statusCode} - ${response.body}', name: 'AuthService');
 
@@ -169,7 +178,13 @@ class AuthService {
       String serverMessage = responseData['message'] ?? responseData['msg'] ?? 'Unknown error';
       switch (response.statusCode) {
         case 400:
-          serverMessage = 'Invalid registration data';
+          if (serverMessage.contains('Email already in use')) {
+            throw EmailInUseException('This email is already in use. Please try a different email.');
+          } else if (serverMessage.contains('companyType')) {
+            serverMessage = 'Invalid company type';
+          } else {
+            serverMessage = 'Invalid registration data';
+          }
           break;
         case 409:
           serverMessage = 'User already exists';
@@ -177,6 +192,12 @@ class AuthService {
         case 500:
           if (serverMessage.contains('userName must be unique')) {
             serverMessage = 'Username must be unique';
+          } else if (serverMessage.contains('aadhaarNumber must be unique')) {
+            serverMessage = 'Aadhaar number already exists';
+          } else if (serverMessage.contains('panNumber must be unique')) {
+            serverMessage = 'PAN number already exists';
+          } else if (serverMessage.contains('accountNumber must be unique')) {
+            serverMessage = 'Account number already exists';
           } else {
             serverMessage = 'Server error';
           }

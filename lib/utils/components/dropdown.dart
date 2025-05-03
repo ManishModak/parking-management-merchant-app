@@ -404,7 +404,7 @@ class SearchableDropdown extends StatefulWidget {
   });
 
   static String _defaultItemText(dynamic item) {
-    if (item is Plaza) return item.plazaName;
+    if (item is Plaza) return item.plazaName!;
     return item.toString();
   }
 

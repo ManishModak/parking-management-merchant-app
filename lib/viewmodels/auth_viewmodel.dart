@@ -25,6 +25,13 @@ class AuthViewModel extends ChangeNotifier {
     'pincode': TextEditingController(),
     'password': TextEditingController(),
     'confirmPassword': TextEditingController(),
+    'companyName': TextEditingController(),
+    'companyType': TextEditingController(),
+    'aadhaarNumber': TextEditingController(),
+    'panNumber': TextEditingController(),
+    'bankName': TextEditingController(),
+    'accountNumber': TextEditingController(),
+    'ifscCode': TextEditingController(),
   };
 
   final Map<String, String?> _errors = {
@@ -38,6 +45,13 @@ class AuthViewModel extends ChangeNotifier {
     'pincode': null,
     'password': null,
     'confirmPassword': null,
+    'companyName': null,
+    'companyType': null,
+    'aadhaarNumber': null,
+    'panNumber': null,
+    'bankName': null,
+    'accountNumber': null,
+    'ifscCode': null,
     'api': null,
   };
 
@@ -53,6 +67,13 @@ class AuthViewModel extends ChangeNotifier {
   TextEditingController get addressController => _controllers['address']!;
   TextEditingController get pincodeController => _controllers['pincode']!;
   TextEditingController get confirmPasswordController => _controllers['confirmPassword']!;
+  TextEditingController get companyNameController => _controllers['companyName']!;
+  TextEditingController get companyTypeController => _controllers['companyType']!;
+  TextEditingController get aadhaarNumberController => _controllers['aadhaarNumber']!;
+  TextEditingController get panNumberController => _controllers['panNumber']!;
+  TextEditingController get bankNameController => _controllers['bankName']!;
+  TextEditingController get accountNumberController => _controllers['accountNumber']!;
+  TextEditingController get ifscCodeController => _controllers['ifscCode']!;
   String? getError(String key) => _errors[key];
   User? get currentUser => _currentUser;
 
@@ -113,7 +134,7 @@ class AuthViewModel extends ChangeNotifier {
 
     if (!validateLoginData(context)) {
       developer.log('[AuthVM] Login validation failed', name: 'AuthViewModel');
-      return false; // No api error set; rely on field-level errors
+      return false;
     }
 
     try {
@@ -161,41 +182,41 @@ class AuthViewModel extends ChangeNotifier {
     bool isValid = true;
     resetErrors();
 
-    if (usernameController.text.isEmpty || usernameController.text.length > 100) {
+    // Username validation (3-50 characters)
+    if (usernameController.text.isEmpty || usernameController.text.length < 3 || usernameController.text.length > 50) {
       setError('username', usernameController.text.isEmpty
           ? strings.errorUsernameRequired
           : strings.errorUsernameLength);
       isValid = false;
     }
 
-    if (nameController.text.isEmpty || nameController.text.length > 100) {
+    // Name validation (3-50 characters)
+    if (nameController.text.isEmpty || nameController.text.length < 3 || nameController.text.length > 50) {
       setError('name', nameController.text.isEmpty
           ? strings.errorFullNameRequired
           : strings.errorFullNameLength);
       isValid = false;
     }
 
-    if (mobileController.text.isEmpty || mobileController.text.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(mobileController.text)) {
+    // Mobile validation (10 digits, no +91 required)
+    final mobilePattern = RegExp(r'^\d{10}$');
+    if (mobileController.text.isEmpty || !mobilePattern.hasMatch(mobileController.text)) {
       setError('mobile', mobileController.text.isEmpty
           ? strings.errorMobileRequired
-          : !RegExp(r'^[0-9]+$').hasMatch(mobileController.text)
-          ? strings.errorMobileInvalidFormat
-          : strings.errorMobileLength);
+          : strings.errorMobileInvalidFormat);
       isValid = false;
     }
 
+    // Email validation
     final emailPattern = RegExp(r'^[\w.%+-]+@[\w.-]+\.[a-zA-Z]{2,}$', caseSensitive: false);
-    if (emailController.text.isEmpty || emailController.text.length < 10 || emailController.text.length > 50 || !emailPattern.hasMatch(emailController.text)) {
+    if (emailController.text.isEmpty || !emailPattern.hasMatch(emailController.text)) {
       setError('email', emailController.text.isEmpty
           ? strings.errorEmailRequired
-          : emailController.text.length < 10
-          ? strings.errorEmailMinLength
-          : emailController.text.length > 50
-          ? strings.errorEmailLength
           : strings.errorEmailInvalid);
       isValid = false;
     }
 
+    // Address validation
     if (addressController.text.isEmpty || addressController.text.length > 256) {
       setError('address', addressController.text.isEmpty
           ? strings.errorAddressRequired
@@ -203,6 +224,7 @@ class AuthViewModel extends ChangeNotifier {
       isValid = false;
     }
 
+    // City validation (max 50 characters)
     if (cityController.text.isEmpty || cityController.text.length > 50) {
       setError('city', cityController.text.isEmpty
           ? strings.errorCityRequired
@@ -210,22 +232,23 @@ class AuthViewModel extends ChangeNotifier {
       isValid = false;
     }
 
+    // State validation (max 50 characters)
     if (stateController.text.isEmpty || stateController.text.length > 50) {
-      setError('state', stateController.text.isEmpty
+      setError('state', cityController.text.isEmpty
           ? strings.errorStateRequired
           : strings.errorStateLength);
       isValid = false;
     }
 
-    if (pincodeController.text.isEmpty || pincodeController.text.length != 6 || !RegExp(r'^[0-9]+$').hasMatch(pincodeController.text)) {
+    // Pincode validation (6 digits)
+    if (pincodeController.text.isEmpty || pincodeController.text.length != 6 || !RegExp(r'^\d{6}$').hasMatch(pincodeController.text)) {
       setError('pincode', pincodeController.text.isEmpty
           ? strings.errorPincodeRequired
-          : pincodeController.text.length != 6
-          ? strings.errorPincodeLength
           : strings.errorPincodeInvalid);
       isValid = false;
     }
 
+    // Password validation
     final passwordRegEx = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,20}$');
     if (passwordController.text.isEmpty || !passwordRegEx.hasMatch(passwordController.text)) {
       setError('password', passwordController.text.isEmpty
@@ -234,11 +257,67 @@ class AuthViewModel extends ChangeNotifier {
       isValid = false;
     }
 
+    // Confirm Password validation
     if (confirmPasswordController.text.isEmpty || passwordController.text != confirmPasswordController.text) {
       setError('confirmPassword', confirmPasswordController.text.isEmpty
           ? strings.errorConfirmPasswordRequired
           : strings.errorPasswordMismatch);
       isValid = false;
+    }
+
+    // Company Name validation (3-50 characters)
+    if (companyNameController.text.isEmpty || companyNameController.text.length < 3 || companyNameController.text.length > 50) {
+      setError('companyName', companyNameController.text.isEmpty
+          ? strings.errorCompanyNameRequired
+          : strings.errorCompanyNameLength);
+      isValid = false;
+    }
+
+    // Company Type validation (must be one of the allowed values)
+    final allowedCompanyTypes = ['Individual', 'LLP', 'Private Limited', 'Public Limited'];
+    if (companyTypeController.text.isEmpty || !allowedCompanyTypes.contains(companyTypeController.text)) {
+      setError('companyType', companyTypeController.text.isEmpty
+          ? strings.errorCompanyTypeRequired
+          : strings.errorCompanyTypeInvalid);
+      isValid = false;
+    }
+
+    // Aadhaar Number validation (12 digits, optional)
+    if (aadhaarNumberController.text.isNotEmpty) {
+      if (aadhaarNumberController.text.length != 12 || !RegExp(r'^\d{12}$').hasMatch(aadhaarNumberController.text)) {
+        setError('aadhaarNumber', strings.errorAadhaarInvalid);
+        isValid = false;
+      }
+    }
+
+    // PAN Number validation (matches regex, optional)
+    if (panNumberController.text.isNotEmpty) {
+      if (!RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$').hasMatch(panNumberController.text)) {
+        setError('panNumber', strings.errorPanInvalid);
+        isValid = false;
+      }
+    }
+
+    // Bank Name validation (max 100 characters, optional)
+    if (bankNameController.text.isNotEmpty && bankNameController.text.length > 100) {
+      setError('bankName', strings.errorBankNameLength);
+      isValid = false;
+    }
+
+    // Account Number validation (numeric, optional)
+    if (accountNumberController.text.isNotEmpty) {
+      if (!RegExp(r'^\d+$').hasMatch(accountNumberController.text)) {
+        setError('accountNumber', strings.errorAccountNumberInvalid);
+        isValid = false;
+      }
+    }
+
+    // IFSC Code validation (matches regex, optional)
+    if (ifscCodeController.text.isNotEmpty) {
+      if (!RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}$').hasMatch(ifscCodeController.text)) {
+        setError('ifscCode', strings.errorIfscInvalid);
+        isValid = false;
+      }
     }
 
     return isValid;
@@ -273,11 +352,23 @@ class AuthViewModel extends ChangeNotifier {
         city: cityController.text,
         state: stateController.text,
         pincode: pincodeController.text,
+        companyName: companyNameController.text,
+        companyType: companyTypeController.text,
+        aadhaarNumber: aadhaarNumberController.text.isEmpty ? null : aadhaarNumberController.text,
+        panNumber: panNumberController.text.isEmpty ? null : panNumberController.text,
+        bankName: bankNameController.text.isEmpty ? null : bankNameController.text,
+        accountNumber: accountNumberController.text.isEmpty ? null : accountNumberController.text,
+        ifscCode: ifscCodeController.text.isEmpty ? null : ifscCodeController.text,
       );
 
       _currentUser = User.fromJson(userData);
       developer.log('[AuthVM] Registration successful, user: ${_currentUser?.id}', name: 'AuthViewModel');
       return true;
+    } on EmailInUseException catch (e) {
+      error = e;
+      setError('email', 'This email is already in use. Please try a different email.');
+      developer.log('[AuthVM] Email in use: ${emailController.text}', name: 'AuthViewModel', error: e);
+      return false;
     } on NoInternetException catch (e) {
       error = e;
       setError('api', strings.errorNoInternet);

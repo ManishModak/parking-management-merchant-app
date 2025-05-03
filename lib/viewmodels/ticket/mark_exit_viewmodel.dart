@@ -1,19 +1,42 @@
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
-import '../../models/ticket.dart';
 import '../../services/core/ticket_service.dart';
+import '../../services/utils/socket_service.dart';
 
 class MarkExitViewModel extends ChangeNotifier {
   final TicketService _ticketService;
+  final SocketService _socketService;
 
   bool isLoading = false;
   Exception? error;
   List<Map<String, dynamic>> tickets = [];
   String? apiError;
-  Map<String, dynamic>? ticketDetails; // Store detailed ticket data
+  Map<String, dynamic>? ticketDetails;
+  String? paymentStatus;
 
-  MarkExitViewModel({TicketService? ticketService})
-      : _ticketService = ticketService ?? TicketService();
+  MarkExitViewModel({
+    TicketService? ticketService,
+    SocketService? socketService,
+  })  : _ticketService = ticketService ?? TicketService(),
+        _socketService = socketService ?? SocketService();
+
+  void initializeSocket(String userId, String socketUrl) {
+    _socketService.initialize(userId, socketUrl);
+    _listenForPaymentResults();
+  }
+
+  void _listenForPaymentResults() {
+    _socketService.onPaymentResult('notification', (data) {
+      try {
+        final paymentData = data as Map<String, dynamic>;
+        paymentStatus = paymentData['status']?.toString() ?? 'unknown';
+        developer.log('[MarkExitViewModel] Payment result received: $paymentStatus', name: 'MarkExitViewModel');
+        notifyListeners();
+      } catch (e) {
+        developer.log('[MarkExitViewModel] Error processing payment result: $e', name: 'MarkExitViewModel');
+      }
+    });
+  }
 
   Future<void> fetchOpenTickets() async {
     try {
@@ -28,13 +51,13 @@ class MarkExitViewModel extends ChangeNotifier {
         'plazaID': ticket.plazaId,
         'vehicleNumber': ticket.vehicleNumber,
         'vehicleType': ticket.vehicleType,
-        'plazaName': 'Plaza ${ticket.plazaId}', // Replace with actual plaza name if available
+        'plazaName': 'Plaza ${ticket.plazaId}',
         'entryTime': ticket.entryTime,
         'entryLaneId': ticket.entryLaneId,
         'entryLaneDirection': ticket.entryLaneDirection,
         'ticketCreationTime': ticket.createdTime.toIso8601String(),
-        'floorId': ticket.floorId != null ? 'N/A' : ticket.floorId,
-        'slotId': ticket.slotId != null ? 'N/A' : ticket.slotId,
+        'floorId': ticket.floorId ?? 'N/A',
+        'slotId': ticket.slotId ?? 'N/A',
         'ticketStatus': ticket.status.toString().split('.').last,
         'modificationTime': ticket.modificationTime?.toIso8601String(),
       }).toList();
@@ -74,7 +97,7 @@ class MarkExitViewModel extends ChangeNotifier {
         'fare_type': responseData['fare_type'] ?? '',
         'fare_amount': responseData['fare_amount']?.toString() ?? '',
         'total_charges': responseData['total_transaction']?.toString() ?? '',
-        'captured_images': responseData['captured_images'] ?? [], // Use pre-mapped full URLs
+        'captured_images': responseData['captured_images'] ?? [],
       };
       developer.log('[MarkExitViewModel] Ticket marked as exited: $ticketDetails', name: 'MarkExitViewModel');
       return true;
@@ -91,16 +114,15 @@ class MarkExitViewModel extends ChangeNotifier {
 
   Future<void> markTicketAsCashPending(String ticketId) async {
     try {
-      // Update your backend API to mark the ticket as "Cash Payment Pending"
-      // Example: await apiService.updateTicketStatus(ticketId, 'cash_pending');
       notifyListeners();
     } catch (e) {
-      // Handle error
+      developer.log('[MarkExitViewModel] Error marking ticket as cash pending: $e', name: 'MarkExitViewModel');
     }
   }
 
   @override
   void dispose() {
+    _socketService.disconnect();
     super.dispose();
   }
 }

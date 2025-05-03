@@ -1,7 +1,7 @@
 // API Configuration
 class ApiConfig {
-  static const String baseUrl = 'http://13.201.218.178:3001/';
-  //static const String baseUrl = 'http://192.168.1.103:3001/';
+  //static const String baseUrl = 'http://13.201.218.178:3001/';
+  static const String baseUrl = 'http://192.168.0.107:3001/';
   static Duration defaultTimeout = const Duration(seconds: 15);
   static Duration longTimeout = const Duration(seconds: 30);
 
@@ -97,4 +97,53 @@ class TicketApi {
 
   // Vehicle operations
   static const String markVehicleExit = '${vehicleBasePath}exit/'; // POST: Mark vehicle exit
+}
+
+
+// Disputes Management
+class DisputesApi {
+  static const String basePath = 'transactions/disputes/';
+
+  // Create a dispute
+  static const String createDispute = '${basePath}create'; // POST: Create a new dispute
+
+  // Get all open disputes
+  static const String getAllOpenDisputes = '${basePath}all'; // GET: List all open disputes
+
+  // Get open dispute by dispute ID
+  static const String getDisputeById = '${basePath}getById'; // GET: Retrieve dispute by dispute ID
+
+  // Get open disputes by plaza ID
+  static const String getDisputesByPlaza = '${basePath}getByPlaza'; // GET: List disputes by plaza ID
+
+  // Get open disputes by ticket ID
+  static const String getDisputesByTicket = '${basePath}getByTicket'; // GET: List disputes by ticket ID
+
+  // Get open disputes by vehicle number
+  static const String getDisputesByVehicleNumber = '${basePath}getByVehicleNumber'; // GET: List disputes by vehicle number
+
+  // Get open disputes by date range
+  static const String getDisputesByDate = '${basePath}getByDate'; // POST: List disputes by date range
+
+  // Process a dispute
+  static const String processDispute = '${basePath}processDispute'; // POST: Process an existing dispute
+}
+
+
+// Dashboard Management
+class DashboardApi {
+  static const String basePath = '';
+
+  // Plaza-wise Booking Summary
+  static const String getPlazaBookings = 'plaza-bookings'; // GET: Fetch plaza booking statistics
+
+  // Plaza Details
+  static const String getPlazaDetails = 'plazaDetails'; // GET: Fetch plaza details and slot information
+}
+
+// Transactions Management
+class TransactionsApi {
+  static const String basePath = 'transactions/payment/';
+
+  static const String createOrderQrCode = '${basePath}create-order-Qr-code'; // POST: Generate QR code for an order
 }

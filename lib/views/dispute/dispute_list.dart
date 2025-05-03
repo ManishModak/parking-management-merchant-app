@@ -73,7 +73,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _routeObserver = Provider.of<RouteObserver<ModalRoute>>(context, listen: false);
+    _routeObserver =
+        Provider.of<RouteObserver<ModalRoute>>(context, listen: false);
     _routeObserver.subscribe(this, ModalRoute.of(context)!);
   }
 
@@ -97,36 +98,67 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
     if (mounted) setState(() => _isLoading = false);
   }
 
-  List<Map<String, dynamic>> _getFilteredTickets(List<Map<String, dynamic>> tickets) {
+  List<Map<String, dynamic>> _getFilteredTickets(
+      List<Map<String, dynamic>> tickets) {
     return tickets.where((ticket) {
       final matchesSearch = _searchQuery.isEmpty ||
-          (ticket['ticketID']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          (ticket['plazaID']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          (ticket['vehicleNumber']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          (ticket['vehicleType']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          (ticket['plazaName']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          (ticket['status']?.toString().toLowerCase().contains(_searchQuery) ?? false);
+          (ticket['ticketID']
+                  ?.toString()
+                  .toLowerCase()
+                  .contains(_searchQuery) ??
+              false) ||
+          (ticket['plazaID']?.toString().toLowerCase().contains(_searchQuery) ??
+              false) ||
+          (ticket['vehicleNumber']
+                  ?.toString()
+                  .toLowerCase()
+                  .contains(_searchQuery) ??
+              false) ||
+          (ticket['vehicleType']
+                  ?.toString()
+                  .toLowerCase()
+                  .contains(_searchQuery) ??
+              false) ||
+          (ticket['plazaName']
+                  ?.toString()
+                  .toLowerCase()
+                  .contains(_searchQuery) ??
+              false) ||
+          (ticket['status']?.toString().toLowerCase().contains(_searchQuery) ??
+              false);
 
       final matchesStatus = _selectedStatuses.isEmpty ||
-          _selectedStatuses.contains(ticket['status']?.toString().toLowerCase());
+          _selectedStatuses
+              .contains(ticket['status']?.toString().toLowerCase());
 
       final matchesVehicleType = _selectedVehicleTypes.isEmpty ||
-          _selectedVehicleTypes.contains(ticket['vehicleType']?.toString().toLowerCase());
+          _selectedVehicleTypes
+              .contains(ticket['vehicleType']?.toString().toLowerCase());
 
       final matchesPlazaName = _selectedPlazaNames.isEmpty ||
-          _selectedPlazaNames.contains(ticket['plazaName']?.toString().toLowerCase());
+          _selectedPlazaNames
+              .contains(ticket['plazaName']?.toString().toLowerCase());
 
-      final entryTime = DateTime.tryParse(ticket['entryTime'] ?? '');
+      // Ensure entryTime is treated as a String before parsing
+      final entryTimeString = ticket['entryTime']?.toString() ?? '';
+      final entryTime = DateTime.tryParse(entryTimeString);
       final matchesDate = _selectedDateRange == null ||
           (entryTime != null &&
-              entryTime.isAfter(_selectedDateRange!.start.subtract(const Duration(days: 1))) &&
-              entryTime.isBefore(_selectedDateRange!.end.add(const Duration(days: 1))));
+              entryTime.isAfter(_selectedDateRange!.start
+                  .subtract(const Duration(days: 1))) &&
+              entryTime.isBefore(
+                  _selectedDateRange!.end.add(const Duration(days: 1))));
 
-      return matchesSearch && matchesStatus && matchesVehicleType && matchesPlazaName && matchesDate;
+      return matchesSearch &&
+          matchesStatus &&
+          matchesVehicleType &&
+          matchesPlazaName &&
+          matchesDate;
     }).toList();
   }
 
-  List<Map<String, dynamic>> _getPaginatedTickets(List<Map<String, dynamic>> filteredTickets) {
+  List<Map<String, dynamic>> _getPaginatedTickets(
+      List<Map<String, dynamic>> filteredTickets) {
     final startIndex = (_currentPage - 1) * _itemsPerPage;
     final endIndex = startIndex + _itemsPerPage;
     return endIndex > filteredTickets.length
@@ -136,7 +168,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
 
   void _updatePage(int newPage) {
     final filteredTickets = _getFilteredTickets(_viewModel.tickets);
-    final totalPages = (filteredTickets.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
+    final totalPages = (filteredTickets.length / _itemsPerPage)
+        .ceil()
+        .clamp(1, double.infinity)
+        .toInt();
     if (newPage < 1 || newPage > totalPages) return;
     setState(() => _currentPage = newPage);
   }
@@ -154,7 +189,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
     } else if (_isLast30DaysRange(_selectedDateRange!)) {
       displayText = 'Last 30 Days';
     } else {
-      displayText = '${DateFormat('dd MMM').format(_selectedDateRange!.start)} - '
+      displayText =
+          '${DateFormat('dd MMM').format(_selectedDateRange!.start)} - '
           '${DateFormat('dd MMM').format(_selectedDateRange!.end)}';
     }
 
@@ -164,7 +200,9 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: _selectedDateRange != null ? AppColors.primary.withOpacity(0.1) : Colors.grey[200],
+          color: _selectedDateRange != null
+              ? AppColors.primary.withOpacity(0.1)
+              : Colors.grey[200],
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -172,15 +210,20 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
           children: [
             Icon(
               Icons.calendar_today,
-              color: _selectedDateRange != null ? AppColors.primary : Colors.grey,
+              color:
+                  _selectedDateRange != null ? AppColors.primary : Colors.grey,
               size: 16,
             ),
             const SizedBox(width: 6),
             Text(
               displayText,
               style: TextStyle(
-                color: _selectedDateRange != null ? AppColors.primary : Colors.black87,
-                fontWeight: _selectedDateRange != null ? FontWeight.w600 : FontWeight.normal,
+                color: _selectedDateRange != null
+                    ? AppColors.primary
+                    : Colors.black87,
+                fontWeight: _selectedDateRange != null
+                    ? FontWeight.w600
+                    : FontWeight.normal,
               ),
             ),
           ],
@@ -199,7 +242,9 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: hasActiveFilters ? AppColors.primary.withOpacity(0.1) : Colors.grey[200],
+          color: hasActiveFilters
+              ? AppColors.primary.withOpacity(0.1)
+              : Colors.grey[200],
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -215,7 +260,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
               'Filters',
               style: TextStyle(
                 color: hasActiveFilters ? AppColors.primary : Colors.black87,
-                fontWeight: hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
+                fontWeight:
+                    hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ],
@@ -243,26 +289,28 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
             if (selectedFilters.isNotEmpty) ...[
               const SizedBox(width: 8),
               ...selectedFilters.map((filter) => Container(
-                margin: const EdgeInsets.only(right: 8),
-                child: Chip(
-                  label: Text(filter),
-                  onDeleted: () {
-                    setState(() {
-                      if (filter.startsWith('Status:')) {
-                        _selectedStatuses.remove(filter.split(': ')[1].toLowerCase());
-                      } else if (filter.startsWith('Vehicle:')) {
-                        _selectedVehicleTypes.remove(filter.split(': ')[1].toLowerCase());
-                      } else if (filter.startsWith('Plaza:')) {
-                        _selectedPlazaNames.remove(filter.split(': ')[1]);
-                      }
-                    });
-                  },
-                  deleteIcon: const Icon(Icons.close, size: 16),
-                  backgroundColor: AppColors.primary.withOpacity(0.1),
-                  labelStyle: TextStyle(color: AppColors.primary),
-                  deleteIconColor: AppColors.primary,
-                ),
-              )),
+                    margin: const EdgeInsets.only(right: 8),
+                    child: Chip(
+                      label: Text(filter),
+                      onDeleted: () {
+                        setState(() {
+                          if (filter.startsWith('Status:')) {
+                            _selectedStatuses
+                                .remove(filter.split(': ')[1].toLowerCase());
+                          } else if (filter.startsWith('Vehicle:')) {
+                            _selectedVehicleTypes
+                                .remove(filter.split(': ')[1].toLowerCase());
+                          } else if (filter.startsWith('Plaza:')) {
+                            _selectedPlazaNames.remove(filter.split(': ')[1]);
+                          }
+                        });
+                      },
+                      deleteIcon: const Icon(Icons.close, size: 16),
+                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                      labelStyle: TextStyle(color: AppColors.primary),
+                      deleteIconColor: AppColors.primary,
+                    ),
+                  )),
             ],
           ],
         ),
@@ -308,7 +356,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       'Advanced Filters',
                       style: TextStyle(
@@ -325,9 +374,9 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                           title: 'Dispute Status',
                           options: [
                             {'key': 'open', 'label': 'Open'},
-                            {'key': 'pending', 'label': 'Pending'},
-                            {'key': 'complete', 'label': 'Completed'},
-                            {'key': 'rejected', 'label': 'Rejected'}
+                            {'key': 'inprogress', 'label': 'Inprogress'},
+                            {'key': 'accepted', 'label': 'Accepted'},
+                            {'key': 'rejected', 'label': 'Rejected'},
                           ],
                           selectedItems: _selectedStatuses,
                           onChanged: (value, isSelected) {
@@ -348,7 +397,7 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                             {'key': '4-wheeler', 'label': '4-Wheeler'},
                             {'key': 'bus', 'label': 'Bus'},
                             {'key': 'truck', 'label': 'Truck'},
-                            {'key': 'hmv', 'label': 'Heavy Machinery'}
+                            {'key': 'hmv', 'label': 'Heavy Machinery'},
                           ],
                           selectedItems: _selectedVehicleTypes,
                           onChanged: (value, isSelected) {
@@ -416,7 +465,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                               });
                               Navigator.pop(context);
                             },
-                            child: const Text('Apply', style: TextStyle(color: Colors.white)),
+                            child: const Text('Apply',
+                                style: TextStyle(color: Colors.white)),
                           ),
                         ),
                       ],
@@ -494,7 +544,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
               child: Text(
                 title,
                 style: TextStyle(
@@ -505,18 +556,21 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: TextField(
                 controller: searchController,
                 decoration: InputDecoration(
                   hintText: 'Search $title',
                   prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 onChanged: (value) {
                   setLocalState(() {
                     filteredOptions = options
-                        .where((option) => option.toLowerCase().contains(value.toLowerCase()))
+                        .where((option) =>
+                            option.toLowerCase().contains(value.toLowerCase()))
                         .toList();
                   });
                 },
@@ -540,8 +594,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                         checkmarkColor: AppColors.primary,
                         backgroundColor: Colors.grey[200],
                         labelStyle: TextStyle(
-                          color: isSelected ? AppColors.primary : Colors.black87,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          color:
+                              isSelected ? AppColors.primary : Colors.black87,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
                         ),
                       );
                     }).toList(),
@@ -566,7 +622,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
           child: CustomFormFields.searchFormField(
             controller: _searchController,
-            hintText: 'Search by Ticket ID, Status, Plaza, Vehicle Number...', context: context,
+            hintText: 'Search by Ticket ID, Status, Plaza, Vehicle Number...',
+            context: context,
           ),
         ),
         Padding(
@@ -581,7 +638,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
     );
   }
 
-  Future<DateTimeRange?> _selectCustomDateRange(BuildContext context, DateTimeRange? initialRange) async {
+  Future<DateTimeRange?> _selectCustomDateRange(
+      BuildContext context, DateTimeRange? initialRange) async {
     final earliestDate = DateTime.now().subtract(const Duration(days: 365 * 5));
     final picked = await showDateRangePicker(
       context: context,
@@ -604,8 +662,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
 
     if (picked == null) return null;
 
-    final start = picked.start.isBefore(earliestDate) ? earliestDate : picked.start;
-    final end = picked.end.isAfter(DateTime.now()) ? DateTime.now() : picked.end;
+    final start =
+        picked.start.isBefore(earliestDate) ? earliestDate : picked.start;
+    final end =
+        picked.end.isAfter(DateTime.now()) ? DateTime.now() : picked.end;
 
     final maxAllowedRange = const Duration(days: 365);
     if (end.difference(start) > maxAllowedRange) {
@@ -655,7 +715,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       'Select Date Range',
                       style: TextStyle(
@@ -666,7 +727,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Column(
@@ -681,8 +743,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                                   setDialogState(() {
                                     final now = DateTime.now();
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(now.year, now.month, now.day),
-                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
+                                      start: DateTime(
+                                          now.year, now.month, now.day),
+                                      end: DateTime(now.year, now.month,
+                                          now.day, 23, 59, 59),
                                     );
                                     selectedOption = 'Today';
                                   });
@@ -694,10 +758,18 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                                 isSelected: selectedOption == 'Yesterday',
                                 onTap: () {
                                   setDialogState(() {
-                                    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+                                    final yesterday = DateTime.now()
+                                        .subtract(const Duration(days: 1));
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(yesterday.year, yesterday.month, yesterday.day),
-                                      end: DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59),
+                                      start: DateTime(yesterday.year,
+                                          yesterday.month, yesterday.day),
+                                      end: DateTime(
+                                          yesterday.year,
+                                          yesterday.month,
+                                          yesterday.day,
+                                          23,
+                                          59,
+                                          59),
                                     );
                                     selectedOption = 'Yesterday';
                                   });
@@ -711,8 +783,11 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                                   setDialogState(() {
                                     final now = DateTime.now();
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7)),
-                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
+                                      start: DateTime(
+                                              now.year, now.month, now.day)
+                                          .subtract(const Duration(days: 7)),
+                                      end: DateTime(now.year, now.month,
+                                          now.day, 23, 59, 59),
                                     );
                                     selectedOption = 'Last 7 Days';
                                   });
@@ -731,8 +806,11 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                                   setDialogState(() {
                                     final now = DateTime.now();
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 30)),
-                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
+                                      start: DateTime(
+                                              now.year, now.month, now.day)
+                                          .subtract(const Duration(days: 30)),
+                                      end: DateTime(now.year, now.month,
+                                          now.day, 23, 59, 59),
                                     );
                                     selectedOption = 'Last 30 Days';
                                   });
@@ -743,7 +821,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                                 label: 'Custom',
                                 isSelected: selectedOption == 'Custom',
                                 onTap: () async {
-                                  final picked = await _selectCustomDateRange(context, tempDateRange);
+                                  final picked = await _selectCustomDateRange(
+                                      context, tempDateRange);
                                   if (picked != null) {
                                     setDialogState(() {
                                       tempDateRange = picked;
@@ -760,10 +839,11 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                   ),
                   if (selectedOption == 'Custom' && tempDateRange != null) ...[
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 8.0),
                       child: Text(
                         'Selected Range: ${DateFormat('dd MMM yyyy').format(tempDateRange!.start)} - '
-                            '${DateFormat('dd MMM yyyy').format(tempDateRange!.end)}',
+                        '${DateFormat('dd MMM yyyy').format(tempDateRange!.end)}',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -811,7 +891,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                               });
                               Navigator.pop(context);
                             },
-                            child: const Text('Apply', style: TextStyle(color: Colors.white)),
+                            child: const Text('Apply',
+                                style: TextStyle(color: Colors.white)),
                           ),
                         ),
                       ],
@@ -845,7 +926,9 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.2) : Colors.grey[200],
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.2)
+              : Colors.grey[200],
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? AppColors.primary : Colors.transparent,
@@ -867,47 +950,61 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-    return range.start == todayStart && range.end.isAtSameMomentAs(todayEnd);
+    return range.start.isAtSameMomentAs(todayStart) &&
+        range.end.isAtSameMomentAs(todayEnd);
   }
 
   bool _isYesterdayRange(DateTimeRange range) {
     final yesterday = DateTime.now().subtract(const Duration(days: 1));
-    final yesterdayStart = DateTime(yesterday.year, yesterday.month, yesterday.day);
-    final yesterdayEnd = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
-    return range.start == yesterdayStart && range.end.isAtSameMomentAs(yesterdayEnd);
+    final yesterdayStart =
+        DateTime(yesterday.year, yesterday.month, yesterday.day);
+    final yesterdayEnd =
+        DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
+    return range.start.isAtSameMomentAs(yesterdayStart) &&
+        range.end.isAtSameMomentAs(yesterdayEnd);
   }
 
   bool _isLast7DaysRange(DateTimeRange range) {
     final now = DateTime.now();
-    final sevenDaysAgo = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7));
+    final sevenDaysAgo = DateTime(now.year, now.month, now.day)
+        .subtract(const Duration(days: 7));
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-    return range.start == sevenDaysAgo && range.end.isAtSameMomentAs(todayEnd);
+    return range.start.isAtSameMomentAs(sevenDaysAgo) &&
+        range.end.isAtSameMomentAs(todayEnd);
   }
 
   bool _isLast30DaysRange(DateTimeRange range) {
     final now = DateTime.now();
-    final thirtyDaysAgo = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 30));
+    final thirtyDaysAgo = DateTime(now.year, now.month, now.day)
+        .subtract(const Duration(days: 30));
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-    return range.start == thirtyDaysAgo && range.end.isAtSameMomentAs(todayEnd);
+    return range.start.isAtSameMomentAs(thirtyDaysAgo) &&
+        range.end.isAtSameMomentAs(todayEnd);
   }
 
   Widget _buildTicketCard(Map<String, dynamic> ticket) {
-    DateTime entryTime = DateTime.parse(ticket['entryTime'] ?? DateTime.now().toString());
-    String formattedEntryTime = DateFormat('dd MMM, hh:mm a').format(entryTime);
+    final entryTimeString = ticket['entryTime']?.toString() ?? '';
+    final entryTime = DateTime.tryParse(entryTimeString);
+    final formattedEntryTime = entryTime != null
+        ? DateFormat('dd MMM, hh:mm a').format(entryTime)
+        : 'N/A';
+
     Color statusColor;
-    switch (ticket['status'].toString().toLowerCase()) {
+    switch (ticket['status']?.toString().toLowerCase() ?? '') {
       case 'open':
         statusColor = Colors.green;
+        break;
+      case 'inprogress':
+        statusColor = Colors.orange;
+        break;
+      case 'accepted':
+        statusColor = Colors.blue;
         break;
       case 'rejected':
         statusColor = Colors.red;
         break;
-      case 'complete':
-        statusColor = Colors.blue;
-        break;
-      case 'pending':
       default:
-        statusColor = Colors.orange;
+        statusColor = Colors.grey;
     }
 
     return Card(
@@ -949,7 +1046,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                       children: [
                         Expanded(
                           child: Text(
-                            '${ticket['plazaName']?.toString() ?? 'N/A'} | ${ticket['entryLaneId']?.toString() ?? 'N/A'}',
+                            // TODO: Replace with actual plaza name lookup from plazaID
+                            '${ticket['plazaName']?.toString() ?? 'Plaza ${ticket['plazaID']}' ?? 'N/A'} | ${ticket['entryLaneId']?.toString() ?? 'N/A'}',
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.normal,
@@ -959,13 +1057,14 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: statusColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            ticket['status'].toString(),
+                            ticket['status']?.toString() ?? 'Unknown',
                             style: TextStyle(
                               color: statusColor,
                               fontWeight: FontWeight.w600,
@@ -998,7 +1097,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                         ),
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 6.0),
-                          child: Text('|', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                          child: Text('|',
+                              style: TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold)),
                         ),
                         Text(
                           ticket['vehicleType']?.toString() ?? 'N/A',
@@ -1010,7 +1112,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                         ),
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 6.0),
-                          child: Text('|', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                          child: Text('|',
+                              style: TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold)),
                         ),
                         Text(
                           formattedEntryTime,
@@ -1071,7 +1176,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
         errorMessage = 'Please check your internet connection and try again.';
       } else if (error is RequestTimeoutException) {
         errorTitle = 'Request Timed Out';
-        errorMessage = 'The server is taking too long to respond. Please try again later.';
+        errorMessage =
+            'The server is taking too long to respond. Please try again later.';
       } else if (error is HttpException) {
         errorTitle = 'Server Error';
         errorMessage = 'We couldn’t reach the server. Please try again.';
@@ -1108,9 +1214,13 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
         children: [
           Icon(Icons.error_outline, size: 50, color: Colors.red),
           SizedBox(height: 16),
-          Text(errorTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(errorTitle,
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           SizedBox(height: 8),
-          Text(errorMessage, style: const TextStyle(fontSize: 14), textAlign: TextAlign.center),
+          Text(errorMessage,
+              style: const TextStyle(fontSize: 14),
+              textAlign: TextAlign.center),
           SizedBox(height: 16),
           ElevatedButton(onPressed: _refreshData, child: const Text('Retry')),
         ],
@@ -1143,7 +1253,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final filteredTickets = _getFilteredTickets(_viewModel.tickets);
-    final totalPages = (filteredTickets.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
+    final totalPages = (filteredTickets.length / _itemsPerPage)
+        .ceil()
+        .clamp(1, double.infinity)
+        .toInt();
     final paginatedTickets = _getPaginatedTickets(filteredTickets);
 
     return Scaffold(
@@ -1151,7 +1264,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
       appBar: CustomAppBar.appBarWithNavigation(
         screenTitle: "Dispute Tickets",
         onPressed: () => Navigator.pop(context),
-        darkBackground: true, context: context,
+        darkBackground: true,
+        context: context,
       ),
       body: Column(
         children: [
@@ -1176,7 +1290,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                           child: _buildEmptyState(),
                         )
                       else if (!_isLoading)
-                          ...paginatedTickets.map((ticket) => _buildTicketCard(ticket)),
+                        ...paginatedTickets
+                            .map((ticket) => _buildTicketCard(ticket)),
                     ],
                   ),
                   if (_isLoading) _buildShimmerList(),
@@ -1197,5 +1312,6 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
 }
 
 extension StringExtension on String {
-  String capitalize() => "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
+  String capitalize() =>
+      "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
 }

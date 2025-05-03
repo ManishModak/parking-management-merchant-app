@@ -1,18 +1,18 @@
 import 'dart:developer' as developer;
-import 'dart:io'; // Needed for Image.file if used
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:merchant_app/config/app_colors.dart'; // For shimmer colors
-import 'package:merchant_app/config/app_config.dart'; // For device width
-import 'package:merchant_app/generated/l10n.dart'; // For localization
+import 'package:merchant_app/config/app_colors.dart';
+import 'package:merchant_app/config/app_config.dart';
+import 'package:merchant_app/generated/l10n.dart';
 import 'package:merchant_app/utils/components/button.dart';
-import 'package:merchant_app/utils/exceptions.dart'; // For custom exceptions
-import 'package:provider/provider.dart'; // For state management
-import 'package:merchant_app/config/app_routes.dart'; // For navigation routes
-import 'package:merchant_app/config/app_theme.dart'; // For theme extensions
-import 'package:merchant_app/utils/components/appbar.dart'; // Custom AppBar
-import 'package:shimmer/shimmer.dart'; // For loading shimmer effect
-import '../../viewmodels/plaza/plaza_modification_viewmodel.dart'; // The ViewModel
+import 'package:merchant_app/utils/exceptions.dart';
+import 'package:provider/provider.dart';
+import 'package:merchant_app/config/app_routes.dart';
+import 'package:merchant_app/config/app_theme.dart';
+import 'package:merchant_app/utils/components/appbar.dart';
+import 'package:shimmer/shimmer.dart';
+import '../../viewmodels/plaza/plaza_modification_viewmodel.dart';
 
 class PlazaInfoScreen extends StatefulWidget {
   final dynamic plazaId;
@@ -24,40 +24,32 @@ class PlazaInfoScreen extends StatefulWidget {
 }
 
 class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
-  static const String _logName = 'PlazaInfoScreen'; // Logger name for debugging
-
-  late String _plazaId = ''; // Stores the actual plaza ID being viewed
+  static const String _logName = 'PlazaInfoScreen';
+  late String _plazaId = '';
   late final PlazaModificationViewModel _viewModel;
-  bool _isInitialized = false; // Tracks if initState/didChangeDependencies logic has run
-  bool _hasFetchError = false; // Tracks if the latest fetch attempt failed
-  int _currentImagePage = 0; // For image pagination within the image section card
-  bool _isImagesExpanded = true; // State for the ExpansionTile containing images
-  int _fetchAttemptId = 0; // Added to track fetch attempts for unique keys
-
-  // Declare the RouteObserver variable - must be provided via Provider higher up
+  bool _isInitialized = false;
+  bool _hasFetchError = false;
+  int _currentImagePage = 0;
+  bool _isImagesExpanded = true;
+  int _fetchAttemptId = 0;
+  bool _isFetching = false;
   late RouteObserver<ModalRoute> _routeObserver;
 
   @override
   void initState() {
     super.initState();
-    // Get the ViewModel instance once. Listen is false as we use Consumer/watch in build.
     _viewModel = context.read<PlazaModificationViewModel>();
     developer.log('initState', name: _logName);
-    // Initialization logic moved to didChangeDependencies
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
-    // Initialize Plaza ID and fetch initial data only once
     if (!_isInitialized) {
       developer.log('didChangeDependencies - First time initialization', name: _logName);
-      _initializePlaza(); // Handles getting plazaId and triggering the *first* load
+      _initializePlaza();
       _isInitialized = true;
     }
-
-    // Subscribe to the RouteObserver to listen for navigation events
     final route = ModalRoute.of(context);
     if (route != null) {
       _routeObserver = Provider.of<RouteObserver<ModalRoute>>(context, listen: false);
@@ -72,28 +64,21 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
   @override
   void dispose() {
     developer.log('dispose - Unsubscribing from RouteObserver', name: _logName);
-    // Unsubscribe from the RouteObserver when the widget is disposed
     _routeObserver.unsubscribe(this);
     super.dispose();
   }
 
-  /// Called when the top route has been popped and this route is now visible.
   @override
   void didPopNext() {
     developer.log('didPopNext - Screen became visible again. Refreshing details.',
         name: _logName);
-    // Refresh all plaza details when returning from a modification screen
     if (_isInitialized && mounted && _plazaId.isNotEmpty) {
       _loadPlazaDetails();
     }
   }
 
-  // --- Initialization and Data Fetching ---
-
-  /// Determines the Plaza ID from constructor or route arguments and triggers the initial data load.
   void _initializePlaza() {
     final routeArgs = widget.plazaId ?? ModalRoute.of(context)?.settings.arguments;
-    // Ensure the argument is treated as a String? for safety.
     final potentialPlazaId = routeArgs?.toString();
     final strings = S.of(context);
 
@@ -114,7 +99,7 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
           }
         }
       });
-      if (mounted) setState(() {}); // Trigger rebuild to show error state
+      if (mounted) setState(() {});
     } else {
       _plazaId = potentialPlazaId;
       developer.log('Plaza ID set to: $_plazaId. Scheduling initial load.', name: _logName);
@@ -126,20 +111,19 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
     }
   }
 
-  /// Fetches all details for the current Plaza ID using the ViewModel.
   Future<void> _loadPlazaDetails() async {
-    if (!mounted || _plazaId.isEmpty) {
-      developer.log('Skipping _loadPlazaDetails (not mounted or no plazaId).', name: _logName);
+    if (!mounted || _plazaId.isEmpty || _isFetching) {
+      developer.log('Skipping _loadPlazaDetails (not mounted, no plazaId, or fetch in progress).',
+          name: _logName);
       return;
     }
+    _isFetching = true;
     _hasFetchError = false;
-    _fetchAttemptId++; // Increment for each fetch to ensure unique keys
+    _fetchAttemptId++;
     developer.log('Starting _loadPlazaDetails for ID: $_plazaId, Attempt: $_fetchAttemptId',
         name: _logName);
-    // ViewModel handles loading state notification.
 
-    // Optionally trigger rebuild *before* async call to ensure loading state shows immediately
-    if (mounted && !_viewModel.isLoading) { // Only force rebuild if not already loading
+    if (mounted && !_viewModel.isLoading) {
       setState(() {});
     }
 
@@ -150,19 +134,15 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
       _hasFetchError = true;
       developer.log('Error loading plaza details: $e', name: _logName,
           error: e, stackTrace: stackTrace, level: 1000);
-      // ViewModel handles setting the error state.
     } finally {
-      // Ensure UI reflects the final state (loaded or error) after fetch attempt.
       if (mounted) {
         setState(() {});
       }
+      _isFetching = false;
       developer.log('Finished _loadPlazaDetails attempt.', name: _logName);
     }
   }
 
-  // --- UI Building Methods ---
-
-  /// Builds the AppBar, displaying plaza name and status when loaded.
   PreferredSizeWidget _buildCustomAppBar(PlazaModificationViewModel viewModel, S strings) {
     final bool isDataActuallyLoaded = viewModel.plazaId == _plazaId &&
         !viewModel.isLoading &&
@@ -193,7 +173,6 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
     );
   }
 
-  /// Builds the shimmer loading placeholder widget.
   Widget _buildLoadingState(S strings) {
     developer.log('Building loading shimmer state.', name: _logName);
     return SingleChildScrollView(
@@ -218,57 +197,49 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
     );
   }
 
-  /// Helper for building individual section card placeholders in the shimmer effect.
   Widget _buildShimmerSectionCard({
     int fieldCount = 3,
     bool isImageSection = false,
     bool isActionCard = false,
   }) {
-    // Get the appropriate card color from the theme
     final cardColor = Theme.of(context).cardTheme.color ?? Theme.of(context).cardColor;
-    final shimmerPlaceholderColor = Colors.white.withOpacity(0.5); // Color for placeholder shapes inside shimmer
+    final shimmerPlaceholderColor = Colors.white.withOpacity(0.5);
 
     return Card(
-      elevation: 0, // No elevation for shimmer placeholders
-      margin: const EdgeInsets.symmetric(vertical: 4.0), // Reduced vertical margin slightly
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
       shape: Theme.of(context).cardTheme.shape ??
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-      color: cardColor, // Use card color as base for the card itself
+      color: cardColor,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- Placeholder for Title and Edit Icon Row ---
-            // Show this row unless it's the simple action card placeholder
             if (!isActionCard)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(width: 150, height: 20, color: shimmerPlaceholderColor), // Title placeholder
-                  Container(width: 30, height: 20, color: shimmerPlaceholderColor), // Edit icon placeholder
+                  Container(width: 150, height: 20, color: shimmerPlaceholderColor),
+                  Container(width: 30, height: 20, color: shimmerPlaceholderColor),
                 ],
               ),
-            // Add spacing only if the title row was shown
             if (!isActionCard) const SizedBox(height: 16),
-
-            // --- Placeholder for Image Section Content ---
             if (isImageSection)
               SizedBox(
-                height: 140, // Match actual image section height
+                height: 140,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
-                  physics: const NeverScrollableScrollPhysics(), // Disable scroll
+                  physics: const NeverScrollableScrollPhysics(),
                   children: List.generate(
-                    3, // Show 3 placeholder images
+                    3,
                         (index) => Padding(
                       padding: const EdgeInsets.only(right: 8.0),
                       child: Container(
-                        // Calculate width similar to actual images if possible
-                        width: (AppConfig.deviceWidth * 0.9 - 48 - 16) / 3, // Approx calculation
+                        width: (AppConfig.deviceWidth * 0.9 - 48 - 16) / 3,
                         height: 140,
                         decoration: BoxDecoration(
-                          color: shimmerPlaceholderColor, // Placeholder color
+                          color: shimmerPlaceholderColor,
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
@@ -276,60 +247,52 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
                   ),
                 ),
               )
-
-            // --- Placeholder for Action Card (like Lane Details) ---
             else if (isActionCard)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      Container(width: 24, height: 24, color: shimmerPlaceholderColor), // Icon placeholder
+                      Container(width: 24, height: 24, color: shimmerPlaceholderColor),
                       const SizedBox(width: 12),
-                      Container(width: 120, height: 20, color: shimmerPlaceholderColor), // Text placeholder
+                      Container(width: 120, height: 20, color: shimmerPlaceholderColor),
                     ],
                   ),
-                  Container(width: 24, height: 24, color: shimmerPlaceholderColor), // Chevron placeholder
+                  Container(width: 24, height: 24, color: shimmerPlaceholderColor),
                 ],
               )
-
-            // --- Placeholder for Detail Field Sections (Basic/Bank) ---
-            // Show this only if it's NOT an image section and NOT an action card
-            else if (!isImageSection && !isActionCard) // Combined condition
-                ...List.generate( // Use spread operator '...'
-                  fieldCount,
-                      (index) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
-                    child: Row( // Simulate two columns of fields
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: _buildShimmerFieldPair(shimmerPlaceholderColor)), // Pass color
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildShimmerFieldPair(shimmerPlaceholderColor)), // Pass color
-                      ],
-                    ),
+            else
+              ...List.generate(
+                fieldCount,
+                    (index) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _buildShimmerFieldPair(shimmerPlaceholderColor)),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildShimmerFieldPair(shimmerPlaceholderColor)),
+                    ],
                   ),
                 ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  /// Helper for building a Label+Value placeholder pair in the shimmer effect.
   Widget _buildShimmerFieldPair(Color placeholderColor) {
-    // Accept color parameter
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(width: 100, height: 14, color: placeholderColor), // Label placeholder
+        Container(width: 100, height: 14, color: placeholderColor),
         const SizedBox(height: 6),
-        Container(width: 130, height: 18, color: placeholderColor), // Value placeholder
+        Container(width: 130, height: 18, color: placeholderColor),
       ],
     );
   }
 
-  /// Builds the UI displayed when an error occurs during data fetching.
   Widget _buildErrorState(Exception error, S strings) {
     developer.log('Building error state: ${error.runtimeType} - $error', name: _logName);
     String errorTitle = strings.errorTitleDefault;
@@ -354,58 +317,70 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         physics: const AlwaysScrollableScrollPhysics(),
-        // Allow refresh on error screen
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.error_outline_rounded, size: 64, color: Theme.of(context).colorScheme.error),
             const SizedBox(height: 16),
-            Text(errorTitle,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: context.textPrimaryColor),
-                textAlign: TextAlign.center),
+            Text(
+              errorTitle,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: context.textPrimaryColor),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
-            Text(errorMessage,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: context.textSecondaryColor),
-                textAlign: TextAlign.center),
+            Text(
+              errorMessage,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: context.textSecondaryColor),
+              textAlign: TextAlign.center,
+            ),
             if (errorDetails != null && errorDetails.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text("Details: $errorDetails",
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textSecondaryColor),
-                  textAlign: TextAlign.center),
+              Text(
+                "Details: $errorDetails",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.textSecondaryColor),
+                textAlign: TextAlign.center,
+              ),
             ],
             const SizedBox(height: 24),
             CustomButtons.primaryButton(
-                height: 40, width: 150, text: strings.buttonRetry, onPressed: _loadPlazaDetails, context: context),
+              height: 40,
+              width: 150,
+              text: strings.buttonRetry,
+              onPressed: _loadPlazaDetails,
+              context: context,
+            ),
           ],
         ),
       ),
     );
   }
 
-  /// Helper to build individual detail items (Label + Value) within sections.
   Widget _buildDetailItem({required String title, required String value, required S strings}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelMedium
-                  ?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
+          Text(
+            title,
+            style: Theme.of(context)
+                .textTheme
+                .labelMedium
+                ?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 4),
-          Text(value.isEmpty ? strings.labelNA : value,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9))),
+          Text(
+            value.isEmpty ? strings.labelNA : value,
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9)),
+          ),
         ],
       ),
     );
   }
 
-  /// Builds the Basic Details section card.
   Widget _buildBasicDetailsSection(PlazaModificationViewModel viewModel, S strings) {
     final details = viewModel.formState.basicDetails;
     final plazaCategory = details['plazaCategory'] as String?;
@@ -422,81 +397,118 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text(strings.menuBasicDetails,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-              IconButton(
-                icon: Icon(Icons.edit_outlined, color: Theme.of(context).colorScheme.primary, size: 20),
-                onPressed: areDetailsLoaded && viewModel.error == null
-                    ? () {
-                  developer.log('Navigating to Basic Details Mod', name: _logName);
-                  Navigator.pushNamed(context, AppRoutes.basicDetailsModification, arguments: _plazaId).then(
-                          (_) => developer.log('Returned from Basic Details Mod', name: _logName));
-                }
-                    : null,
-                tooltip: strings.tooltipEditBasicDetails,
-                constraints: const BoxConstraints(),
-                padding: EdgeInsets.zero,
-              ),
-            ]),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  strings.menuBasicDetails,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: Icon(Icons.edit_outlined, color: Theme.of(context).colorScheme.primary, size: 20),
+                  onPressed: areDetailsLoaded && viewModel.error == null
+                      ? () {
+                    developer.log('Navigating to Basic Details Mod', name: _logName);
+                    Navigator.pushNamed(context, AppRoutes.basicDetailsModification, arguments: _plazaId).then(
+                          (_) => developer.log('Returned from Basic Details Mod', name: _logName),
+                    );
+                  }
+                      : null,
+                  tooltip: strings.tooltipEditBasicDetails,
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.zero,
+                ),
+              ],
+            ),
             if (areDetailsLoaded) ...[
               const SizedBox(height: 8),
-              Row(children: [
-                Expanded(
+              Row(
+                children: [
+                  Expanded(
                     child: _buildDetailItem(
-                        title: strings.labelOwner,
-                        value: details['plazaOwner']?.toString() ?? '',
-                        strings: strings)),
-                Expanded(
+                      title: strings.labelOwner,
+                      value: details['plazaOwner']?.toString() ?? '',
+                      strings: strings,
+                    ),
+                  ),
+                  Expanded(
                     child: _buildDetailItem(
-                        title: strings.labelOperator,
-                        value: details['plazaOperatorName']?.toString() ?? '',
-                        strings: strings)),
-              ]),
-              Row(children: [
-                Expanded(
+                      title: strings.labelOperator,
+                      value: details['plazaOperatorName']?.toString() ?? '',
+                      strings: strings,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
                     child: _buildDetailItem(
-                        title: strings.labelMobileNumber,
-                        value: details['mobileNumber']?.toString() ?? '',
-                        strings: strings)),
-                Expanded(
+                      title: strings.labelMobileNumber,
+                      value: details['mobileNumber']?.toString() ?? '',
+                      strings: strings,
+                    ),
+                  ),
+                  Expanded(
                     child: _buildDetailItem(
-                        title: strings.labelPincode, value: details['pincode']?.toString() ?? '', strings: strings)),
-              ]),
+                      title: strings.labelPincode,
+                      value: details['pincode']?.toString() ?? '',
+                      strings: strings,
+                    ),
+                  ),
+                ],
+              ),
               _buildDetailItem(
-                  title: strings.labelEmail, value: details['email']?.toString() ?? '', strings: strings),
+                title: strings.labelEmail,
+                value: details['email']?.toString() ?? '',
+                strings: strings,
+              ),
               _buildDetailItem(
-                  title: strings.labelAddress, value: details['address']?.toString() ?? '', strings: strings),
-              Row(children: [
-                Expanded(
+                title: strings.labelAddress,
+                value: details['address']?.toString() ?? '',
+                strings: strings,
+              ),
+              Row(
+                children: [
+                  Expanded(
                     flex: 2,
                     child: _buildDetailItem(
-                        title: strings.labelCategory,
-                        value: plazaCategory?.capitalize() ?? strings.labelNA,
-                        strings: strings)),
-                Expanded(
+                      title: strings.labelCategory,
+                      value: plazaCategory?.capitalize() ?? strings.labelNA,
+                      strings: strings,
+                    ),
+                  ),
+                  Expanded(
                     flex: 2,
                     child: _buildDetailItem(
-                        title: strings.labelSubCategory,
-                        value: plazaSubCategory?.capitalize() ?? strings.labelNA,
-                        strings: strings)),
-                Expanded(
+                      title: strings.labelSubCategory,
+                      value: plazaSubCategory?.capitalize() ?? strings.labelNA,
+                      strings: strings,
+                    ),
+                  ),
+                  Expanded(
                     flex: 1,
                     child: _buildDetailItem(
-                        title: strings.labelCity, value: details['city']?.toString() ?? '', strings: strings)),
-              ]),
+                      title: strings.labelCity,
+                      value: details['city']?.toString() ?? '',
+                      strings: strings,
+                    ),
+                  ),
+                ],
+              ),
             ] else if (!viewModel.isLoading)
               Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  child: Center(
-                      child: Text(strings.loadingEllipsis, style: TextStyle(color: context.textSecondaryColor))))
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: Center(
+                  child: Text(strings.loadingEllipsis, style: TextStyle(color: context.textSecondaryColor)),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  /// Builds the Bank Details section card.
   Widget _buildBankDetailsSection(PlazaModificationViewModel viewModel, S strings) {
     final details = viewModel.formState.bankDetails;
     final bool hasBankDetails = details.isNotEmpty && (details['bankName']?.toString().isNotEmpty ?? false);
@@ -512,71 +524,94 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text(strings.menuBankDetails,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-              IconButton(
-                icon: Icon(Icons.edit_outlined, color: Theme.of(context).colorScheme.primary, size: 20),
-                onPressed: areBasicDetailsLoaded && viewModel.error == null
-                    ? () {
-                  developer.log('Navigating to Bank Details Mod', name: _logName);
-                  Navigator.pushNamed(context, AppRoutes.bankDetailsModification, arguments: _plazaId)
-                      .then((_) => developer.log('Returned from Bank Details Mod', name: _logName));
-                }
-                    : null,
-                tooltip: strings.tooltipEditBankDetails,
-                constraints: const BoxConstraints(),
-                padding: EdgeInsets.zero,
-              ),
-            ]),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  strings.menuBankDetails,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: Icon(Icons.edit_outlined, color: Theme.of(context).colorScheme.primary, size: 20),
+                  onPressed: areBasicDetailsLoaded && viewModel.error == null
+                      ? () {
+                    developer.log('Navigating to Bank Details Mod', name: _logName);
+                    Navigator.pushNamed(context, AppRoutes.bankDetailsModification, arguments: _plazaId).then(
+                          (_) => developer.log('Returned from Bank Details Mod', name: _logName),
+                    );
+                  }
+                      : null,
+                  tooltip: strings.tooltipEditBankDetails,
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.zero,
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             if (areBasicDetailsLoaded) ...[
               if (hasBankDetails) ...[
-                Row(children: [
-                  Expanded(
+                Row(
+                  children: [
+                    Expanded(
                       child: _buildDetailItem(
-                          title: strings.labelBankName,
-                          value: details['bankName']?.toString() ?? '',
-                          strings: strings)),
-                  Expanded(
+                        title: strings.labelBankName,
+                        value: details['bankName']?.toString() ?? '',
+                        strings: strings,
+                      ),
+                    ),
+                    Expanded(
                       child: _buildDetailItem(
-                          title: strings.labelAccountHolder,
-                          value: details['accountHolderName']?.toString() ?? '',
-                          strings: strings)),
-                ]),
-                Row(children: [
-                  Expanded(
+                        title: strings.labelAccountHolder,
+                        value: details['accountHolderName']?.toString() ?? '',
+                        strings: strings,
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(
                       child: _buildDetailItem(
-                          title: strings.labelAccountNumber,
-                          value: details['accountNumber']?.toString() ?? '',
-                          strings: strings)),
-                  Expanded(
+                        title: strings.labelAccountNumber,
+                        value: details['accountNumber']?.toString() ?? '',
+                        strings: strings,
+                      ),
+                    ),
+                    Expanded(
                       child: _buildDetailItem(
-                          title: strings.labelIFSC,
-                          value: details['IFSCcode']?.toString() ?? '',
-                          strings: strings)),
-                ]),
+                        title: strings.labelIFSC,
+                        value: details['IFSCcode']?.toString() ?? '',
+                        strings: strings,
+                      ),
+                    ),
+                  ],
+                ),
               ] else
                 Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
-                    child: Center(
-                        child: Text(strings.messageNoBankDetails,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))))),
-            ] else if (!viewModel.isLoading)
-              Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
                   child: Center(
-                      child: Text(strings.loadingEllipsis, style: TextStyle(color: context.textSecondaryColor))))
+                    child: Text(
+                      strings.messageNoBankDetails,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                    ),
+                  ),
+                ),
+            ] else if (!viewModel.isLoading)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: Center(
+                  child: Text(strings.loadingEllipsis, style: TextStyle(color: context.textSecondaryColor)),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  /// Builds the Plaza Images section card using an ExpansionTile.
   Widget _buildImageSection(PlazaModificationViewModel viewModel, S strings) {
     final images = viewModel.formState.plazaImages;
     final bool areBasicDetailsLoaded = viewModel.formState.basicDetails.isNotEmpty;
@@ -588,35 +623,50 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
       color: Theme.of(context).cardColor,
       child: ExpansionTile(
         key: const ValueKey('plazaImagesExpansionTile'),
-        title: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(strings.menuPlazaImages,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            if (images.isNotEmpty)
-              Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10)),
-                  child: Text('${images.length}',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500))),
-            if (images.isNotEmpty) const SizedBox(width: 8),
-            IconButton(
-              icon: Icon(Icons.edit_outlined, color: Theme.of(context).colorScheme.primary, size: 20),
-              onPressed: areBasicDetailsLoaded && viewModel.error == null
-                  ? () {
-                developer.log('Navigating to Images Mod', name: _logName);
-                Navigator.pushNamed(context, AppRoutes.plazaImagesModification, arguments: _plazaId)
-                    .then((_) => developer.log('Returned from Images Mod', name: _logName));
-              }
-                  : null,
-              tooltip: strings.tooltipEditImages,
-              constraints: const BoxConstraints(),
-              padding: EdgeInsets.zero,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              strings.menuPlazaImages,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
-          ]),
-        ]),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (images.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${images.length}',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                if (images.isNotEmpty) const SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(Icons.edit_outlined, color: Theme.of(context).colorScheme.primary, size: 20),
+                  onPressed: areBasicDetailsLoaded && viewModel.error == null
+                      ? () {
+                    developer.log('Navigating to Images Mod', name: _logName);
+                    Navigator.pushNamed(context, AppRoutes.plazaImagesModification, arguments: _plazaId).then(
+                          (_) => developer.log('Returned from Images Mod', name: _logName),
+                    );
+                  }
+                      : null,
+                  tooltip: strings.tooltipEditImages,
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.zero,
+                ),
+              ],
+            ),
+          ],
+        ),
         initiallyExpanded: _isImagesExpanded,
         onExpansionChanged: (expanded) => setState(() => _isImagesExpanded = expanded),
         shape: const Border(),
@@ -624,172 +674,231 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
         tilePadding: const EdgeInsets.only(left: 16, right: 8, top: 4, bottom: 4),
         children: [
           Padding(
-              padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 if (images.isEmpty && !viewModel.isLoading && areBasicDetailsLoaded)
                   SizedBox(
-                      height: 150,
-                      child: Center(
-                          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                            Icon(Icons.image_not_supported_outlined,
-                                size: 48, color: Theme.of(context).colorScheme.primary.withOpacity(0.7)),
-                            const SizedBox(height: 8),
-                            Text(strings.messageNoImagesAvailable,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)))
-                          ])))
+                    height: 150,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.image_not_supported_outlined,
+                            size: 48,
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            strings.messageNoImagesAvailable,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
                 else if (images.isNotEmpty) ...[
                   SizedBox(
-                      height: 150,
-                      child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _getCurrentImages(images).length,
-                          itemBuilder: (context, index) {
-                            final imageUrl = _getCurrentImages(images)[index];
-                            final imageWidth = (AppConfig.deviceWidth * 0.9 - 48 - 16) / 3;
-                            final isNetworkImage = imageUrl.startsWith('http');
-                            final isFileImage = !isNetworkImage && File(imageUrl).existsSync();
-                            return Padding(
-                                padding: const EdgeInsets.only(right: 8.0),
-                                child: Container(
-                                    width: imageWidth,
-                                    decoration: BoxDecoration(
-                                        border: Border.all(
-                                            color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
-                                        borderRadius: BorderRadius.circular(12)),
-                                    child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(11),
-                                        child: GestureDetector(
-                                            onTap: () =>
-                                                _showZoomableImageDialog(imageUrl, isNetworkImage, isFileImage, strings),
-                                            child: isNetworkImage
-                                                ? CachedNetworkImage(
-                                                imageUrl: imageUrl,
-                                                fit: BoxFit.cover,
-                                                placeholder: (context, url) =>
-                                                    _buildShimmerPlaceholder(width: imageWidth, height: 150),
-                                                errorWidget: (context, url, error) =>
-                                                    _buildImageErrorWidget(strings, isNetwork: true))
-                                                : isFileImage
-                                                ? Image.file(File(imageUrl),
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (ctx, err, st) =>
-                                                    _buildImageErrorWidget(strings, isNetwork: false))
-                                                : _buildImageErrorWidget(
-                                                strings, isNetwork: false, message: strings.errorImageNotFound)))));
-                          })),
+                    height: 150,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _getCurrentImages(images).length,
+                      itemBuilder: (context, index) {
+                        final imageUrl = _getCurrentImages(images)[index];
+                        final imageWidth = (AppConfig.deviceWidth * 0.9 - 48 - 16) / 3;
+                        final isNetworkImage = imageUrl.startsWith('http');
+                        final isFileImage = !isNetworkImage && File(imageUrl).existsSync();
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: Container(
+                            width: imageWidth,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(11),
+                              child: GestureDetector(
+                                onTap: () => _showZoomableImageDialog(imageUrl, isNetworkImage, isFileImage, strings),
+                                child: isNetworkImage
+                                    ? CachedNetworkImage(
+                                  imageUrl: imageUrl,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) =>
+                                      _buildShimmerPlaceholder(width: imageWidth, height: 150),
+                                  errorWidget: (context, url, error) =>
+                                      _buildImageErrorWidget(strings, isNetwork: true),
+                                )
+                                    : isFileImage
+                                    ? Image.file(
+                                  File(imageUrl),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (ctx, err, st) =>
+                                      _buildImageErrorWidget(strings, isNetwork: false),
+                                )
+                                    : _buildImageErrorWidget(
+                                  strings,
+                                  isNetwork: false,
+                                  message: strings.errorImageNotFound,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                   if (_getTotalPages(images) > 1) ...[
                     const SizedBox(height: 12),
-                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      IconButton(
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
                           icon: const Icon(Icons.arrow_back_ios, size: 18),
                           color: _currentImagePage > 0
                               ? Theme.of(context).colorScheme.primary
                               : Theme.of(context).disabledColor,
-                          onPressed: _currentImagePage > 0 ? () => setState(() => _currentImagePage--) : null),
-                      Container(
+                          onPressed: _currentImagePage > 0 ? () => setState(() => _currentImagePage--) : null,
+                        ),
+                        Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12)),
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           child: Text(
-                              '${strings.labelPage} ${_currentImagePage + 1} ${strings.labelOf} ${_getTotalPages(images)}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelMedium
-                                  ?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500))),
-                      IconButton(
+                            '${strings.labelPage} ${_currentImagePage + 1} ${strings.labelOf} ${_getTotalPages(images)}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelMedium
+                                ?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        IconButton(
                           icon: const Icon(Icons.arrow_forward_ios, size: 18),
                           color: _currentImagePage < _getTotalPages(images) - 1
                               ? Theme.of(context).colorScheme.primary
                               : Theme.of(context).disabledColor,
                           onPressed: _currentImagePage < _getTotalPages(images) - 1
                               ? () => setState(() => _currentImagePage++)
-                              : null)
-                    ])
+                              : null,
+                        ),
+                      ],
+                    ),
                   ],
                 ] else if (!areBasicDetailsLoaded && !viewModel.isLoading)
-                  SizedBox(height: 150, child: Center(child: Text(strings.loadingEllipsis)))
-              ])),
+                  SizedBox(
+                    height: 150,
+                    child: Center(child: Text(strings.loadingEllipsis)),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  /// Helper widget for displaying image loading errors.
   Widget _buildImageErrorWidget(S strings, {required bool isNetwork, String? message}) {
     return Center(
-        child: Padding(
-            padding: const EdgeInsets.all(4.0),
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(Icons.broken_image_outlined,
-                  size: 32, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-              const SizedBox(height: 4),
-              Text(message ?? (isNetwork ? strings.errorImageLoadFailed : strings.errorImageNotFound),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)))
-            ])));
+      child: Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.broken_image_outlined,
+              size: 32,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              message ?? (isNetwork ? strings.errorImageLoadFailed : strings.errorImageNotFound),
+              textAlign: TextAlign.center,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  /// Helper for building image shimmer placeholders.
   Widget _buildShimmerPlaceholder({double width = double.infinity, double height = 20}) {
     return Shimmer.fromColors(
-        baseColor: Theme.of(context).brightness == Brightness.light ? Colors.grey[300]! : Colors.grey[700]!,
-        highlightColor: Theme.of(context).brightness == Brightness.light ? Colors.grey[100]! : Colors.grey[600]!,
-        child: Container(
-            width: width,
-            height: height,
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8))));
+      baseColor: Theme.of(context).brightness == Brightness.light ? Colors.grey[300]! : Colors.grey[700]!,
+      highlightColor: Theme.of(context).brightness == Brightness.light ? Colors.grey[100]! : Colors.grey[600]!,
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+      ),
+    );
   }
 
-  /// Shows a dialog with a zoomable image.
   void _showZoomableImageDialog(String imagePath, bool isNetworkImage, bool isFileImage, S strings) {
     showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return Dialog(
-              backgroundColor: Colors.transparent,
-              insetPadding: const EdgeInsets.all(10),
-              child: Stack(alignment: Alignment.center, children: [
-                InteractiveViewer(
-                    boundaryMargin: const EdgeInsets.all(20.0),
-                    minScale: 0.5,
-                    maxScale: 4.0,
-                    child: isNetworkImage
-                        ? CachedNetworkImage(
-                        imageUrl: imagePath,
-                        fit: BoxFit.contain,
-                        placeholder: (context, url) =>
-                            Center(child: _buildShimmerPlaceholder(height: 300, width: 300)),
-                        errorWidget: (context, url, error) => _buildImageErrorWidget(strings, isNetwork: true))
-                        : isFileImage
-                        ? Image.file(File(imagePath),
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) =>
-                            _buildImageErrorWidget(strings, isNetwork: false))
-                        : _buildImageErrorWidget(strings, isNetwork: false, message: strings.errorImageNotFound)),
-                Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Material(
-                        color: Colors.black54,
-                        shape: const CircleBorder(),
-                        child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: () => Navigator.of(context).pop(),
-                            child: const Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: Icon(Icons.close, color: Colors.white, size: 20)))))
-              ]));
-        });
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(10),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              InteractiveViewer(
+                boundaryMargin: const EdgeInsets.all(20.0),
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: isNetworkImage
+                    ? CachedNetworkImage(
+                  imageUrl: imagePath,
+                  fit: BoxFit.contain,
+                  placeholder: (context, url) => Center(child: _buildShimmerPlaceholder(height: 300, width: 300)),
+                  errorWidget: (context, url, error) => _buildImageErrorWidget(strings, isNetwork: true),
+                )
+                    : isFileImage
+                    ? Image.file(
+                  File(imagePath),
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) =>
+                      _buildImageErrorWidget(strings, isNetwork: false),
+                )
+                    : _buildImageErrorWidget(strings, isNetwork: false, message: strings.errorImageNotFound),
+              ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: Material(
+                  color: Colors.black54,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => Navigator.of(context).pop(),
+                    child: const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Icon(Icons.close, color: Colors.white, size: 20),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
-  /// Gets the sublist of images for the current page.
   List<String> _getCurrentImages(List<String> allImages) {
     if (allImages.isEmpty) return [];
     const int imagesPerPage = 3;
@@ -798,14 +907,12 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
     return allImages.sublist(startIndex, endIndex);
   }
 
-  /// Calculates the total number of pages for image pagination.
   int _getTotalPages(List<String> allImages) {
     if (allImages.isEmpty) return 0;
     const int imagesPerPage = 3;
     return (allImages.length / imagesPerPage).ceil();
   }
 
-  /// Builds the action card to navigate to the Lane Details modification screen.
   Widget _buildLaneDetailsAction(PlazaModificationViewModel viewModel, S strings) {
     final bool canNavigate = viewModel.formState.basicDetails.isNotEmpty && viewModel.error == null;
     final int laneCount = viewModel.lanes.length;
@@ -819,156 +926,166 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
         onTap: canNavigate
             ? () {
           developer.log('Navigating to Lane Details Mod', name: _logName);
-          Navigator.pushNamed(context, AppRoutes.laneDetailsModification, arguments: _plazaId)
-              .then((_) => developer.log('Returned from Lane Details Mod', name: _logName));
+          Navigator.pushNamed(context, AppRoutes.laneDetailsModification, arguments: _plazaId).then(
+                (_) => developer.log('Returned from Lane Details Mod', name: _logName),
+          );
         }
             : null,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 18.0),
-          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Row(children: [
-              Icon(Icons.edit_road_outlined,
-                  color: canNavigate ? Theme.of(context).colorScheme.primary : Theme.of(context).disabledColor),
-              const SizedBox(width: 12),
-              Text(strings.menuLaneDetails,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.edit_road_outlined,
+                    color: canNavigate ? Theme.of(context).colorScheme.primary : Theme.of(context).disabledColor,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    strings.menuLaneDetails,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: canNavigate ? Theme.of(context).colorScheme.primary : Theme.of(context).disabledColor,
-                      fontWeight: FontWeight.w600))
-            ]),
-            Row(children: [
-              if (canNavigate && laneCount > 0)
-                Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  if (canNavigate && laneCount > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10)),
-                    child: Text(laneCount.toString(),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        laneCount.toString(),
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Theme.of(context).colorScheme.secondary, fontWeight: FontWeight.w500))),
-              if (canNavigate && laneCount > 0) const SizedBox(width: 8),
-              Icon(Icons.chevron_right,
-                  color: canNavigate ? Theme.of(context).colorScheme.primary : Theme.of(context).disabledColor)
-            ]),
-          ]),
+                          color: Theme.of(context).colorScheme.secondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  if (canNavigate && laneCount > 0) const SizedBox(width: 8),
+                  Icon(
+                    Icons.chevron_right,
+                    color: canNavigate ? Theme.of(context).colorScheme.primary : Theme.of(context).disabledColor,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // --- Main Build Method ---
-  @override
-  Widget build(BuildContext context) {
-    final strings = S.of(context);
-    // Use Consumer to listen for changes in the ViewModel and rebuild accordingly
-    return Consumer<PlazaModificationViewModel>(
-      builder: (context, viewModel, _) {
-        // Determine overall screen state
-        final effectiveError = _hasFetchError && viewModel.error == null
-            ? Exception(strings.errorLoadingPlazaDetailsGeneric) // Handle silent fetch failure
-            : viewModel.error;
-
-        // Show loading shimmer if ViewModel is loading AND there's no error to display
-        final bool showLoading = viewModel.isLoading && effectiveError == null;
-        // Show error state if there's an error AND we are not currently loading
-        final bool showError = effectiveError != null && !viewModel.isLoading;
-
-        developer.log(
-            '[PlazaInfoScreen] Build: isLoading=${viewModel.isLoading}, '
-                'showLoading=$showLoading, effectiveError=${effectiveError?.runtimeType}, '
-                'isInitialized=$_isInitialized',
-            name: _logName);
-
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: _buildCustomAppBar(viewModel, strings),
-          body: RefreshIndicator(
-            onRefresh: _loadPlazaDetails, // Trigger full refresh on pull
-            color: Theme.of(context).colorScheme.primary,
-            child: Builder(builder: (innerContext) {
-              // Display error state first if applicable
-              if (showError) {
-                return _buildErrorState(effectiveError, strings);
-              }
-              // Use AnimatedSwitcher for smooth transitions between loading and content
-              return AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  // Use KeyedSubtree with dynamic keys based on fetch attempt
-                  child: showLoading
-                      ? KeyedSubtree(
-                    key: ValueKey('loading_$_fetchAttemptId'),
-                    child: _buildLoadingState(strings),
-                  )
-                      : KeyedSubtree(
-                    key: ValueKey('content_$_plazaId$_fetchAttemptId'),
-                    child: _buildContentLoaded(viewModel, strings),
-                  ));
-            }),
-          ),
-        );
-      },
-    );
-  }
-
-  /// Builds the main scrollable content area containing all the detail sections.
   Widget _buildContentLoaded(PlazaModificationViewModel viewModel, S strings) {
     developer.log(
-        'Building content loaded state. Basic details loaded: ${viewModel.formState.basicDetails.isNotEmpty}',
-        name: _logName);
-    // Check if *any* data is present before building sections.
+      'Building content loaded state. Basic details loaded: ${viewModel.formState.basicDetails.isNotEmpty}',
+      name: _logName,
+    );
     final bool hasAnyData = viewModel.formState.basicDetails.isNotEmpty ||
         viewModel.formState.bankDetails.isNotEmpty ||
         viewModel.formState.plazaImages.isNotEmpty ||
         viewModel.lanes.isNotEmpty;
 
-    // Handle edge case: content view shown but no data loaded (e.g., error cleared but data missing)
     if (!hasAnyData && !viewModel.isLoading) {
       developer.log('Content loaded state, but no data found.', name: _logName);
       return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              // Provide retry option in this rare case
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(strings.noDetailsAvailable, textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                CustomButtons.primaryButton(
-                    height: 35,
-                    width: 100,
-                    text: strings.buttonRetry,
-                    onPressed: _loadPlazaDetails,
-                    context: context),
-              ],
-            ),
-          ));
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(strings.noDetailsAvailable, textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              CustomButtons.primaryButton(
+                height: 35,
+                width: 100,
+                text: strings.buttonRetry,
+                onPressed: _loadPlazaDetails,
+                context: context,
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
-    // Build the scrollable column with all sections
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
       physics: const AlwaysScrollableScrollPhysics(),
-      // Ensures pull-to-refresh always works
       child: Column(
         children: [
           _buildBasicDetailsSection(viewModel, strings),
           _buildBankDetailsSection(viewModel, strings),
           _buildImageSection(viewModel, strings),
           _buildLaneDetailsAction(viewModel, strings),
-          const SizedBox(height: 20), // Padding at the bottom
+          const SizedBox(height: 20),
         ],
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = S.of(context);
+    return Consumer<PlazaModificationViewModel>(
+      builder: (context, viewModel, _) {
+        final effectiveError = _hasFetchError && viewModel.error == null
+            ? Exception(strings.errorLoadingPlazaDetailsGeneric)
+            : viewModel.error;
+        final bool showLoading = viewModel.isLoading && effectiveError == null;
+        final bool showError = effectiveError != null && !viewModel.isLoading;
+
+        developer.log(
+          '[PlazaInfoScreen] Build: isLoading=${viewModel.isLoading}, '
+              'showLoading=$showLoading, effectiveError=${effectiveError?.runtimeType}, '
+              'isInitialized=$_isInitialized, fetchAttemptId=$_fetchAttemptId',
+          name: _logName,
+        );
+
+        return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: _buildCustomAppBar(viewModel, strings),
+          body: RefreshIndicator(
+            onRefresh: _loadPlazaDetails,
+            color: Theme.of(context).colorScheme.primary,
+            child: Builder(
+              builder: (innerContext) {
+                if (showError) {
+                  return _buildErrorState(effectiveError, strings);
+                }
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: showLoading
+                      ? KeyedSubtree(
+                    key: ValueKey('loading_$_fetchAttemptId'),
+                    child: _buildLoadingState(strings),
+                  )
+                      : KeyedSubtree(
+                    key: ValueKey('content_$_plazaId$_fetchAttemptId${DateTime.now().millisecondsSinceEpoch}'),
+                    child: _buildContentLoaded(viewModel, strings),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
-// --- Helper Extension ---
-/// Adds a capitalize method to String class for UI display formatting.
 extension StringExtension on String {
   String capitalize() {
     if (isEmpty) return this;
-    if (length == 1) return toUpperCase(); // Handle single characters
-    // Capitalize first letter, lowercase the rest
+    if (length == 1) return toUpperCase();
     return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
   }
 }

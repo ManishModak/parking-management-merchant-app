@@ -1,4 +1,3 @@
-
 /// A model class representing fare details for a parking plaza.
 class PlazaFare {
   final int? fareId;
@@ -11,6 +10,8 @@ class PlazaFare {
   DateTime startEffectDate;
   DateTime? endEffectDate;
   final bool isDeleted;
+  int? from; // Already Added for Progressive fare type
+  int? toCustom; // Already Added for Progressive fare type
 
   PlazaFare({
     this.fareId,
@@ -23,6 +24,8 @@ class PlazaFare {
     required this.startEffectDate,
     this.endEffectDate,
     this.isDeleted = false,
+    this.from, // Already Added
+    this.toCustom, // Already Added
   });
 
   /// Creates a [PlazaFare] instance from a JSON map.
@@ -42,6 +45,8 @@ class PlazaFare {
           ? DateTime.parse(json['endEffectDate'])
           : null,
       isDeleted: json['isDeleted'] ?? false,
+      from: json['from'],
+      toCustom: json['toCustom'],
     );
   }
 
@@ -58,6 +63,9 @@ class PlazaFare {
       'startEffectDate': startEffectDate.toIso8601String().split('T')[0],
       if (endEffectDate != null)
         'endEffectDate': endEffectDate!.toIso8601String().split('T')[0],
+      if (from != null) 'from': from,
+      if (toCustom != null) 'toCustom': toCustom,
+      // Note: isDeleted is usually not sent in add/update payload unless specifically needed
     };
   }
 
@@ -73,6 +81,8 @@ class PlazaFare {
     DateTime? startEffectDate,
     DateTime? endEffectDate,
     bool? isDeleted,
+    int? from,
+    int? toCustom,
   }) {
     return PlazaFare(
       fareId: fareId ?? this.fareId,
@@ -85,6 +95,8 @@ class PlazaFare {
       startEffectDate: startEffectDate ?? this.startEffectDate,
       endEffectDate: endEffectDate ?? this.endEffectDate,
       isDeleted: isDeleted ?? this.isDeleted,
+      from: from ?? this.from,
+      toCustom: toCustom ?? this.toCustom,
     );
   }
 
@@ -102,7 +114,9 @@ class PlazaFare {
               discountRate == other.discountRate &&
               startEffectDate == other.startEffectDate &&
               endEffectDate == other.endEffectDate &&
-              isDeleted == other.isDeleted;
+              isDeleted == other.isDeleted &&
+              from == other.from &&
+              toCustom == other.toCustom;
 
   @override
   int get hashCode =>
@@ -115,7 +129,13 @@ class PlazaFare {
       discountRate.hashCode ^
       startEffectDate.hashCode ^
       endEffectDate.hashCode ^
-      isDeleted.hashCode;
+      isDeleted.hashCode ^
+      from.hashCode ^
+      toCustom.hashCode;
+
+// Helper extension for logging PlazaFare details easily (already present in ViewModel file)
+// Consider moving this extension here if it's not in the ViewModel file.
+// Map<String, dynamic> toJsonLog() => { ... };
 }
 
 /// Constants for vehicle types supported by the system.
@@ -145,11 +165,15 @@ class FareTypes {
   static const String daily = 'Daily';
   static const String hourWiseCustom = 'Hour-wise Custom';
   static const String monthlyPass = 'Monthly Pass';
+  static const String progressive = 'Progressive'; // Already Added
+  static const String freePass = 'FREEPASS'; // Already Added
 
   static const List<String> values = [
     hourly,
     daily,
     hourWiseCustom,
     monthlyPass,
+    progressive,
+    freePass,
   ];
 }
