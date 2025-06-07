@@ -30,15 +30,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _verificationService = VerificationService();
   final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
-  Future<void> _handleRegister(
-      BuildContext context, AuthViewModel authVM) async {
-    final strings = S.of(context); // Cache localized strings at the start
+  Future<void> _handleRegister(BuildContext context, AuthViewModel authVM) async {
+    final strings = S.of(context);
     final mobile = authVM.mobileController.text;
 
-    // Validate plaza owner data and mobile number
+    developer.log('Starting registration process for mobile: $mobile', name: 'RegisterScreen');
+
+    // Validate plaza owner data
     final isValid = authVM.validatePlazaOwnerData(context);
-    if (!isValid || mobile.isEmpty) {
-      authVM.resetErrors(); // Reset only if validation fails
+    developer.log('Validation result: $isValid', name: 'RegisterScreen');
+
+    if (!isValid) {
+      developer.log('Validation failed. Errors: ${authVM.errors}', name: 'RegisterScreen');
+      // Show SnackBar with a generic validation error message
+      _showErrorSnackBar(strings.errorInvalidRegistrationData, strings);
       return;
     }
 

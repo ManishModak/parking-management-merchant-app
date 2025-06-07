@@ -207,9 +207,9 @@
             final String dialogTitle = strings.dialogTitleSuccess; // "Success"
             final String dialogContent = wasFirstSave
                 ? strings
-                .dialogContentPlazaRegistered // "Plaza Registered Successfully"
+                .dialogContentBasicDetailsRegistered
                 : strings
-                .dialogContentPlazaUpdated; // "Plaza Details Updated Successfully"
+                .dialogContentBasicDetailsModified;
     
             onOkAction() {
               developer.log(
@@ -258,7 +258,7 @@
           final String dialogTitle = strings.dialogTitleSuccess;
     
           final String dialogContent = wasFirstSave
-              ? strings.dialogContentLanesAdded // "Lane Details Added Successfully"
+              ? strings.dialogContentLanesRegistered
               : strings
               .dialogContentLanesModified; // "Lane Details Updated Successfully" (Covers adding more later or just reviewing)
     
@@ -351,7 +351,7 @@
           final strings = S.of(context);
           final String dialogTitle = strings.dialogTitleSuccess;
           // Different message based on overall flow mode (Registration vs Modification)
-          final String dialogContent = strings.plazaImageUploadSuccessfully; // "Plaza Registration Complete"
+          final String dialogContent = strings.plazaRegisteredSuccessfully; // "Plaza Registration Complete"
     
           // Action after OK: Pop the screen
           onOkAction() {

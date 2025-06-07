@@ -32,9 +32,15 @@ class CustomNavigationBar extends StatelessWidget {
     final Color selectedTextColor = isDarkMode ? AppColors.secondary : Colors.white;
     final Color unselectedTextColor = isDarkMode ? AppColors.secondary.withOpacity(0.7) : Colors.white70;
 
+    final double navBarHeight = kBottomNavigationBarHeight + 12 + MediaQuery.of(context).padding.bottom;
+
     return Container(
-      height: 70,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      height: navBarHeight,
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        bottom: MediaQuery.of(context).padding.bottom,
+      ),
       decoration: BoxDecoration(
         color: barBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(50)),
@@ -85,34 +91,38 @@ class CustomNavigationBar extends StatelessWidget {
         onItemTapped(index);
       },
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 8),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: isSelected ? selectedIconBgColor : Colors.transparent,
-              shape: BoxShape.circle,
+      child: SizedBox(
+        width: 70,
+        height: 56, // Ensures total height fits without overflow
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: isSelected ? selectedIconBgColor : Colors.transparent,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: isSelected ? selectedIconColor : unselectedIconColor,
+                size: 24,
+              ),
             ),
-            child: Icon(
-              icon,
-              color: isSelected ? selectedIconColor : unselectedIconColor,
-              size: 24,
+            const SizedBox(height: 2), // Reduce spacing if needed
+            Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: isSelected ? selectedTextColor : unselectedTextColor,
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: isSelected ? selectedTextColor : unselectedTextColor,
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

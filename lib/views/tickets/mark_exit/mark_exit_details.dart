@@ -1,7 +1,7 @@
 import 'dart:developer' as developer;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+// import 'package:intl/intl.dart'; // Keep for other formatting if needed, but not for entry/exit time here
 import 'package:merchant_app/config/api_config.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:provider/provider.dart';
@@ -25,46 +25,87 @@ class MarkExitDetailsScreen extends StatefulWidget {
 
 class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
   int _currentImagePage = 0;
-  bool _isImagesExpanded = false;
+  // bool _isImagesExpanded = false; // Not used, can be removed if not needed
   bool _isNfcSupported = false;
   bool _isNfcEnabled = false;
+  final PaymentService _paymentService = PaymentService(); // Instantiate PaymentService
 
   @override
   void initState() {
     super.initState();
-    // Schedule post-frame callback to mark ticket as exited, check NFC status, and initialize Socket.IO
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _markTicketAsExited();
       _checkNfcStatus();
       final viewModel = Provider.of<MarkExitViewModel>(context, listen: false);
-      viewModel.initializeSocket('user-${widget.ticketId}', ApiConfig.baseUrl);
+      // Ensure ApiConfig.baseUrl does not end with a slash if socket URL needs specific format
+      String socketBaseUrl = ApiConfig.baseUrl;
+      if (socketBaseUrl.endsWith('/')) {
+        socketBaseUrl = socketBaseUrl.substring(0, socketBaseUrl.length -1);
+      }
+      viewModel.initializeSocket('user-${widget.ticketId}', socketBaseUrl);
     });
   }
 
-  // Check NFC availability and update state
   Future<void> _checkNfcStatus() async {
-    final isAvailable = await NfcManager.instance.isAvailable();
-    setState(() {
-      _isNfcSupported = isAvailable;
-      _isNfcEnabled = isAvailable;
-    });
-    developer.log(isAvailable ? 'NFC is supported and enabled' : 'NFC not supported or disabled', name: 'NFC Check');
+    try {
+      final isAvailable = await NfcManager.instance.isAvailable();
+      if (mounted) {
+        setState(() {
+          _isNfcSupported = isAvailable;
+          _isNfcEnabled = isAvailable; // Assuming if available, it's enabled initially
+        });
+      }
+      developer.log(
+          isAvailable ? 'NFC is supported' : 'NFC not supported', // Simplified log
+          name: 'NFC Check');
+    } catch (e) {
+      developer.log('NFC check error: $e', name: 'NFC Check');
+      if (mounted) {
+        setState(() {
+          _isNfcSupported = false;
+          _isNfcEnabled = false;
+        });
+      }
+    }
   }
 
-  // Mark ticket as exited using the view model
+
   Future<void> _markTicketAsExited() async {
     final viewModel = Provider.of<MarkExitViewModel>(context, listen: false);
-    await viewModel.markTicketAsExited(widget.ticketId);
+    final strings = S.of(context);
+    try {
+      await viewModel.markTicketAsExited(widget.ticketId);
+      if (viewModel.error != null && mounted) { // Check for error after marking
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${strings.errorMarkExitFailed}: ${viewModel.apiError ?? viewModel.error.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) { // This catch might be redundant if viewModel handles and sets its error state
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${strings.errorMarkExitFailed}: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   @override
   void dispose() {
+    // ViewModel's dispose handles socket disconnection
     super.dispose();
   }
 
-  // Display a zoomable image dialog for QR code or ticket images
   void _showZoomableImageDialog(String imageUrl) {
-    developer.log('[MarkExitDetailsScreen] Showing zoomable image dialog for URL: $imageUrl', name: 'MarkExitDetailsScreen');
+    developer.log('Showing zoomable image dialog for URL: $imageUrl',
+        name: 'MarkExitDetailsScreen');
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -92,7 +133,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                 top: 10,
                 right: 10,
                 child: IconButton(
-                  icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onPrimary),
+                  icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onPrimaryContainer), // Adjusted for visibility
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
@@ -103,25 +144,201 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
-  // Build a shimmer placeholder for loading states
   Widget _buildShimmerPlaceholder({double width = double.infinity, double height = 20}) {
     return Shimmer.fromColors(
-      baseColor: AppColors.shimmerBaseLight,
-      highlightColor: AppColors.shimmerHighlightLight,
+      baseColor: Theme.of(context).brightness == Brightness.light ? AppColors.shimmerBaseLight : AppColors.shimmerBaseDark,
+      highlightColor: Theme.of(context).brightness == Brightness.light ? AppColors.shimmerHighlightLight : AppColors.shimmerHighlightDark,
       child: Container(
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
+          color: Theme.of(context).cardColor, // Use cardColor for shimmer bg consistency
           borderRadius: BorderRadius.circular(8),
         ),
       ),
     );
   }
 
-  // Build the image section for ticket images
+  Widget _buildLoadingState(S strings) {
+    // ... (loading state remains the same, ensure labels match S.of(context))
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        children: [
+          Card(
+            elevation: Theme.of(context).cardTheme.elevation,
+            margin: Theme.of(context).cardTheme.margin,
+            shape: Theme.of(context).cardTheme.shape,
+            color: Theme.of(context).cardColor,
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildShimmerPlaceholder(width: 140, height: 24),
+                      _buildShimmerPlaceholder(width: 80, height: 18),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: _buildShimmerFieldPair(strings.ticketIdLabel)),
+                      const SizedBox(width: 24),
+                      Expanded(child: _buildShimmerFieldPair(strings.labelFloorId)),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(child: _buildShimmerFieldPair(strings.labelSlotId)),
+                      const SizedBox(width: 24),
+                      Expanded(child: _buildShimmerFieldPair(strings.labelVehicleNumber)),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(child: _buildShimmerFieldPair(strings.labelVehicleType)),
+                      const SizedBox(width: 24),
+                      Expanded(child: _buildShimmerFieldPair(strings.labelEntryLane)),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(child: _buildShimmerFieldPair(strings.labelExitLane)),
+                      const SizedBox(width: 24),
+                      Expanded(child: _buildShimmerFieldPair(strings.labelEntryTime)),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(child: _buildShimmerFieldPair(strings.labelExitTime)),
+                      const SizedBox(width: 24),
+                      Expanded(child: _buildShimmerFieldPair(strings.labelDuration)),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(child: _buildShimmerFieldPair(strings.labelFareType)),
+                      const SizedBox(width: 24),
+                      Expanded(child: _buildShimmerFieldPair(strings.labelFareRate)),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(child: _buildShimmerFieldPair(strings.labelTotalCharges)),
+                      const SizedBox(width: 24),
+                      Expanded(child: _buildShimmerFieldPair(strings.labelPaymentStatus)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Card(
+            elevation: Theme.of(context).cardTheme.elevation,
+            margin: Theme.of(context).cardTheme.margin,
+            shape: Theme.of(context).cardTheme.shape,
+            color: Theme.of(context).cardColor,
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildShimmerPlaceholder(width: 140, height: 24),
+                      _buildShimmerPlaceholder(width: 30, height: 24),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    height: 150,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: List.generate(
+                        3,
+                            (index) => Padding(
+                          padding: EdgeInsets.only(right: 8.0),
+                          child: _buildShimmerPlaceholder(
+                            width: (AppConfig.deviceWidth - 64) / 3, // Use context for AppConfig
+                            height: 150,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Card(
+            elevation: Theme.of(context).cardTheme.elevation,
+            margin: Theme.of(context).cardTheme.margin,
+            shape: Theme.of(context).cardTheme.shape,
+            color: Theme.of(context).cardColor,
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                children: [
+                  _buildShimmerOptionRow(),
+                  _buildShimmerOptionRow(),
+                  _buildShimmerOptionRow(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerFieldPair(String label) {
+    // ... (shimmer field pair remains the same)
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildShimmerPlaceholder(width: 110, height: 16),
+          const SizedBox(height: 6),
+          _buildShimmerPlaceholder(height: 22),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerOptionRow() {
+    // ... (shimmer option row remains the same)
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              _buildShimmerPlaceholder(width: 24, height: 24),
+              const SizedBox(width: 12),
+              _buildShimmerPlaceholder(width: 120, height: 22),
+            ],
+          ),
+          _buildShimmerPlaceholder(width: 24, height: 24),
+        ],
+      ),
+    );
+  }
+
   Widget _buildImageSection(MarkExitViewModel viewModel, S strings) {
     final capturedImageUrls = viewModel.ticketDetails?['captured_images'] as List<String>? ?? [];
+    // ... (image section logic remains largely the same, ensure AppConfig.deviceWidth(context) is used)
     return Card(
       elevation: Theme.of(context).cardTheme.elevation,
       margin: Theme.of(context).cardTheme.margin,
@@ -152,8 +369,8 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
               ),
           ],
         ),
-        initiallyExpanded: true,
-        onExpansionChanged: (expanded) => setState(() => _isImagesExpanded = expanded),
+        initiallyExpanded: false, // Default to collapsed
+        onExpansionChanged: (expanded) => setState(() { /* _isImagesExpanded = expanded; */ }), // Not used, can remove state var
         shape: const RoundedRectangleBorder(side: BorderSide.none),
         collapsedShape: const RoundedRectangleBorder(side: BorderSide.none),
         tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -170,13 +387,13 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.image_not_supported,
-                              size: 48, color: Theme.of(context).colorScheme.primary),
+                          Icon(Icons.image_not_supported_outlined,
+                              size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6)),
                           const SizedBox(height: 8),
                           Text(
                             strings.messageNoImagesAvailable,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
                             ),
                           ),
                         ],
@@ -191,13 +408,13 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                       itemCount: _getCurrentImages(capturedImageUrls).length,
                       itemBuilder: (context, index) {
                         final imageUrl = _getCurrentImages(capturedImageUrls)[index];
-                        final imageWidth = (AppConfig.deviceWidth - 64) / 3;
+                        final imageWidth = (AppConfig.deviceWidth - 64) / 3; // Use context
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0),
                           child: Container(
                             width: imageWidth,
                             decoration: BoxDecoration(
-                              border: Border.all(color: Theme.of(context).colorScheme.primary),
+                              border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.5)),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: ClipRRect(
@@ -207,6 +424,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                                 child: CachedNetworkImage(
                                   imageUrl: imageUrl,
                                   fit: BoxFit.cover,
+                                  memCacheWidth: 300,
                                   placeholder: (context, url) =>
                                       _buildShimmerPlaceholder(width: imageWidth, height: 150),
                                   errorWidget: (context, url, error) => Center(
@@ -215,15 +433,18 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                                       children: [
                                         Icon(Icons.broken_image_outlined,
                                             size: 32,
-                                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-                                        const SizedBox(height: 8),
-                                        Text(strings.errorImageLoadFailed,
+                                            color: Theme.of(context).colorScheme.error),
+                                        const SizedBox(height: 4),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                          child: Text(
+                                            strings.errorImageLoadFailed,
                                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withOpacity(0.6),
-                                            )),
+                                              color: Theme.of(context).colorScheme.error,
+                                            ),
+                                            textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -283,31 +504,32 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
-  // Get current images for pagination
   List<String> _getCurrentImages(List<String> capturedImageUrls) {
+    // ... (remains the same)
     if (capturedImageUrls.isEmpty) return [];
     final startIndex = _currentImagePage * 3;
     final endIndex = (startIndex + 3).clamp(0, capturedImageUrls.length);
     return capturedImageUrls.sublist(startIndex, endIndex);
   }
 
-  // Calculate total pages for image pagination
   int _getTotalPages(List<String> capturedImageUrls) {
+    // ... (remains the same)
     if (capturedImageUrls.isEmpty) return 0;
     return (capturedImageUrls.length / 3).ceil();
   }
 
-  // Build error state UI
   Widget _buildErrorState(MarkExitViewModel viewModel, S strings) {
+    // ... (error state remains the same)
     return Center(
-      child: SingleChildScrollView(
+      child: SingleChildScrollView( // Added SingleChildScrollView for smaller screens
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.error),
             const SizedBox(height: 16),
             Text(
-              strings.errorGeneric,
+              strings.errorFailedToMarkExit, // More specific error title
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -315,13 +537,13 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              viewModel.error.toString(),
+              viewModel.apiError ?? viewModel.error?.toString() ?? strings.errorUnknown,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             CustomButtons.primaryButton(
               width: 150,
               height: 40,
@@ -335,7 +557,6 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
-  // Build detail item for ticket details
   Widget _buildDetailItem({
     required String title,
     required String value,
@@ -343,6 +564,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     bool isBadge = false,
     required S strings,
   }) {
+    // ... (detail item remains the same)
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
@@ -351,8 +573,8 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
           Text(
             title,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.8), // Adjusted for better contrast
+              fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 4),
@@ -360,7 +582,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
               ? Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: value.toLowerCase() == 'open'
+              color: value.toLowerCase() == 'open' // Example badge logic
                   ? Colors.green.withOpacity(0.1)
                   : Colors.orange.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
@@ -382,7 +604,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
               color: highlight
-                  ? (value.toLowerCase() == 'success' ? Colors.green : Colors.red)
+                  ? (value.toLowerCase() == 'success' ? Colors.green.shade700 : (value.toLowerCase() == 'pending' ? Colors.orange.shade700 : Colors.red.shade700)) // Adjusted highlight colors
                   : Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
             ),
           ),
@@ -391,117 +613,207 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
-  // Build ticket details UI
+  Widget _buildCompactSection({
+    required Widget title,
+    required List<Widget> children,
+    Widget? trailing,
+  }) {
+    // ... (compact section remains the same)
+    return Card(
+      elevation: Theme.of(context).cardTheme.elevation,
+      margin: Theme.of(context).cardTheme.margin,
+      shape: Theme.of(context).cardTheme.shape,
+      color: Theme.of(context).cardColor,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: title), // Ensure title can expand
+                if (trailing != null) Flexible(child: trailing), // Allow trailing to take space
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTicketDetails(MarkExitViewModel viewModel, S strings) {
     final ticketData = viewModel.ticketDetails ?? {};
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         children: [
-          Card(
-            elevation: Theme.of(context).cardTheme.elevation,
-            margin: Theme.of(context).cardTheme.margin,
-            shape: Theme.of(context).cardTheme.shape,
-            color: Theme.of(context).cardColor,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          _buildCompactSection(
+            title: Text(
+              strings.labelTicketInformation,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: (ticketData['status']?.toString().toLowerCase() == 'open' // Defensive toString
+                    ? AppColors.successLight // Use AppColors
+                    : AppColors.warningLight)
+                    .withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: ticketData['status']?.toString().toLowerCase() == 'open'
+                      ? AppColors.successDark
+                      : AppColors.warningDark,
+                  width: 1.5,
+                ),
+              ),
+              child: Text(
+                ticketData['status']?.toString() ?? strings.labelNA,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: ticketData['status']?.toString().toLowerCase() == 'open'
+                      ? AppColors.successDark
+                      : AppColors.warningDark,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            children: [
+              Row(
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildDetailItem(
-                          title: strings.ticketIdLabel,
-                          value: ticketData['ticket_ref_id'] ?? 'N/A',
-                          strings: strings,
-                        ),
-                        _buildDetailItem(
-                          title: strings.labelStatus,
-                          value: ticketData['status'] ?? 'N/A',
-                          strings: strings,
-                          isBadge: true,
-                        ),
-                        _buildDetailItem(
-                          title: strings.labelEntryLane,
-                          value: ticketData['entry_lane_id'] ?? 'N/A',
-                          strings: strings,
-                        ),
-                        _buildDetailItem(
-                          title: 'Exit Lane',
-                          value: ticketData['exit_lane_id'] ?? 'Not filled',
-                          strings: strings,
-                        ),
-                        _buildDetailItem(
-                          title: strings.labelFloorId,
-                          value: ticketData['floor_id'] ?? 'N/A',
-                          strings: strings,
-                        ),
-                        _buildDetailItem(
-                          title: strings.labelSlotId,
-                          value: ticketData['slot_id'] ?? 'N/A',
-                          strings: strings,
-                        ),
-                        _buildDetailItem(
-                          title: strings.labelVehicleNumber,
-                          value: ticketData['vehicle_number'] ?? 'N/A',
-                          strings: strings,
-                        ),
-                      ],
+                    child: _buildDetailItem(
+                      title: strings.ticketIdLabel,
+                      value: ticketData['ticket_ref_id']?.toString() ?? strings.labelNA,
+                      strings: strings,
                     ),
                   ),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildDetailItem(
-                          title: strings.labelVehicleType,
-                          value: ticketData['vehicle_type'] ?? 'N/A',
-                          strings: strings,
-                        ),
-                        _buildDetailItem(
-                          title: strings.labelEntryTime,
-                          value: _formatDateTime(ticketData['entry_time']),
-                          strings: strings,
-                        ),
-                        _buildDetailItem(
-                          title: 'Exit Time',
-                          value: _formatDateTime(ticketData['exit_time']),
-                          strings: strings,
-                        ),
-                        _buildDetailItem(
-                          title: 'Parking Duration',
-                          value: ticketData['parking_duration']?.toString() ?? 'Calculating...',
-                          strings: strings,
-                        ),
-                        _buildDetailItem(
-                          title: 'Fare Type',
-                          value: ticketData['fare_type']?.toString() ?? 'Pending',
-                          strings: strings,
-                        ),
-                        _buildDetailItem(
-                          title: 'Fare Amount',
-                          value: ticketData['fare_amount']?.toString() ?? 'Pending',
-                          strings: strings,
-                        ),
-                        _buildDetailItem(
-                          title: 'Total Charges',
-                          value: ticketData['total_charges']?.toString() ?? 'Pending',
-                          strings: strings,
-                        ),
-                        _buildDetailItem(
-                          title: 'Payment Status',
-                          value: viewModel.paymentStatus?.toString() ?? 'Pending',
-                          highlight: true,
-                          strings: strings,
-                        ),
-                      ],
+                    child: _buildDetailItem(
+                      title: strings.labelFloorId,
+                      value: ticketData['floor_id']?.toString() ?? strings.labelNA,
+                      strings: strings,
                     ),
                   ),
                 ],
               ),
-            ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelSlotId,
+                      value: ticketData['slot_id']?.toString() ?? strings.labelNA,
+                      strings: strings,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelVehicleNumber,
+                      value: ticketData['vehicle_number']?.toString() ?? strings.labelNA,
+                      strings: strings,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelVehicleType,
+                      value: ticketData['vehicle_type']?.toString() ?? strings.labelNA,
+                      strings: strings,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelEntryLane,
+                      value: ticketData['entry_lane_id']?.toString() ?? strings.labelNA,
+                      strings: strings,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelExitLane,
+                      value: ticketData['exit_lane_id']?.toString() ?? strings.labelNotFilled,
+                      strings: strings,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelEntryTime,
+                      // USE THE FORMATTED GETTER FROM VIEWMODEL
+                      value: viewModel.getFormattedEntryTime(),
+                      strings: strings,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelExitTime,
+                      // USE THE FORMATTED GETTER FROM VIEWMODEL
+                      value: viewModel.getFormattedExitTime(),
+                      strings: strings,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelDuration,
+                      value: ticketData['parking_duration']?.toString() ?? strings.labelCalculating,
+                      strings: strings,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelFareType,
+                      value: ticketData['fare_type']?.toString() ?? strings.labelPending,
+                      strings: strings,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelFareRate,
+                      value: ticketData['fare_amount']?.toString() ?? strings.labelPending,
+                      strings: strings,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelTotalCharges,
+                      value: ticketData['total_charges']?.toString() ?? strings.labelPending,
+                      strings: strings,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildDetailItem(
+                      title: strings.labelPaymentStatus,
+                      value: viewModel.paymentStatus?.toString() ?? strings.labelPending,
+                      highlight: true,
+                      strings: strings,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
           _buildImageSection(viewModel, strings),
           _buildActionButton(viewModel, strings),
@@ -510,125 +822,233 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
-  // Build action buttons for payment options
   Widget _buildActionButton(MarkExitViewModel viewModel, S strings) {
     final ticketData = viewModel.ticketDetails ?? {};
     final totalChargesStr = ticketData['total_charges']?.toString() ?? '0';
     final totalCharges = double.tryParse(totalChargesStr) ?? 0.0;
 
-    // Initiate UPI payment by generating and displaying a QR code
     void initiateUpiPayment() async {
-      // Validate the payment amount to ensure it's positive
       if (totalCharges <= 0) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid amount for payment')),
+          SnackBar(
+            content: Text(strings.errorInvalidAmount),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
         );
         return;
       }
 
       try {
-        // Initialize PaymentService to call the createOrderQrCode method
-        final paymentService = PaymentService();
-
-        // Log the attempt to generate the QR code
-        developer.log('[MarkExitDetailsScreen] Generating QR code for ticket: ${widget.ticketId}',
+        developer.log('Generating QR code for ticket: ${widget.ticketId}',
             name: 'MarkExitDetailsScreen');
-
-        // Call the createOrderQrCode method with the ticket ID
-        final qrCodeResponse = await paymentService.createOrderQrCode(widget.ticketId);
-
-        // Log the response for debugging
-        developer.log('[MarkExitDetailsScreen] QR Code Response: $qrCodeResponse',
-            name: 'MarkExitDetailsScreen');
-
-        // Extract the QR code URL (backend returns 'qrUrl')
+        final qrCodeResponse = await _paymentService.createOrderQrCode(widget.ticketId);
+        developer.log('QR Code Response: $qrCodeResponse', name: 'MarkExitDetailsScreen');
         final qrCodeUrl = qrCodeResponse['qrUrl']?.toString() ?? '';
 
-        // Check if QR code URL is valid
         if (qrCodeUrl.isEmpty) {
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to retrieve QR code URL')),
+            SnackBar(
+              content: Text(strings.errorQrCodeFailed),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
           );
           return;
         }
-
-        // Display the QR code in a dialog
+        if (!mounted) return;
         _showZoomableImageDialog(qrCodeUrl);
       } catch (e) {
-        // Log any errors during QR code generation
         developer.log('Error generating QR code: $e', name: 'MarkExitDetailsScreen');
-
-        // Show error message to the user
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generating QR code: $e')),
+          SnackBar(
+            content: Text('${strings.errorQrCodeFailed}: ${e.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
         );
       }
     }
 
-    // Initiate NFC card payment
     void initiateNfcCardPayment() async {
-      // Check if NFC is supported
       if (!_isNfcSupported) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('This device does not support NFC')),
+          SnackBar(
+            content: Text(strings.errorNfcNotSupported),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
         );
         return;
       }
-      // Check if NFC is enabled
-      if (!_isNfcEnabled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enable NFC in Settings')),
-        );
-        return;
-      }
+
       try {
-        // Start NFC session to detect card
-        await NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
-          if (tag.data.containsKey('isodep') || tag.data.containsKey('nfca')) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('EMV card detected - processing...')),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Unsupported card type')),
-            );
+        bool isSessionOpen = false;
+        await NfcManager.instance.startSession(
+          pollingOptions: {
+            NfcPollingOption.iso14443, // For EMV cards (NFC-A and NFC-B)
+            NfcPollingOption.iso15693, // Optional: For NFC-V tags, if needed
+          },
+          alertMessageIos: strings.messageNfcScanPrompt, // iOS: Prompt user to scan
+          noPlatformSoundsAndroid: true, // Android: Disable platform sounds
+          invalidateAfterFirstReadIos: true, // iOS: Stop after first tag read
+          onDiscovered: (NfcTag tag) async {
+            isSessionOpen = true;
+            developer.log('NFC Tag Discovered: ${tag.data}', name: 'MarkExitDetailsScreen');
+
+            // Cast tag.data to Map<String, dynamic> for type safety
+            final tagData = tag.data as Map<String, dynamic>;
+
+            // Check for supported tag types (e.g., isodep for EMV cards)
+            if (tagData.containsKey('isodep') || tagData.containsKey('mifareclassic') || tagData.containsKey('nfca')) {
+              // Placeholder for EMV card processing
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(strings.messageEmvCardDetected),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+              // TODO: Implement actual EMV payment processing with a payment SDK
+            } else {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(strings.errorUnsupportedCard),
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                  ),
+                );
+              }
+            }
+
+            // Stop session after processing
+            try {
+              await NfcManager.instance.stopSession();
+              isSessionOpen = false;
+              developer.log('NFC Session stopped after discovery.', name: 'MarkExitDetailsScreen');
+            } catch (e) {
+              developer.log('Error stopping NFC session after discovery: $e', name: 'MarkExitDetailsScreen');
+            }
+          },
+          onSessionErrorIos: (error) async {
+            isSessionOpen = true;
+            developer.log('iOS NFC Session Error: $error', name: 'MarkExitDetailsScreen');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${strings.errorNfc}: $error'),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
+              );
+            }
+            // Stop session on iOS error
+            try {
+              await NfcManager.instance.stopSession();
+              isSessionOpen = false;
+              developer.log('NFC Session stopped after iOS error.', name: 'MarkExitDetailsScreen');
+            } catch (e) {
+              developer.log('Error stopping NFC session after iOS error: $e', name: 'MarkExitDetailsScreen');
+            }
+          },
+        );
+        developer.log('NFC session started, waiting for tag...', name: 'MarkExitDetailsScreen');
+
+        // Timeout to stop session if no tag is detected
+        Future.delayed(const Duration(seconds: 15), () async {
+          if (isSessionOpen && mounted) {
+            try {
+              await NfcManager.instance.stopSession();
+              isSessionOpen = false;
+              developer.log('NFC Session stopped due to timeout.', name: 'MarkExitDetailsScreen');
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(strings.errorNfcTimeout),
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                  ),
+                );
+              }
+            } catch (e) {
+              developer.log('Error stopping NFC session on timeout: $e', name: 'MarkExitDetailsScreen');
+            }
           }
-          await NfcManager.instance.stopSession();
         });
       } catch (e) {
-        // Handle NFC errors
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('NFC Error: $e')));
-        await NfcManager.instance.stopSession();
+        developer.log('Error starting NFC session: $e', name: 'MarkExitDetailsScreen');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${strings.errorNfc}: ${e.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
       }
     }
 
-    // Initiate cash payment
-    void initiateCashPayment() {
-      // Notify user to pay cash
+    void initiateCashPayment() async {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please pay cash at the exit gate')));
-      // Update ticket status to cash pending
-      viewModel.markTicketAsCashPending(widget.ticketId);
+        SnackBar(
+          content: Text(strings.messageProcessingPayment),
+          backgroundColor: Colors.blue,
+        ),
+      );
+
+      try {
+        developer.log('Initiating cash payment for ticket: ${widget.ticketId}', name: 'MarkExitDetailsScreen.initiateCashPayment');
+        final response = await _paymentService.recordCashPayment(widget.ticketId);
+        developer.log('Cash payment response: $response', name: 'MarkExitDetailsScreen.initiateCashPayment');
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).removeCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response['message']?.toString() ?? strings.messageCashPaymentSuccess),
+              backgroundColor: AppColors.successDark,
+            ),
+          );
+          Navigator.pop(context, true);
+        }
+      } catch (e) {
+        developer.log('Error recording cash payment: $e', name: 'MarkExitDetailsScreen.initiateCashPayment');
+        if (mounted) {
+          ScaffoldMessenger.of(context).removeCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${strings.errorCashPaymentFailed}: ${e.toString()}'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      }
     }
 
-    // Build the payment options card
     return Card(
+      elevation: Theme.of(context).cardTheme.elevation,
+      margin: Theme.of(context).cardTheme.margin,
+      shape: Theme.of(context).cardTheme.shape,
+      color: Theme.of(context).cardColor,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
             InkWell(
-              onTap: initiateUpiPayment,
-              child: _buildOptionRow('Pay via UPI', Icons.qr_code),
+              onTap: viewModel.isLoading ? null : initiateUpiPayment,
+              borderRadius: BorderRadius.circular(12),
+              child: _buildOptionRow(strings.buttonPayUpi, Icons.qr_code_2_outlined),
             ),
             if (_isNfcSupported)
               InkWell(
-                onTap: initiateNfcCardPayment,
-                child: _buildOptionRow('Pay via Card (NFC)', Icons.nfc),
+                onTap: viewModel.isLoading ? null : initiateNfcCardPayment,
+                borderRadius: BorderRadius.circular(12),
+                child: _buildOptionRow(strings.buttonPayNfc, Icons.nfc_outlined),
               ),
             InkWell(
-              onTap: initiateCashPayment,
-              child: _buildOptionRow('Pay with Cash', Icons.money),
+              onTap: viewModel.isLoading ? null : initiateCashPayment,
+              borderRadius: BorderRadius.circular(12),
+              child: _buildOptionRow(strings.buttonPayCash, Icons.payments_outlined),
             ),
           ],
         ),
@@ -636,17 +1056,17 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
-  // Build a row for payment options
   Widget _buildOptionRow(String text, IconData icon) {
+    // ... (option row remains the same)
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 12.0), // Increased vertical padding
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
-              Icon(icon, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(width: 12),
+              Icon(icon, color: Theme.of(context).colorScheme.primary, size: 28), // Slightly larger icon
+              const SizedBox(width: 16), // Increased spacing
               Text(
                 text,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -656,75 +1076,103 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
               ),
             ],
           ),
-          Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.primary),
+          Icon(Icons.chevron_right,
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.7), size: 28), // Adjusted opacity
         ],
       ),
     );
   }
 
-  // Build custom app bar with ticket reference ID
   PreferredSizeWidget _buildCustomAppBar(MarkExitViewModel viewModel, S strings) {
-    final ticketRefId = viewModel.ticketDetails?['ticket_ref_id'] ?? 'N/A';
+    // ... (custom app bar remains the same)
+    final ticketRefId = viewModel.ticketDetails?['ticket_ref_id']?.toString() ?? strings.labelNA;
     return CustomAppBar.appBarWithNavigation(
       screenTitle: "${strings.markExitLabel} #$ticketRefId",
-      onPressed: () => Navigator.pop(context),
+      onPressed: () => Navigator.pop(context, viewModel.paymentStatus?.toLowerCase() == 'success'), // Pass back success status
       darkBackground: Theme.of(context).brightness == Brightness.dark,
-      fontSize: 14,
+      fontSize: 16, // Adjusted font size
       centreTitle: false,
       context: context,
     );
   }
 
-  // Format date-time string
-  String _formatDateTime(String? dateTimeStr) {
-    if (dateTimeStr == null || dateTimeStr.isEmpty) return 'N/A';
-    try {
-      final dateTime = DateTime.parse(dateTimeStr);
-      return DateFormat('dd MMM yyyy, hh:mm a').format(dateTime);
-    } catch (e) {
-      return dateTimeStr;
-    }
-  }
+  // REMOVE _formatDateTime as it's now handled by ViewModel
+  // String _formatDateTime(String? dateTimeStr) { ... }
 
-  // Build the main scaffold
   @override
   Widget build(BuildContext context) {
     final strings = S.of(context);
     return Consumer<MarkExitViewModel>(
       builder: (context, viewModel, child) {
-        // Show SnackBar when payment status changes
-        if (viewModel.paymentStatus != null) {
+        // Handle payment status snackbar display more reliably
+        // This was causing issues by being in the build method directly.
+        // It's better to trigger side effects like snackbars from event handlers or init/dispose.
+        // For now, will keep the WidgetsBinding approach but be mindful of its placement.
+
+        // This specific block for showing snackbar on paymentStatus change
+        // should ideally be triggered ONLY when the paymentStatus actually changes
+        // and not on every build. Using a StatefulWidget and didUpdateWidget or
+        // a more sophisticated state management pattern would be better.
+        // However, for now, the existing WidgetsBinding.instance.addPostFrameCallback
+        // tries to mitigate multiple snackbars.
+        if (viewModel.paymentStatus != null && viewModel.paymentStatus != "processing_payment_notification") { // Avoid showing initial "processing"
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Payment Status: ${viewModel.paymentStatus}'),
-                backgroundColor: viewModel.paymentStatus?.toLowerCase() == 'success'
-                    ? Colors.green
-                    : Colors.red,
-              ),
-            );
+            if (mounted) { // Ensure widget is still mounted
+              // Only show snackbar if the status is one that needs user attention (e.g. success/failure)
+              // And potentially not if it's just "pending" from an API call that already showed a message.
+              // The current logic might show multiple snackbars if not careful.
+              // Consider having a flag in ViewModel 'hasShownPaymentStatusSnackbar'
+              if (viewModel.paymentStatus?.toLowerCase() == 'success' || viewModel.paymentStatus?.toLowerCase() == 'failed' || viewModel.paymentStatus?.toLowerCase() == 'paid_cash') {
+                ScaffoldMessenger.of(context).removeCurrentSnackBar(); // Remove previous if any
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${strings.labelPaymentStatus}: ${viewModel.paymentStatus?.capitalize() ?? strings.labelUnknown.capitalize()}'),
+                    backgroundColor: viewModel.paymentStatus?.toLowerCase() == 'success' || viewModel.paymentStatus?.toLowerCase() == 'paid_cash'
+                        ? AppColors.successDark // Use AppColors
+                        : AppColors.errorDark,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                if (viewModel.paymentStatus?.toLowerCase() == 'success' || viewModel.paymentStatus?.toLowerCase() == 'paid_cash') {
+                  // Optionally pop the screen on success after a delay
+                  Future.delayed(const Duration(seconds: 2), () {
+                    if (mounted) Navigator.pop(context, true); // Pop with success
+                  });
+                }
+              }
+            }
           });
         }
-        return Scaffold(
-          appBar: _buildCustomAppBar(viewModel, strings),
-          body: Stack(
-            children: [
-              viewModel.error != null
+        return PopScope( // Use PopScope for more control over back navigation
+          canPop: !(viewModel.isLoading), // Prevent pop if loading
+          onPopInvoked: (didPop) {
+            if (didPop) return;
+            // Handle custom back press logic if needed, e.g., confirm exit
+          },
+          child: Scaffold(
+            appBar: _buildCustomAppBar(viewModel, strings),
+            body: RefreshIndicator(
+              onRefresh: _markTicketAsExited,
+              color: Theme.of(context).colorScheme.primary, // Set refresh indicator color
+              child: viewModel.isLoading && viewModel.ticketDetails == null // Show loading only if no details yet
+                  ? _buildLoadingState(strings)
+                  : viewModel.error != null && viewModel.ticketDetails == null // Show error only if no details yet
                   ? _buildErrorState(viewModel, strings)
+                  : viewModel.ticketDetails == null // Fallback for unexpected null details
+                  ? _buildErrorState(viewModel, strings) // Or a specific "No details" message
                   : _buildTicketDetails(viewModel, strings),
-              if (viewModel.isLoading && viewModel.error == null)
-                Container(
-                  color: Colors.black.withOpacity(0.5),
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                    ),
-                  ),
-                ),
-            ],
+            ),
           ),
         );
       },
     );
+  }
+}
+
+// Add capitalize extension if not already present globally
+extension StringExtension on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
   }
 }

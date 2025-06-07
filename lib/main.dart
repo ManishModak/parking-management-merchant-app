@@ -1,9 +1,11 @@
-import 'dart:developer' as developer;
+  import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:merchant_app/providers/locale_provider.dart';
 import 'package:merchant_app/providers/theme_provider.dart';
 import 'package:merchant_app/services/utils/navigation_service.dart';
+import 'package:merchant_app/viewmodels/dashboard_viewmodel.dart';
+import 'package:merchant_app/viewmodels/dispute/dispute_list_viewmodel.dart';
 import 'package:merchant_app/viewmodels/dispute/process_dispute_viewmodel.dart';
 import 'package:merchant_app/viewmodels/dispute/view_dispute_viewmodel.dart';
 import 'package:merchant_app/viewmodels/plaza/lane_details_viewmodel.dart';
@@ -22,6 +24,7 @@ import 'config/app_routes.dart';
 import 'config/app_theme.dart';
 import 'generated/l10n.dart';
 import 'services/core/auth_service.dart';
+import 'services/push_notification_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'viewmodels/auth_viewmodel.dart';
 import 'viewmodels/notification_viewmodel.dart';
@@ -34,6 +37,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   await AppConfig.initializeSettings();
+  
+  // Initialize native push notifications
+  await PushNotificationService.initialize();
 
   final authService = AuthService();
   final routeObserver = RouteObserver<ModalRoute>();
@@ -58,6 +64,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => OpenTicketViewModel()),
         ChangeNotifierProvider(create: (_) => RejectTicketViewModel ()),
         ChangeNotifierProvider(create: (_) => SettingsViewModel()),
+        ChangeNotifierProvider(create: (_) => DashboardViewModel()),
+        ChangeNotifierProvider(create: (_) => DisputeListViewModel()),
       ],
       child: MyApp(routeObserver: routeObserver),
     ),

@@ -40,14 +40,12 @@ class SettingsViewModel extends ChangeNotifier {
     }
   }
 
-  // New method to fetch and store user data
   Future<bool> fetchAndStoreUserData({required String userId, required bool isCurrentAppUser}) async {
     try {
       _setLoading(true);
       final user = await _userService.fetchUserInfo(userId, isCurrentAppUser);
       _currentUser = user;
 
-      // Prepare user data for storage
       final userData = {
         'id': user.id,
         'username': user.name,
@@ -57,12 +55,11 @@ class SettingsViewModel extends ChangeNotifier {
         'address': user.address ?? '',
         'state': user.state ?? '',
         'city': user.city ?? '',
-        'subEntity': user.subEntity ?? [],
-        'entityName': user.entityName, // Adjust based on actual entity name field
-        'entityId': user.entityId,     // Adjust based on actual entity ID field
+        'subEntity': user.subEntityData ?? [],
+        'entityName': user.entityName,
+        'entityId': user.entityId,
       };
 
-      // Store user data in secure storage
       await _secureStorage.storeUserData(userData);
       developer.log('Stored user data: $userData', name: 'SettingsViewModel');
 
@@ -92,6 +89,7 @@ class SettingsViewModel extends ChangeNotifier {
   }) async {
     try {
       _setLoading(true);
+      clearErrors(); // Clear previous errors before attempting update
       final success = await _userService.updateUserInfo(
         userId,
         username: username,
@@ -103,19 +101,43 @@ class SettingsViewModel extends ChangeNotifier {
         role: role,
       );
       if (success) {
-        // Fetch and store updated user data
         final updated = await fetchAndStoreUserData(userId: userId, isCurrentAppUser: isCurrentAppUser);
         if (!updated) {
           _errors['general'] = 'Failed to refresh user data after update';
+          notifyListeners(); // Ensure UI updates with this error
           return false;
         }
         developer.log('Updated user: id=$userId, name=$username', name: 'SettingsViewModel');
-        clearErrors();
+        // clearErrors(); // Already cleared at the beginning and on success of fetchAndStoreUserData
+      } else {
+        // If success is false but no specific exception was caught, it might be a non-exceptional failure.
+        // However, typical failures like validation are expected to throw exceptions.
+        // If _userService.updateUserInfo can return false without throwing for specific validation,
+        // that logic would need to be handled here (e.g. by inspecting a response object if available).
+        // For now, assuming false means a generic failure if no exception caught.
+        if (_errors.isEmpty) { // If no specific error was set by an exception handler
+          _errors['general'] = 'Failed to update profile: Unknown reason';
+        }
       }
       return success;
     } on EmailInUseException catch (e) {
-      _errors['email'] = 'Email is already in use';
-      developer.log('Email in use: $email', name: 'SettingsViewModel', error: e);
+      _errors['email'] = e.message; // Use the specific message from the exception (e.g., "email must be unique")
+      developer.log('Email in use: $email. Server message: "${e.message}"', name: 'SettingsViewModel', error: e);
+      return false;
+    } on HttpException catch (he) { // Catch HttpException specifically to access statusCode and serverMessage
+      if (he.statusCode == 400 && he.serverMessage != null && he.serverMessage!.toLowerCase().contains("validation")) {
+        // Check if the serverMessage contains hints of specific field errors,
+        // though ideally UserService should parse this and throw more specific exceptions.
+        // For example, if serverMessage was the full JSON, we could parse it here.
+        // As per logs, serverMessage is "Validation error occurred".
+        // If UserService cannot be changed, this is a fallback:
+        // Try to make a guess or provide a more generic validation message.
+        // For now, we rely on EmailInUseException for specific email errors.
+        _errors['general'] = he.serverMessage ?? 'Validation failed during update.';
+      } else {
+        _errors['general'] = he.serverMessage ?? 'Failed to update profile due to a server error.';
+      }
+      developer.log('HTTP Error updating user: ${he.message}, Status: ${he.statusCode}, Server: ${he.serverMessage}', name: 'SettingsViewModel', error: he);
       return false;
     } catch (e) {
       _errors['general'] = 'Failed to update profile';
@@ -174,13 +196,17 @@ class SettingsViewModel extends ChangeNotifier {
   }
 
   void clearError(String key) {
-    _errors.remove(key);
-    notifyListeners();
+    if (_errors.containsKey(key)) {
+      _errors.remove(key);
+      notifyListeners();
+    }
   }
 
   void clearErrors() {
-    _errors.clear();
-    notifyListeners();
+    if (_errors.isNotEmpty) {
+      _errors.clear();
+      notifyListeners();
+    }
   }
 
   void _setLoading(bool value) {

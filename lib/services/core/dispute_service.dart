@@ -58,11 +58,9 @@ class DisputesService {
       request.headers.addAll(headers);
       developer.log('[DISPUTE] Headers Sent: $headers', name: 'DisputesService');
 
-      // Send dispute data as a JSON string in the 'dispute' field
       request.fields['dispute'] = jsonEncode(dispute.toJsonForCreate());
       developer.log('[DISPUTE] Dispute Data: ${request.fields['dispute']}', name: 'DisputesService');
 
-      // Add files with the correct field name 'files'
       for (var i = 0; i < uploadedFiles.length; i++) {
         final file = File(uploadedFiles[i]);
         if (await file.exists()) {
@@ -75,7 +73,7 @@ class DisputesService {
             name: 'DisputesService',
           );
           request.files.add(await http.MultipartFile.fromPath(
-            'files', // Correct field name to match backend
+            'uploadedFiles',
             file.path,
             filename: 'dispute_file_$i.$ext',
             contentType: MediaType(ext == 'pdf' ? 'application' : 'image', ext),
@@ -95,12 +93,17 @@ class DisputesService {
       developer.log('[DISPUTE] Response Status Code: ${response.statusCode}', name: 'DisputesService');
       developer.log('[DISPUTE] Response Body: ${response.body}', name: 'DisputesService');
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = json.decode(response.body);
-        if (responseData['success'] == true && responseData['dispute'] != null) {
-          final createdDispute = Dispute.fromJson(responseData['dispute']);
-          developer.log('[DISPUTE] Successfully created dispute: ${createdDispute.disputeId}', name: 'DisputesService');
-          return createdDispute;
+        if (responseData['success'] == true) {
+          if (responseData['dispute'] != null) {
+            final createdDispute = Dispute.fromJson(responseData['dispute']);
+            developer.log('[DISPUTE] Successfully created dispute: ${createdDispute.disputeId}', name: 'DisputesService');
+            return createdDispute;
+          }
+          // Handle case where success is true but dispute data is not returned
+          developer.log('[DISPUTE] Dispute created but no dispute data returned', name: 'DisputesService');
+          return dispute; // Return the input dispute as a fallback
         }
         throw ServiceException(responseData['message'] ?? 'Invalid response format');
       }
@@ -122,7 +125,7 @@ class DisputesService {
   }
 
   Future<List<Dispute>> getAllOpenDisputes() async {
-    final url = ApiConfig.getFullUrl(DisputesApi.getAllOpenDisputes);
+    final url = ApiConfig.getFullUrl(DisputesApi.getDisputesByUser);
     final serverUrl = Uri.parse(url);
 
     if (!(await _connectivityService.isConnected())) {

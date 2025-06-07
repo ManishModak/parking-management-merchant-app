@@ -1,0 +1,16 @@
+ToDo - International Lang Requested - Thailand, Malaysia, Mandarin(Chinese), Vietnam, Singapore, Arabic
+
+ToDo - National Lang Requested - Tamil, Telugu, Malayalam, Hindi, Marathi, Bengali, Gujarati, Tulu (Karnataka), Kannada
+
+
+Known Dev Issues (Some of the issue can be just my mind playing games on me so check with scrutiny) :
+
+    * For Ios build Add Permissions Like we do in Android Manifest At The time non are added.
+    * In Plaza Registration If Plaza id starts with 0 it will fail. (Initial Assessment - Backend Issue Even if Success the id in response comes diff)
+
+Dev Suggestions :
+
+    * Don't Touch it if it works Modules Like User and plaza were done when just joined as intern This are created late in night really late so be careful while dealing with it.
+    * Some Code Might be inefficient but let it be it does need to be perfect
+    * Best of luck while dealing with This :) I tried trust Me.
+    * Lots of AI was used to build fast and meet deadlines.

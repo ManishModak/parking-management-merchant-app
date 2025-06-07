@@ -113,6 +113,27 @@
   "titleMarkExit": "Mark Exit",
   "titleModifyViewTicketDetails": "Ticket Details",
   "titleViewTicketDetails": "Ticket Details",
+  "labelTotalTransactions": "Total Transactions",
+  "errorFailedToLoadSection": "Couldn't load this section.",
+  "tryRefreshing": "Please pull down to refresh.",
+  "labelDisputesLowerCase": "disputes",
+  "labelTransactionsLowerCase": "transactions",
+  "errorNoAccess": "No Access",
+  "errorFailedToLoadPlazas": "Failed to load plaza options. Please check your connection and try again.",
+  "errorNoPlazasAssigned": "No plazas are currently assigned to your account. Please contact support if you believe this is an error.",
+  "errorNoAccessToPlazaData": "You do not have access to view plaza-specific data.",
+  "errorDataNotFoundGeneric": "Data not found. Please pull to refresh or try again later.",
+  "errorDataNotFoundTicketOverview": "Could not load ticket overview. Please try refreshing.",
+  "errorDataNotFoundPlazaSummary": "Could not load plaza summary. Please try refreshing.",
+  "errorDataNotFoundBookingAnalysis": "Could not load booking analysis. Please try refreshing.",
+  "errorDataNotFoundDisputeSummary": "Could not load dispute summary. Please try refreshing.",
+  "errorDataNotFoundPaymentAnalysis": "Could not load payment analysis. Please try refreshing.",
+  "labelNoDataAvailable": "No data available to display.",
+  "featureComingSoon": "This feature is coming soon!",
+  "exportReport": "Export Report",
+  "labelAvailableSlots": "Available Slots",
+  "titleDisputeList": "Disputes",
+  "statusLabel": "Status",
   "labelPassword": "Password",
   "labelConfirmPassword": "Confirm Password",
   "labelEmailAndMobileNo": "Email ID / Mobile No.",
@@ -121,6 +142,200 @@
   "labelUsername": "Username",
   "labelRole": "Role",
   "labelAssignRole": "Assign Role",
+  "titleProcessingDispute": "Processing Dispute",
+  "labelTicket": "Ticket",
+  "labelPaymentAmount": "Payment Amount",
+  "labelPaymentDate": "Payment Date",
+  "labelDisputeExpiryDate": "Expiry Date",
+  "labelDisputeReason": "Dispute Reason",
+  "labelDisputeAmount": "Dispute Amount",
+  "labelDisputeRemark": "Dispute Remark",
+  "errorLoadDisputeDetails": "Failed to load dispute details",
+  "buttonProcessDispute": "Process Dispute",
+  "buttonClose": "Close",
+  "labelAuditDetails": "Audit Details",
+  "labelDisputeInformation": "Dispute Information",
+  "labelDisputeRaisedBy": "Dispute Raised By",
+  "labelDisputeRaisedDate": "Dispute Raised Date",
+  "labelDisputeProcessedBy": "Dispute Processed By",
+  "labelDisputeProcessedDate": "Dispute Processed Date",
+  "labelTicketInformation": "Ticket Information",
+  "labelExitLane": "Exit Lane",
+  "labelTotalCharges": "Total Charges",
+  "labelPaymentStatus": "Payment Status",
+  "labelNotFilled": "Not filled",
+  "titleProcessDispute": "Process Dispute",
+  "labelDisputeAction": "Dispute Action",
+  "imageProcessingError": "Error processing image: {details}",
+  "@imageProcessingError": {
+    "description": "Message displayed when an error occurs during image processing.",
+    "placeholders": {
+      "details": {
+        "type": "String",
+        "example": "File not found"
+      }
+    }
+  },
+  "errorNoAccessToDashboard": "You do not have permission to view the dashboard.",
+  "errorLoadingDashboardConfig": "Error loading dashboard configuration",
+  "errorPlazaOwnerEntityIdMissing": "Plaza Owner configuration is incomplete. Please contact support.",
+  "errorAdminOperatorNoPlazasConfigured": "No plazas are configured for your account. Please contact support.",
+  "errorAdminOperatorNoPlazasAssigned": "You are not assigned to any plazas. Please contact your administrator.",
+  "labelNoDisputesData": "No dispute data to display",
+  "labelNoPaymentData": "No payment data to display",
+  "labelVsPreviousPeriod": "vs previous period",
+  "initializationError": "Failed to initialize the screen: {details}",
+  "@initializationError": {
+    "description": "Error message when the screen/viewmodel fails to initialize.",
+    "placeholders": {
+      "details": {
+        "type": "String",
+        "example": "Network request failed"
+      }
+    }
+  },
+
+  "locationFetchTimeoutError": "Could not get location in time. Please try again.",
+  "@locationFetchTimeoutError": {
+    "description": "Error message when fetching GPS location times out."
+  },
+
+  "locationNotAvailableError": "Location data is not available. Please ensure location services are enabled and permissions are granted.",
+  "@locationNotAvailableError": {
+    "description": "Error displayed during form validation if location data was not successfully fetched."
+  },
+
+
+  "noPlazasFound": "No plazas found for your account.",
+  "@noPlazasFound": {
+    "description": "Message displayed when a Plaza Owner has no plazas associated with their account."
+  },
+
+  "unnamedPlaza": "Unnamed Plaza",
+  "@unnamedPlaza": {
+    "description": "Default name for a plaza if its name is missing."
+  },
+
+  "noLanesFoundForPlaza": "No lanes found for the selected plaza.",
+  "@noLanesFoundForPlaza": {
+    "description": "Message displayed if a selected plaza has no lanes configured."
+  },
+
+  "vehicleNumberRequiredError": "Vehicle number is required.",
+  "@vehicleNumberRequiredError": {
+    "description": "Validation error if the vehicle number is empty for manual ticket."
+  },
+
+  "vehicleNumberTooLongError": "Vehicle number cannot exceed 20 characters.",
+  "@vehicleNumberTooLongError": {
+    "description": "Validation error if the vehicle number is too long."
+  },
+
+
+
+  "internalServerError": "Internal Server Error. Please try again later.",
+  "@internalServerError": {
+    "description": "Error message for HTTP 500 responses."
+  },
+
+  "badRequestError": "Bad request. Please check your input and try again.",
+  "@badRequestError": {
+    "description": "Error message for HTTP 400 responses when no specific server message is available."
+  },
+
+  "unauthorizedError": "Unauthorized. Please login again.",
+  "@unauthorizedError": {
+    "description": "Error message for HTTP 401 responses."
+  },
+
+  "forbiddenError": "Access denied. You do not have permission to perform this action.",
+  "@forbiddenError": {
+    "description": "Error message for HTTP 403 responses."
+  },
+
+  "httpRequestFailedWithCode": "Request failed. Status: {code}",
+  "@httpRequestFailedWithCode": {
+    "description": "Generic error message for HTTP requests that fail with a status code.",
+    "placeholders": {
+      "code": {
+        "type": "String",
+        "example": "404"
+      }
+    }
+  },
+
+  "unknownCode": "Unknown",
+  "@unknownCode": {
+    "description": "Placeholder for an unknown HTTP status code."
+  },
+
+  "noInternetConnection": "No internet connection. Please check your network settings.",
+  "@noInternetConnection": {
+    "description": "Error message when there is no internet connectivity."
+  },
+
+  "serverConnectionError": "Could not connect to the server. Please try again later.",
+  "@serverConnectionError": {
+    "description": "Error message when the app cannot connect to the backend server."
+  },
+
+  "requestTimeoutError": "The request timed out. Please try again.",
+  "@requestTimeoutError": {
+    "description": "Error message when an HTTP request times out."
+  },
+
+  "networkError": "A network error occurred. Please check your connection and try again.",
+  "@networkError": {
+    "description": "Generic error message for network-related issues like SocketException."
+  },
+
+  "unexpectedErrorOccurred": "An unexpected error occurred: {details}",
+  "@unexpectedErrorOccurred": {
+    "description": "Generic error message for any other unhandled exceptions.",
+    "placeholders": {
+      "details": {
+        "type": "String",
+        "example": "Null pointer exception"
+      }
+    }
+  },
+
+
+
+
+
+  "noPlazaAssignedWidgetError": "No plaza assigned. Cannot proceed.",
+  "@noPlazaAssignedWidgetError": {
+    "description": "Error message shown in the widget UI if no plaza is assigned (for Plaza Admin/Operator)."
+  },
+
+
+
+  "messageDisputeProcessed": "Dispute processed successfully!",
+  "errorProcessDispute": "Failed to process dispute",
+  "errorNoFilesSelected": "No files selected",
+  "errorPickingFiles": "Error picking files",
+  "labelCalculating": "Calculating...",
+  "labelPending": "Pending",
+  "buttonPayUpi": "Pay via UPI",
+  "buttonPayNfc": "Pay via Card (NFC)",
+  "buttonPayCash": "Pay with Cash",
+  "errorInvalidAmount": "Invalid amount for payment",
+  "errorQrCodeFailed": "Failed to retrieve QR code URL",
+  "errorNfcNotSupported": "This device does not support NFC",
+  "errorNfcDisabled": "Please enable NFC in Settings",
+  "messageEmvCardDetected": "EMV card detected - processing...",
+  "errorUnsupportedCard": "Unsupported card type",
+  "errorNfc": "NFC Error",
+  "messagePayCash": "Please pay cash at the exit gate",
+  "messageNoDisputeData": "No dispute data available",
+  "titleRaiseDispute": "Raise Dispute",
+  "labelEnterRemark": "Enter Remark",
+  "labelUploadedFiles": "Uploaded Files",
+  "buttonAddMore": "Add More",
+  "labelAddImagesOrPdfs": "Tap to Add Images or PDFs",
+  "errorInvalidTimeFormat": "Invalid ticket creation time format",
+  "messageDisputeRaised": "Dispute raised successfully!",
   "labelEntity": "Entity",
   "labelSubEntity": "Sub-Entity",
   "selectCompanyType": "Select Company Type",
@@ -228,8 +443,6 @@
   "navNotifications": "Notifications",
   "navAccount": "Account",
   "searchHint": "Search by Ticket ID, Plaza, Vehicle Number...",
-  "lastUpdated": "Last updated",
-  "swipeToRefresh": "Swipe down to refresh.",
   "noOpenTickets": "No open tickets",
   "noTicketsAvailable": "There are no open tickets available",
   "noTicketsMatchSearch": "No tickets match your search criteria",
@@ -258,38 +471,12 @@
   "errorServiceOverloadedMessage": "Server is busy.",
   "errorUnexpectedMessage": "An unexpected issue occurred.",
   "searchTicketHistoryHint": "Search by Ticket ID, Status, Plaza, Vehicle Number...",
-  "dateRangeLabel": "Date Range",
-  "todayLabel": "Today",
-  "yesterdayLabel": "Yesterday",
-  "last7DaysLabel": "Last 7 Days",
-  "last30DaysLabel": "Last 30 Days",
-  "customLabel": "Custom",
-  "filtersLabel": "Filters",
-  "statusLabel": "Status",
-  "vehicleLabel": "Vehicle",
-  "plazaLabel": "Plaza",
   "loggingIn": "Logging in...",
-  "advancedFiltersLabel": "Advanced Filters",
   "ticketStatusLabel": "Ticket Status",
   "openTicketsLabel": "Open Tickets",
   "pendingTicketsLabel": "Pending Tickets",
   "completedTicketsLabel": "Completed Tickets",
   "rejectedTicketsLabel": "Rejected Tickets",
-  "vehicleTypeLabel": "Vehicle Type",
-  "bikeLabel": "Bike",
-  "threeWheelerLabel": "3-Wheeler",
-  "fourWheelerLabel": "4-Wheeler",
-  "busLabel": "Bus",
-  "truckLabel": "Truck",
-  "heavyMachineryLabel": "Heavy Machinery",
-  "plazaNameLabel": "Plaza Name",
-  "searchPlazaHint": "Search Plaza Name",
-  "clearAllLabel": "Clear All",
-  "applyLabel": "Apply",
-  "selectDateRangeLabel": "Select Date Range",
-  "clearLabel": "Clear",
-  "selectedRangeLabel": "Selected Range",
-  "dateRangeTooLongWarning": "Please select a date range within one year.",
   "noTicketsFoundLabel": "No tickets found.",
   "adjustFiltersMessage": "Try adjusting your filters or swipe down to refresh.",
   "errorUnableToLoadTicketsHistory": "Unable to Load Ticket History",
@@ -352,7 +539,6 @@
   "summaryPendingTxns": "Pending Txns",
   "cardPlazaRevenueSummary": "Plaza-wise Revenue Summary",
   "tooltipRevenue": "Revenue",
-  "cardPlazaBookingSummary": "Plaza-wise Booking Summary",
   "tooltipTotal": "Total",
   "tooltipCancelled": "Cancelled",
   "legendTotalBookings": "Total Bookings",
@@ -370,9 +556,39 @@
   "dialogTitleSuccess": "Registration Successful",
   "dialogContentSuccess": "User has been registered successfully.",
   "buttonOk": "OK",
-  "hintSearchUsers": "Search by ID, name, role, or mobile number...",
+  "hintSearchUsers": "Search by name, mob no. or email",
+  "successMobileRestored": "Original mobile number restored and verified.",
+  "successMobileVerification": "Mobile number verified successfully!",
+  "suggestionTryAnotherNumber": "Please try a different mobile number.",
+  "errorOtpSendFailed": "Failed to send OTP.",
   "labelLastUpdated": "Last updated",
   "labelSwipeToRefresh": "Swipe down to refresh",
+  "failedToParseTicketIds": "Ticket created, but failed to retrieve all ticket identifiers",
+  "labelRetry": "Retry",
+  "errorNavigatingToTicketDetails": "Could not open ticket details. ID missing.",
+
+  "errorLoadingNotifications": "Error Loading Notifications",
+
+  "markAllAsRead": "Mark all as read",
+  "markedAllAsRead": "All notifications marked as read.",
+
+  "confirmDeleteTitle": "Confirm Delete",
+  "confirmDeleteMessage": "Are you sure you want to delete this notification?",
+  "labelCancel": "Cancel",
+  "labelDelete": "Delete",
+
+  "notificationTypeNewBooking": "New Booking",
+  "notificationTypePaymentReceived": "Payment Received",
+  "notificationTypeDisputeRaised": "Dispute Raised",
+  "notificationTypePlazaAlert": "Plaza Alert",
+  "notificationTypeAccountUpdate": "Account Update",
+  "notificationTypeDisputeResolved": "Dispute Resolved",
+  "notificationTypeVehicleRegistration": "Vehicle Registration",
+  "notificationTypePlazaRegistration": "Plaza Registration",
+  "notificationTypeBookingCancellation": "Booking Cancelled",
+  "notificationTypeTicketCreation": "New Ticket",
+  "notificationTypeGeneric": "Notification",
+  "notificationTypeUnknown": "Unknown Notification",
   "messageNoUsersFound": "No users found",
   "messageNoUsersAvailable": "There are no users available",
   "messageNoUsersMatchSearch": "No users match your search criteria",
@@ -434,12 +650,10 @@
   "errorNoUserId": "No User Id Provided",
   "errorLoadData": "Error In loading Data",
   "accessDenied": "You do not have permission to access this feature.",
-  "disputeStatusLabel": "Dispute Status",
   "notRaisedLabel": "Not Raised",
   "raisedLabel": "Raised",
   "errorLoadingRole": "Error Loading Role",
   "errorRenderingMenu": "Error In Menu render",
-  "suggestionTryAnotherNumber": "Please try a different number",
   "buttonTryAnotherNumber": "Try Another Number",
   "errorVerificationFailed": "Verification failed",
   "errorInvalidMobile": "Valid 10-digit mobile number is required",
@@ -453,7 +667,6 @@
   "errorNotFoundMessageReject": "No rejectable tickets were found.",
   "ticketIdLabel": "Ticket ID:",
   "vehicleNumberLabel": "Vehicle Number",
-  "entryTimeLabel": "Entry Time",
   "errorUserExists": "User with this information already exists",
   "downloadTransactionsStarted": "Transaction download started",
   "downloadTransactionsFailed": "Failed to download transactions",
@@ -930,7 +1143,7 @@
   },
   "dialogContentBankDetailsRegistered": "Bank Details Registered Successfully",
   "dialogContentBankDetailsModified": "Bank Details Modified Successfully",
-  "dialogContentLanesAdded": "Lanes Added Successfully",
+  "dialogContentLanesRegistered": "Lane details registered successfully.",
   "validationDuplicateGeneral": "One or more fields contain duplicate values.",
   "@validationDuplicateGeneral": {
     "description": "General error message when duplicates are detected"
@@ -966,9 +1179,19 @@
       }
     }
   },
+  "messageNfcScanPrompt": "Hold your card near the device to scan.",
+  "@messageNfcScanPrompt": {
+    "description": "Prompt shown on iOS NFC scan dialog."
+  },
+  "messageCashPaymentSuccess": "Marked Payment by Cash",
+  "messageProcessingPayment": "Accept Cash Payment",
+  "errorCashPaymentFailed": "Error In Marking Payment by Cash",
+  "errorNfcTimeout": "NFC Timeout",
+  "errorFailedToMarkExit": "Failed to mark ticket as Exited",
+  "errorServiceException": "Service Error",
   "messageMaxImagesHint": "You can upload up to {maxImages} images.",
   "buttonRemoveImage": "Remove Image",
-  "plazaImageUploadSuccessfully": "Image Uploaded Successfully",
+  "plazaRegisteredSuccessfully": "Plaza Registered Successfully",
   "messageUploadingImages": "Uploading images...",
   "errorUnknown": "An unknown error occurred.",
   "messageErrorPickingImagesPlatform": "Image picking failed ({0}). Please try again.",
@@ -984,7 +1207,7 @@
   "vehicleNumberError": "Vehicle number must be between 1 and 20 characters",
   "vehicleTypeRequired": "Vehicle type is required",
   "ticketCreationError": "Failed to create ticket: {error}",
-  "dialogContentLanesModified": "Lanes Modified Successfully",
+  "dialogContentLanesModified": "Lanes Details Modified Successfully",
   "titleEditNewLane": "Edit New Lane",
   "validationGeneralError": "Please complete all required fields correctly",
   "validationGeneralError_description": "General error for basic details validation",
@@ -1026,8 +1249,8 @@
   "labelLCVCapacity": "LCV Capacity",
   "labelHMVCapacity": "HMV Capacity",
   "buttonAddLane": "Add Lane",
-  "dialogContentPlazaRegistered": "Plaza Registered Successfully",
-  "dialogContentPlazaUpdated": "Plaza Details Modified Successfully",
+  "dialogContentBasicDetailsRegistered": "Basic details registered successfully",
+  "dialogContentBasicDetailsModified": "Basic details modified Successfully",
   "noDetailsAvailable": "No Details Available",
   "errorDateOverlap": "Date Overlap",
   "errorDiscountNumeric": "Discount Numeric",
@@ -1161,7 +1384,6 @@
   "errorUnableToLoadTicketDetails": "Error Unable to Load Ticket Details",
   "messageErrorPlazaIdNotSet": "Error Plaza Id Not Set",
   "filterByDate": "Filter by Date",
-  "resetAllLabel": "Reset All",
   "clearFilterLabel": "Clear Filter",
   "@plazaFetchError": {
     "description": "Error message when fetching plazas fails.",
@@ -1405,8 +1627,356 @@
   "errorToMinutesGreaterThanFrom": "To (minutes) must be greater than From (minutes).",
   "errorProgressiveFareRequired": "Fare is required for Progressive type.",
   "errorProgressiveFareNonNegative": "Fare must be 0 or greater.",
-
   "warningSelectPlazaToAddFare": "Please select a Plaza to add fares.",
+  "cardTicketCollections": "Ticket Collections",
+  "@cardTicketCollections": {
+    "description": "Title of the card displaying ticket collection statistics."
+  },
+  "labelNumberOfTickets": "No. of Tickets",
+  "@labelNumberOfTickets": {
+    "description": "Label for the number of tickets in the ticket collections card."
+  },
+  "labelTicketCollections": "Ticket Collection",
+  "@labelTicketCollections": {
+    "description": "Label for the ticket collection amount in the ticket collections card."
+  },
 
-  "anprFailedMessage": "Automatic Number Plate Recognition failed to identify vehicle details. Please try again or use manual entry."
+  "labelTotalTickets": "Total Tickets",
+  "@labelTotalTickets": {
+    "description": "Label for the total tickets in the ticket overview section."
+  },
+
+  "labelOpenTickets": "Open Tickets",
+  "@labelOpenTickets": {
+    "description": "Label for open tickets in the ticket overview section."
+  },
+
+  "labelCompletedTickets": "Completed Tickets",
+  "@labelCompletedTickets": {
+    "description": "Label for completed tickets in the ticket overview section."
+  },
+
+  "labelNumberOfPlazas": "No. of Plazas",
+  "@labelNumberOfPlazas": {
+    "description": "Label for the number of plazas in the plaza summary section."
+  },
+
+  "labelTotalSlots": "Total Slots",
+  "@labelTotalSlots": {
+    "description": "Label for the total slots in the plaza summary section."
+  },
+
+  "labelAverageSlots": "Average Slots",
+  "@labelAverageSlots": {
+    "description": "Label for the average slots in the plaza summary section."
+  },
+
+  "labelOccupiedSlots": "Occupied Slots",
+  "@labelOccupiedSlots": {
+    "description": "Label for the occupied slots in the plaza summary section."
+  },
+
+  "labelCount": "Count",
+  "@labelCount": {
+    "description": "Generic label for counts in summary cards."
+  },
+
+  "cardPlazaBookingSummary": "Booking Analysis",
+  "@cardPlazaBookingSummary": {
+    "description": "Title of the card displaying plaza booking statistics as a chart."
+  },
+
+  "labelTotalBookings": "Total Bookings",
+  "@labelTotalBookings": {
+    "description": "Label for total bookings in the booking analysis chart."
+  },
+
+  "labelReservedBookings": "Reserved Bookings",
+  "@labelReservedBookings": {
+    "description": "Label for reserved bookings in the booking analysis chart."
+  },
+
+  "labelCancelledBookings": "Cancelled Bookings",
+  "@labelCancelledBookings": {
+    "description": "Label for cancelled bookings in the booking analysis chart."
+  },
+
+  "labelNoShowBookings": "No-Show Bookings",
+  "@labelNoShowBookings": {
+    "description": "Label for no-show bookings in the booking analysis chart."
+  },
+
+  "labelTotal": "Total",
+  "@labelTotal": {
+    "description": "Short label for total bookings in the booking analysis chart axis."
+  },
+
+  "labelReserved": "Reserved",
+  "@labelReserved": {
+    "description": "Short label for reserved bookings in the booking analysis chart axis."
+  },
+
+  "labelCancelled": "Cancelled",
+  "@labelCancelled": {
+    "description": "Short label for cancelled bookings in the booking analysis chart axis."
+  },
+
+  "labelNoShow": "No-Show",
+  "@labelNoShow": {
+    "description": "Short label for no-show bookings in the booking analysis chart axis."
+  },
+
+  "labelPercentageChange": "Percentage Change",
+  "@labelPercentageChange": {
+    "description": "Label for the percentage change in the booking analysis card."
+  },
+
+  "cardDisputeSummary": "Dispute Summary",
+  "@cardDisputeSummary": {
+    "description": "Title of the card displaying dispute summary statistics."
+  },
+
+  "labelTotalDisputes": "Total Disputes",
+  "@labelTotalDisputes": {
+    "description": "Label for the total number of disputes in the dispute summary card."
+  },
+
+  "labelTotalAmount": "Total Amount",
+  "@labelTotalAmount": {
+    "description": "Label for the total amount of disputes in the dispute summary card."
+  },
+
+  "labelOpenDisputes": "Open Disputes",
+  "@labelOpenDisputes": {
+    "description": "Label for the number of open disputes in the dispute summary card."
+  },
+
+  "labelOpenAmount": "Open Amount",
+  "@labelOpenAmount": {
+    "description": "Label for the amount of open disputes in the dispute summary card."
+  },
+
+  "labelSettledDisputes": "Settled Disputes",
+  "@labelSettledDisputes": {
+    "description": "Label for the number of settled disputes in the dispute summary card."
+  },
+
+  "labelSettledAmount": "Settled Amount",
+  "@labelSettledAmount": {
+    "description": "Label for the amount of settled disputes in the dispute summary card."
+  },
+
+  "labelRejectedDisputes": "Rejected Disputes",
+  "@labelRejectedDisputes": {
+    "description": "Label for the number of rejected disputes in the dispute summary card."
+  },
+
+  "labelRejectedAmount": "Rejected Amount",
+  "@labelRejectedAmount": {
+    "description": "Label for the amount of rejected disputes in the dispute summary card."
+  },
+
+  "cardPaymentMethodAnalysis": "Payment Method Analysis",
+  "@cardPaymentMethodAnalysis": {
+    "description": "Title of the card displaying payment method analysis as a pie chart."
+  },
+
+  "labelCard": "Card",
+  "@labelCard": {
+    "description": "Label for card payment method in the payment method analysis card."
+  },
+
+  "labelUpi": "UPI",
+  "@labelUpi": {
+    "description": "Label for UPI payment method in the payment method analysis card."
+  },
+
+  "labelCash": "Cash",
+  "@labelCash": {
+    "description": "Label for cash payment method in the payment method analysis card."
+  },
+
+  "errorDataNotFound": "Data not found",
+  "@errorDataNotFound": {
+    "description": "Message shown when no data is available for a card or chart."
+  },
+  "labelUnknown": "Unknown",
+  "labelNoData": "No Data Found",
+  "noPlazaAssigned": "No plaza assigned to this user",
+  "labelPendingTickets": "Pending Tickets",
+  "labelSuccessfulTickets": "Successful Tickets",
+  "labelFailedTickets": "Failed Tickets",
+  "labelRejectedTickets": "Rejected Tickets",
+  "labelAllPlazas": "All Plazas",
+  "invalidPlazaData": "Invalid Plaza Data",
+  "disputeListTitle": "Dispute List",
+  "@disputeListTitle": {
+    "description": "Title displayed in the app bar of the Dispute List screen"
+  },
+  "searchDisputeHint": "Search by Dispute ID, Vehicle Number, Plaza, etc.",
+  "@searchDisputeHint": {
+    "description": "Hint text for the search input field"
+  },
+  "noDisputesFound": "No disputes found",
+  "@noDisputesFound": {
+    "description": "Message displayed when no disputes are available"
+  },
+  "lastUpdated": "Last Updated",
+  "@lastUpdated": {
+    "description": "Label for the last updated timestamp"
+  },
+  "swipeToRefresh": "Swipe down to refresh",
+  "@swipeToRefresh": {
+    "description": "Instruction to refresh the dispute list"
+  },
+  "filtersLabel": "Filters",
+  "@filtersLabel": {
+    "description": "Label for the filters chip"
+  },
+  "resetAllLabel": "Reset All",
+  "@resetAllLabel": {
+    "description": "Label for the reset all filters button"
+  },
+  "dateRangeLabel": "Date Range",
+  "@dateRangeLabel": {
+    "description": "Label for the date range filter chip when no range is selected"
+  },
+  "todayLabel": "Today",
+  "@todayLabel": {
+    "description": "Label for the 'Today' date filter option"
+  },
+  "yesterdayLabel": "Yesterday",
+  "@yesterdayLabel": {
+    "description": "Label for the 'Yesterday' date filter option"
+  },
+  "last7DaysLabel": "Last 7 Days",
+  "@last7DaysLabel": {
+    "description": "Label for the 'Last 7 Days' date filter option"
+  },
+  "last30DaysLabel": "Last 30 Days",
+  "@last30DaysLabel": {
+    "description": "Label for the 'Last 30 Days' date filter option"
+  },
+  "customLabel": "Custom",
+  "@customLabel": {
+    "description": "Label for the 'Custom' date range filter option"
+  },
+  "advancedFiltersLabel": "Advanced Filters",
+  "@advancedFiltersLabel": {
+    "description": "Title for the advanced filters dialog"
+  },
+  "disputeStatusLabel": "Dispute Status",
+  "@disputeStatusLabel": {
+    "description": "Label for the dispute status filter section"
+  },
+  "openDisputesLabel": "Open",
+  "@openDisputesLabel": {
+    "description": "Label for the 'Open' dispute status filter"
+  },
+  "errorUnableToLoadDisputes": "Unable to Load Disputes",
+  "inProgressDisputesLabel": "In Progress",
+  "@inProgressDisputesLabel": {
+    "description": "Label for the 'In Progress' dispute status filter"
+  },
+  "acceptedDisputesLabel": "Accepted",
+  "@acceptedDisputesLabel": {
+    "description": "Label for the 'Accepted' dispute status filter"
+  },
+  "rejectedDisputesLabel": "Rejected",
+  "@rejectedDisputesLabel": {
+    "description": "Label for the 'Rejected' dispute status filter"
+  },
+  "vehicleTypeLabel": "Vehicle Type",
+  "@vehicleTypeLabel": {
+    "description": "Label for the vehicle type filter section"
+  },
+  "bikeLabel": "Bike",
+  "@bikeLabel": {
+    "description": "Label for the 'Bike' vehicle type filter"
+  },
+  "threeWheelerLabel": "3-Wheeler",
+  "@threeWheelerLabel": {
+    "description": "Label for the '3-Wheeler' vehicle type filter"
+  },
+  "fourWheelerLabel": "4-Wheeler",
+  "@fourWheelerLabel": {
+    "description": "Label for the '4-Wheeler' vehicle type filter"
+  },
+  "busLabel": "Bus",
+  "@busLabel": {
+    "description": "Label for the 'Bus' vehicle type filter"
+  },
+  "truckLabel": "Truck",
+  "@truckLabel": {
+    "description": "Label for the 'Truck' vehicle type filter"
+  },
+  "heavyMachineryLabel": "Heavy Machinery",
+  "@heavyMachineryLabel": {
+    "description": "Label for the 'Heavy Machinery' vehicle type filter"
+  },
+  "plazaNameLabel": "Plaza Name",
+  "@plazaNameLabel": {
+    "description": "Label for the plaza name filter section"
+  },
+  "searchPlazaHint": "Search Plaza Name",
+  "@searchPlazaHint": {
+    "description": "Hint text for the plaza name search input in the filters dialog"
+  },
+  "clearAllLabel": "Clear All",
+  "@clearAllLabel": {
+    "description": "Label for the clear all filters button in the filters dialog"
+  },
+  "applyLabel": "Apply",
+  "@applyLabel": {
+    "description": "Label for the apply filters button in the filters dialog"
+  },
+  "selectDateRangeLabel": "Select Date Range",
+  "@selectDateRangeLabel": {
+    "description": "Title for the date range filter dialog"
+  },
+  "clearLabel": "Clear",
+  "@clearLabel": {
+    "description": "Label for the clear button in the date range dialog"
+  },
+  "selectedRangeLabel": "Selected Range",
+  "@selectedRangeLabel": {
+    "description": "Label for the selected date range display in the date range dialog"
+  },
+  "dateRangeTooLongWarning": "Selected date range cannot exceed 1 year",
+  "@dateRangeTooLongWarning": {
+    "description": "Warning message when the selected date range is too long"
+  },
+  "disputeIdLabel": "Dispute ID",
+  "@disputeIdLabel": {
+    "description": "Label for the dispute ID field in the dispute card"
+  },
+  "vehicleLabel": "Vehicle",
+  "@vehicleLabel": {
+    "description": "Label for the vehicle details field in the dispute card"
+  },
+  "plazaLabel": "Plaza",
+  "@plazaLabel": {
+    "description": "Label for the plaza name field in the dispute card"
+  },
+  "entryTimeLabel": "Entry Time",
+  "@entryTimeLabel": {
+    "description": "Label for the entry time field in the dispute card"
+  },
+  "disputeAmountLabel": "Dispute Amount",
+  "@disputeAmountLabel": {
+    "description": "Label for the dispute amount field in the dispute card"
+  },
+  "reasonLabel": "Reason",
+  "@reasonLabel": {
+    "description": "Label for the dispute reason field in the dispute card"
+  },
+  "latestRemarkLabel": "Latest Remark",
+  "@latestRemarkLabel": {
+    "description": "Label for the latest remark field in the dispute card"
+  },
+  "ticketStatusOpen": "Open",
+  "anprFailedMessage": "Automatic Number Plate Recognition failed to identify vehicle details. Please try again or use manual entry.",
+  "locationRequired": "Location Required",
+  "buttonRetry": "Retry",
+  "buttonSettings": "Settings"
 }

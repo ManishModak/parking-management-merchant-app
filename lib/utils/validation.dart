@@ -18,4 +18,9 @@ class Validation {
         r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$');
     return passwordRegex.hasMatch(password);
   }
+
+  static bool isValidPincode(String pincode) {
+    final pincodeRegex = RegExp(r'^\d{6}$');
+    return pincodeRegex.hasMatch(pincode);
+  }
 }

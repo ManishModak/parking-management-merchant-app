@@ -75,6 +75,7 @@ class AuthViewModel extends ChangeNotifier {
   TextEditingController get accountNumberController => _controllers['accountNumber']!;
   TextEditingController get ifscCodeController => _controllers['ifscCode']!;
   String? getError(String key) => _errors[key];
+  Map<String, String?> get errors => _errors;
   User? get currentUser => _currentUser;
 
   void resetErrors() {
@@ -346,7 +347,7 @@ class AuthViewModel extends ChangeNotifier {
         userName: usernameController.text,
         name: nameController.text,
         mobileNumber: mobileController.text,
-        email: emailController.text,
+        email: emailController.text.toLowerCase(),
         password: passwordController.text,
         address: addressController.text,
         city: cityController.text,

@@ -2,7 +2,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 
 /*
-* stored updated user data in SecureStorageService: {id: 3, username: Manish, email: manishmodak88874@gmail.com, role: Plaza Owner, mobileNumber: 9356344112, address: Hinjewadi, Pune1, state: Maharashtra, city: Pune, subEntity: [], entityName: Manish Modak, entityId: 3}
+Stored user data: {id: 19, username: Aman Munjewar, email: aman@gmail.com, role: Plaza Admin, mobileNumber: 9968735416, address: Pune, state: Maharashtra , city: Pune, subEntity: [{plazaId: 2, companyName: Sociante, companyType: LLP, plazaName: Laxmi Plaza, plazaOwner: Manish Modak, plazaOrgId: 21345, plazaOwnerId: 3, email: laxmiplaza@gmail.com, mobileNumber: 9966342189, address: Hinjewadi phase 1, Pune, city: Pune, district: Pune, state: Maharashtra, pincode: 411057, geoLatitude: 18.58510000, geoLongitude: 73.73630000, plazaCategory: Public, plazaSubCategory: Apartment, structureType: Open, plazaStatus: Active, noOfParkingSlots: 30, freeParking: false, priceCategory: Premium, capacityBike: 5, capacity3Wheeler: 5, capacity4Wheeler: 5, capacityBus: 5, capacityTruck: 5, capacityHeavyMachinaryVehicle: 5, plazaOpenTimings: 08:00:00, plazaClosingTime: 18:00:00, haveLanes: false, haveBankDetails: false, haveImages: false, isDeleted: false, createdAt: 2025-03-10T17:28:32.731Z, updatedAt: 2025-04-10T05:21:25.492Z}], entityName: Manish, entityId: 3}
 *
 * */
 
@@ -37,6 +37,11 @@ class SecureStorageService {
   Future<String?> getEntityId() async {
     final data = await getUserData();
     return data?['entityId'] as String?;
+  }
+
+  Future<String?> getEntityName() async {
+    final data = await getUserData();
+    return data?['entityName'] as String?;
   }
 
   Future<void> storeUserData(Map<String, dynamic> userData) async {

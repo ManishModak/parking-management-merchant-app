@@ -1,54 +1,91 @@
 import 'dart:developer' as developer;
-
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import '../../models/dispute.dart';
 import '../../services/core/dispute_service.dart';
-import '../../services/core/ticket_service.dart';
+import '../../utils/exceptions.dart';
 
-class DisputeListViewModel extends ChangeNotifier{
-  final TicketService _ticketService;
+class DisputeListViewModel extends ChangeNotifier {
+  final DisputesService _disputesService = DisputesService();
+  List<Map<String, dynamic>> _disputes = [];
+  bool _isLoading = false;
+  String? _errorMessage;
 
-  bool isLoading = false;
-  Exception? error;
-  List<Map<String, dynamic>> tickets = [];
+  DisputeListViewModel();
 
-  DisputeListViewModel({
-    TicketService? ticketService,
-  }) :_ticketService = ticketService ?? TicketService();
+  List<Map<String, dynamic>> get disputes => _disputes;
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
 
-  Future<void> fetchOpenTickets() async {
+  Future<void> fetchOpenDisputes({bool reset = false}) async {
+    if (_isLoading) return;
+    _isLoading = true;
+    _errorMessage = null;
+    if (reset) {
+      _disputes.clear();
+    }
+    notifyListeners();
+
     try {
-      isLoading = true;
-      error = null;
-      notifyListeners();
-
-      final fetchedTickets = await _ticketService.getOpenTickets();
-      tickets = fetchedTickets.map((ticket) => {
-        'ticketID': ticket.ticketId,
-        'ticketRefID': ticket.ticketRefId,
-        'plazaID': ticket.plazaId,
-        'vehicleNumber': ticket.vehicleNumber,
-        'vehicleType': ticket.vehicleType,
-        'plazaName': "Plaza ${ticket.plazaId}",
-        'entryTime': ticket.entryTime,
-        'status': ticket.status.toString().split('.').last,
-        'entryLaneId': ticket.entryLaneId,
-        'entryLaneDirection': ticket.entryLaneDirection,
-        'ticketCreationTime': ticket.createdTime.toIso8601String(),
-        'floorId': ticket.floorId != null ? 'N/A' : ticket.floorId,
-        'slotId': ticket.slotId != null ? 'N/A' : ticket.slotId,
-        'capturedImages': ticket.capturedImages,
-        'modificationTime': ticket.modificationTime?.toIso8601String(),
-      }).toList();
-
-      if (tickets.isEmpty) {
-        developer.log('[OpenTicketViewModel] No open tickets found.', name: 'OpenTicketViewModel');
-      }
-    } catch (e) {
-      error = e as Exception;
-      developer.log('[OpenTicketViewModel] Error fetching tickets: $error', name: 'OpenTicketViewModel');
+      developer.log('Fetching all open disputes', name: 'DisputeListViewModel');
+      final disputes = await _disputesService.getAllOpenDisputes(); // Fetch all disputes
+      _disputes = disputes.map((dispute) => _mapDisputeToMap(dispute)).toList();
+      developer.log('Fetched ${_disputes.length} disputes', name: 'DisputeListViewModel');
+    } catch (e, stackTrace) {
+      _errorMessage = _handleError(e);
+      developer.log('Error fetching disputes: $e', name: 'DisputeListViewModel', error: e, stackTrace: stackTrace);
     } finally {
-      isLoading = false;
+      _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Map<String, dynamic> _mapDisputeToMap(Dispute dispute) {
+    return {
+      'disputeId': dispute.disputeId?.toString() ?? '',
+      'ticketId': dispute.ticketId,
+      'plazaId': dispute.plazaId.toString(),
+      'plazaName': dispute.plazaId.toString(), // Replace with actual plazaName if available
+      'entryTime': dispute.ticketCreationTime,
+      'status': dispute.status.toLowerCase(),
+      'vehicleNumber': dispute.vehicleNumber,
+      'vehicleType': dispute.vehicleType.toLowerCase(),
+      'disputeAmount': dispute.disputeAmount,
+      'disputeReason': dispute.disputeReason,
+      'latestRemark': dispute.latestRemark ?? '',
+    };
+  }
+
+  String _handleError(dynamic e) {
+    // Same error handling as provided
+    if (e is NoInternetException) {
+      return 'No internet connection. Please check your network.';
+    } else if (e is ServerConnectionException) {
+      return 'Failed to connect to the server${e.host != null ? ' at ${e.host}' : ''}.';
+    } else if (e is RequestTimeoutException) {
+      return 'Request timed out. Please try again.';
+    } else if (e is HttpException) {
+      return 'HTTP error: ${e.message}${e.statusCode != null ? ' (Status: ${e.statusCode})' : ''}';
+    } else if (e is ServiceException) {
+      return 'Service error: ${e.message}${e.serverMessage != null ? ' - ${e.serverMessage}' : ''}';
+    } else if (e is PlazaException) {
+      return 'Plaza error: ${e.message}${e.serverMessage != null ? ' - ${e.serverMessage}' : ''}';
+    } else if (e is PaymentException) {
+      return 'Payment error: ${e.message}${e.serverMessage != null ? ' - ${e.serverMessage}' : ''}';
+    } else if (e is StorageException) {
+      return 'Storage error: ${e.message}';
+    } else if (e is AnprFailureException) {
+      return 'ANPR failure: ${e.message}';
+    } else if (e is MobileNumberInUseException || e is EmailInUseException) {
+      return e.message;
+    } else {
+      return 'An unexpected error occurred.';
+    }
+  }
+
+  void reset() {
+    _disputes.clear();
+    _errorMessage = null;
+    _isLoading = false;
+    notifyListeners();
   }
 }

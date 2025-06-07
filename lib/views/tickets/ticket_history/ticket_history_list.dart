@@ -12,6 +12,7 @@ import '../../../../utils/components/button.dart';
 import '../../../../utils/components/form_field.dart';
 import '../../../../utils/components/pagination_controls.dart';
 import '../../../generated/l10n.dart';
+import '../../../models/plaza_fare.dart';
 import '../../../models/ticket.dart';
 import '../../../utils/components/pagination_mixin.dart';
 import '../../../utils/exceptions.dart';
@@ -53,59 +54,75 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
     _searchController.addListener(() {
       if (_debounce?.isActive ?? false) _debounce?.cancel();
       _debounce = Timer(const Duration(milliseconds: 300), () {
-        setState(() {
-          _searchQuery = _searchController.text.toLowerCase();
-          _currentPage = 1;
-        });
+        if (mounted) {
+          setState(() {
+            _searchQuery = _searchController.text.toLowerCase();
+            _currentPage = 1;
+          });
+        }
       });
     });
 
     SchedulerBinding.instance.addPostFrameCallback((_) {
-      _loadInitialData();
+      if (!_isInitialized) {
+        _loadInitialData();
+      }
     });
+  }
+
+  String _formatDateTimeForDisplayInScreen(DateTime? utcTime) {
+    if (utcTime == null) return 'N/A';
+    final DateTime ensuredUtcTime = utcTime.isUtc ? utcTime : utcTime.toUtc();
+    final DateTime istEquivalentTime = ensuredUtcTime.add(const Duration(hours: 5, minutes: 30));
+    final DateTime localRepresentationOfIst = DateTime(
+      istEquivalentTime.year, istEquivalentTime.month, istEquivalentTime.day,
+      istEquivalentTime.hour, istEquivalentTime.minute, istEquivalentTime.second,
+      istEquivalentTime.millisecond, istEquivalentTime.microsecond,
+    );
+    return DateFormat('dd MMM, hh:mm a').format(localRepresentationOfIst);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _routeObserver = Provider.of<RouteObserver<ModalRoute>>(context);
-    _routeObserver.subscribe(this, ModalRoute.of(context)!);
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      _routeObserver.subscribe(this, route);
+    }
 
-    if (!_isInitialized) {
-      final route = ModalRoute.of(context);
-      final args = route?.settings.arguments;
-      developer.log(
-        'Route details: name=${route?.settings.name}, args=$args, context=$context',
-        name: 'TicketHistoryScreen',
-      );
+    if (!_isInitialized && ModalRoute.of(context)?.isCurrent == true) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      bool filtersAppliedFromArgs = false;
       if (args is Map<String, dynamic>?) {
         if (args?['statusFilter'] == 'complete') {
-          _selectedStatuses.add('completed'); // Match Status.Completed
-          developer.log('Preselected status filter: completed', name: 'TicketHistoryScreen');
+          _selectedStatuses.add('completed');
+          filtersAppliedFromArgs = true;
         }
         if (args?['disputeStatusFilter'] == 'not raised') {
           _selectedDisputeStatuses.add('not raised');
-          developer.log('Preselected dispute status filter: not raised', name: 'TicketHistoryScreen');
+          filtersAppliedFromArgs = true;
         }
-        if (_selectedStatuses.isNotEmpty || _selectedDisputeStatuses.isNotEmpty) {
-          _currentPage = 1;
-          developer.log('Filters set, resetting page to 1 and refreshing data', name: 'TicketHistoryScreen');
-          SchedulerBinding.instance.addPostFrameCallback((_) {
-            _refreshData();
-          });
-        }
-      } else {
-        developer.log('Unexpected arguments type: ${args.runtimeType}', name: 'TicketHistoryScreen');
+      } else if (args != null) {
+        developer.log('Unexpected arguments type: ${args.runtimeType}', name: 'TicketHistoryScreen.didChange');
       }
       _isInitialized = true;
+      if (filtersAppliedFromArgs) {
+        _currentPage = 1;
+        SchedulerBinding.instance.addPostFrameCallback((_) => _refreshData());
+      } else {
+        if (_viewModel.tickets.isEmpty && !_viewModel.isLoading) {
+          _loadInitialData();
+        }
+      }
     }
   }
 
   void _setDefaultDateRange() {
     final now = DateTime.now();
     _selectedDateRange = DateTimeRange(
-      start: DateTime(now.year, now.month, now.day),
-      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
+      start: DateTime(now.year, now.month, now.day, 0, 0, 0),
+      end: DateTime(now.year, now.month, now.day, 23, 59, 59, 999, 999),
     );
   }
 
@@ -128,18 +145,13 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
 
   Future<void> _refreshData() async {
     if (!mounted) return;
-    developer.log('Refreshing ticket history data', name: 'TicketHistoryScreen');
     await _viewModel.fetchTicketHistory();
   }
 
   List<Map<String, dynamic>> _getFilteredTickets(List<Map<String, dynamic>> tickets) {
     return tickets.where((ticket) {
-      final entryTime = ticket['entryTime'] is DateTime
-          ? ticket['entryTime'] as DateTime
-          : ticket['entryTime'] != null
-          ? DateTime.parse(ticket['entryTime'])
-          : null;
-      final entryTimeString = entryTime != null ? DateFormat('dd MMM yyyy, hh:mm a').format(entryTime) : '';
+      final entryTimeUtc = ticket['entryTime'];
+      final entryTimeStringForSearch = entryTimeUtc != null ? _formatDateTimeForDisplayInScreen(entryTimeUtc) : '';
 
       final matchesSearch = _searchQuery.isEmpty ||
           (ticket['ticketId']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
@@ -149,12 +161,9 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
           (ticket['plazaName']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
           (ticket['ticketStatus']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
           (ticket['disputeStatus']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          entryTimeString.toLowerCase().contains(_searchQuery);
+          entryTimeStringForSearch.toLowerCase().contains(_searchQuery);
 
-      // Normalize ticketStatus to match _selectedStatuses
-      final ticketStatus = ticket['ticketStatus'] is Status
-          ? ticket['ticketStatus'].toString().split('.').last.toLowerCase() // e.g., 'Status.Completed' -> 'completed'
-          : ticket['ticketStatus']?.toString().toLowerCase() ?? '';
+      final ticketStatus = ticket['ticketStatus']?.toString().toLowerCase() ?? '';
       final matchesStatus = _selectedStatuses.isEmpty || _selectedStatuses.contains(ticketStatus);
 
       final disputeStatus = ticket['disputeStatus']?.toString().toLowerCase() ?? '';
@@ -162,13 +171,14 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
 
       final matchesVehicleType = _selectedVehicleTypes.isEmpty ||
           _selectedVehicleTypes.contains(ticket['vehicleType']?.toString().toLowerCase());
-      final matchesPlazaName =
-          _selectedPlazaNames.isEmpty || _selectedPlazaNames.contains(ticket['plazaName']?.toString().toLowerCase());
+
+      final matchesPlazaName = _selectedPlazaNames.isEmpty ||
+          _selectedPlazaNames.contains(ticket['plazaName']?.toString().toLowerCase());
 
       final matchesDate = _selectedDateRange == null ||
-          (entryTime != null &&
-              entryTime.isAfter(_selectedDateRange!.start.subtract(const Duration(days: 1))) &&
-              entryTime.isBefore(_selectedDateRange!.end.add(const Duration(days: 1))));
+          (entryTimeUtc != null &&
+              !entryTimeUtc.isBefore(_selectedDateRange!.start) &&
+              !entryTimeUtc.isAfter(_selectedDateRange!.end));
 
       return matchesSearch && matchesStatus && matchesVehicleType && matchesPlazaName && matchesDisputeStatus && matchesDate;
     }).toList();
@@ -177,8 +187,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
   void _updatePage(int newPage) {
     final filteredTickets = _getFilteredTickets(_viewModel.tickets);
     updatePage(newPage, filteredTickets, (page) {
-      setState(() => _currentPage = page);
-      developer.log('Page updated to: $_currentPage', name: 'TicketHistory');
+      if (mounted) setState(() => _currentPage = page);
     });
   }
 
@@ -198,8 +207,8 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
       displayText =
       '${DateFormat('dd MMM').format(_selectedDateRange!.start)} - ${DateFormat('dd MMM').format(_selectedDateRange!.end)}';
     }
-
     final textColor = context.textPrimaryColor;
+    final isActive = _selectedDateRange != null;
 
     return GestureDetector(
       onTap: _showDateFilterDialog,
@@ -207,25 +216,18 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: context.secondaryCardColor,
+          color: isActive ? AppColors.primary.withOpacity(0.1) : context.secondaryCardColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.calendar_today,
-              color: textColor,
-              size: 16,
-            ),
+            Icon(Icons.calendar_today, color: isActive ? AppColors.primary : textColor, size: 16),
             const SizedBox(width: 6),
-            Text(
-              displayText,
-              style: TextStyle(
-                color: textColor,
-                fontWeight: _selectedDateRange != null ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
+            Text(displayText,
+                style: TextStyle(
+                    color: isActive ? AppColors.primary : textColor,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.normal)),
           ],
         ),
       ),
@@ -236,35 +238,35 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
     final hasActiveFilters =
         _selectedStatuses.isNotEmpty || _selectedVehicleTypes.isNotEmpty || _selectedPlazaNames.isNotEmpty || _selectedDisputeStatuses.isNotEmpty;
     final textColor = context.textPrimaryColor;
-
     return GestureDetector(
       onTap: _showAllFiltersDialog,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: context.secondaryCardColor,
+          color: hasActiveFilters ? AppColors.primary.withOpacity(0.1) : context.secondaryCardColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.filter_list,
-              color: textColor,
-              size: 16,
-            ),
+            Icon(Icons.filter_list, color: hasActiveFilters ? AppColors.primary : textColor, size: 16),
             const SizedBox(width: 6),
-            Text(
-              strings.filtersLabel,
-              style: TextStyle(
-                color: textColor,
-                fontWeight: hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
+            Text(strings.filtersLabel,
+                style: TextStyle(
+                    color: hasActiveFilters ? AppColors.primary : textColor,
+                    fontWeight: hasActiveFilters ? FontWeight.w600 : FontWeight.normal)),
           ],
         ),
       ),
     );
+  }
+
+  bool _hasAnyActiveFilter() {
+    return _selectedDateRange != null ||
+        _selectedStatuses.isNotEmpty ||
+        _selectedVehicleTypes.isNotEmpty ||
+        _selectedPlazaNames.isNotEmpty ||
+        _selectedDisputeStatuses.isNotEmpty;
   }
 
   Widget _buildFilterChipsRow(S strings) {
@@ -284,46 +286,38 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
           child: Row(
             children: [
-              if (selectedFilters.isNotEmpty || _selectedDateRange != null) ...[
+              if (_hasAnyActiveFilter()) ...[
                 GestureDetector(
                   onTap: () {
-                    setState(() {
-                      _selectedStatuses.clear();
-                      _selectedVehicleTypes.clear();
-                      _selectedPlazaNames.clear();
-                      _selectedDisputeStatuses.clear();
-                      _selectedDateRange = null;
-                      _currentPage = 1;
-                    });
+                    if (mounted) {
+                      setState(() {
+                        _selectedStatuses.clear();
+                        _selectedVehicleTypes.clear();
+                        _selectedPlazaNames.clear();
+                        _selectedDisputeStatuses.clear();
+                        _selectedDateRange = null;
+                        _currentPage = 1;
+                      });
+                    }
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: context.secondaryCardColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      strings.resetAllLabel,
-                      style: TextStyle(
-                        color: textColor,
-                        fontWeight: FontWeight.normal,
-                      ),
-                    ),
+                    decoration: BoxDecoration(color: context.secondaryCardColor, borderRadius: BorderRadius.circular(12)),
+                    child: Text(strings.resetAllLabel, style: TextStyle(color: textColor, fontWeight: FontWeight.normal)),
                   ),
                 ),
                 const SizedBox(width: 8),
               ],
               _buildDateFilterChip(strings),
-              const SizedBox(width: 8),
               _buildMoreFiltersChip(strings),
               if (selectedFilters.isNotEmpty) ...[
                 const SizedBox(width: 8),
-                ...selectedFilters.map(
-                      (filter) => Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    child: Chip(
-                      label: Text(filter),
-                      onDeleted: () {
+                ...selectedFilters.map((filter) => Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  child: Chip(
+                    label: Text(filter),
+                    onDeleted: () {
+                      if (mounted) {
                         setState(() {
                           if (filter.startsWith('${strings.statusLabel}:')) {
                             _selectedStatuses.remove(filter.split(': ')[1].toLowerCase());
@@ -334,15 +328,16 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
                           } else if (filter.startsWith('${strings.disputeStatusLabel}:')) {
                             _selectedDisputeStatuses.remove(filter.split(': ')[1].toLowerCase());
                           }
+                          _currentPage = 1;
                         });
-                      },
-                      deleteIcon: const Icon(Icons.close, size: 16),
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
-                      labelStyle: TextStyle(color: textColor),
-                      deleteIconColor: textColor,
-                    ),
+                      }
+                    },
+                    deleteIcon: const Icon(Icons.close, size: 16),
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    labelStyle: const TextStyle(color: AppColors.primary),
+                    deleteIconColor: AppColors.primary,
                   ),
-                ),
+                )),
               ],
             ],
           ),
@@ -363,339 +358,176 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: context.cardColor,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return Container(
-              decoration: BoxDecoration(
-                color: context.cardColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      builder: (context) => StatefulBuilder(builder: (context, setDialogState) {
+        return Container(
+          decoration: BoxDecoration(color: context.cardColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+          height: MediaQuery.of(context).size.height * 0.8,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12.0),
+                child: Container(width: 50, height: 5, decoration: BoxDecoration(color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600], borderRadius: BorderRadius.circular(10))),
               ),
-              height: MediaQuery.of(context).size.height * 0.8,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12.0),
-                    child: Container(
-                      width: 50,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.light
-                            ? Colors.grey[300]
-                            : Colors.grey[600],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    child: Text(
-                      strings.advancedFiltersLabel,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: context.textPrimaryColor,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: ListView(
-                      children: [
-                        _buildFilterSection(
-                          title: strings.ticketStatusLabel,
-                          options: [
-                            {'key': 'open', 'label': strings.openTicketsLabel},
-                            {'key': 'rejected', 'label': strings.rejectedTicketsLabel},
-                            {'key': 'completed', 'label': strings.completedTicketsLabel},
-                          ],
-                          selectedItems: _selectedStatuses,
-                          onChanged: (value, isSelected) {
-                            setDialogState(() {
-                              if (isSelected) {
-                                _selectedStatuses.add(value);
-                              } else {
-                                _selectedStatuses.remove(value);
-                              }
-                            });
-                          },
-                        ),
-                        _buildFilterSection(
-                          title: strings.vehicleTypeLabel,
-                          options: [
-                            {'key': 'bike', 'label': strings.bikeLabel},
-                            {'key': '3-wheeler', 'label': strings.threeWheelerLabel},
-                            {'key': '4-wheeler', 'label': strings.fourWheelerLabel},
-                            {'key': 'bus', 'label': strings.busLabel},
-                            {'key': 'truck', 'label': strings.truckLabel},
-                            {'key': 'hmv', 'label': strings.heavyMachineryLabel}
-                          ],
-                          selectedItems: _selectedVehicleTypes,
-                          onChanged: (value, isSelected) {
-                            setDialogState(() {
-                              if (isSelected) {
-                                _selectedVehicleTypes.add(value);
-                              } else {
-                                _selectedVehicleTypes.remove(value);
-                              }
-                            });
-                          },
-                        ),
-                        _buildFilterSection(
-                          title: strings.disputeStatusLabel,
-                          options: [
-                            {'key': 'not raised', 'label': strings.notRaisedLabel},
-                            {'key': 'raised', 'label': strings.raisedLabel},
-                          ],
-                          selectedItems: _selectedDisputeStatuses,
-                          onChanged: (value, isSelected) {
-                            setDialogState(() {
-                              if (isSelected) {
-                                _selectedDisputeStatuses.add(value);
-                              } else {
-                                _selectedDisputeStatuses.remove(value);
-                              }
-                            });
-                          },
-                        ),
-                        _buildSearchableFilterSection(
-                          title: strings.plazaNameLabel,
-                          options: plazaNames,
-                          selectedItems: _selectedPlazaNames,
-                          onChanged: (value, isSelected) {
-                            setDialogState(() {
-                              if (isSelected) {
-                                _selectedPlazaNames.add(value);
-                              } else {
-                                _selectedPlazaNames.remove(value);
-                              }
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: CustomButtons.secondaryButton(
-                            height: 40,
-                            text: strings.clearAllLabel,
-                            onPressed: () {
-                              setDialogState(() {
-                                _selectedStatuses.clear();
-                                _selectedVehicleTypes.clear();
-                                _selectedPlazaNames.clear();
-                                _selectedDisputeStatuses.clear();
-                              });
-                            },
-                            context: context,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: CustomButtons.primaryButton(
-                            height: 40,
-                            text: strings.applyLabel,
-                            onPressed: () {
-                              setState(() {
-                                _currentPage = 1;
-                              });
-                              Navigator.pop(context);
-                            },
-                            context: context,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Text(strings.advancedFiltersLabel, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.textPrimaryColor)),
               ),
-            );
-          },
+              Expanded(
+                child: ListView(
+                  children: [
+                    _buildFilterSection(
+                      title: strings.ticketStatusLabel,
+                      options: [
+                        {'key': 'open', 'label': strings.openTicketsLabel},
+                        {'key': 'rejected', 'label': strings.rejectedTicketsLabel},
+                        {'key': 'completed', 'label': strings.completedTicketsLabel},
+                      ],
+                      selectedItems: _selectedStatuses,
+                      onChanged: (value, isSelected) => setDialogState(() {
+                        if (isSelected) _selectedStatuses.add(value); else _selectedStatuses.remove(value);
+                      }),
+                    ),
+                    _buildFilterSection(
+                      title: strings.vehicleTypeLabel,
+                      options: VehicleTypes.values.map((e) => {'key': e.toLowerCase(), 'label': e.capitalize()}).toList(),
+                      selectedItems: _selectedVehicleTypes,
+                      onChanged: (value, isSelected) => setDialogState(() {
+                        if (isSelected) _selectedVehicleTypes.add(value); else _selectedVehicleTypes.remove(value);
+                      }),
+                    ),
+                    _buildFilterSection(
+                      title: strings.disputeStatusLabel,
+                      options: [
+                        {'key': 'not raised', 'label': strings.notRaisedLabel},
+                        {'key': 'raised', 'label': strings.raisedLabel},
+                      ],
+                      selectedItems: _selectedDisputeStatuses,
+                      onChanged: (value, isSelected) => setDialogState(() {
+                        if (isSelected) _selectedDisputeStatuses.add(value); else _selectedDisputeStatuses.remove(value);
+                      }),
+                    ),
+                    _buildSearchableFilterSection(
+                      title: strings.plazaNameLabel,
+                      options: plazaNames,
+                      selectedItems: _selectedPlazaNames,
+                      onChanged: (value, isSelected) => setDialogState(() {
+                        if (isSelected) _selectedPlazaNames.add(value); else _selectedPlazaNames.remove(value);
+                      }),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Expanded(child: CustomButtons.secondaryButton(height: 40, text: strings.clearAllLabel, onPressed: () => setDialogState(() { _selectedStatuses.clear(); _selectedVehicleTypes.clear(); _selectedPlazaNames.clear(); _selectedDisputeStatuses.clear(); }), context: context)),
+                    const SizedBox(width: 16),
+                    Expanded(child: CustomButtons.primaryButton(height: 40, text: strings.applyLabel, onPressed: () { if (mounted) setState(() => _currentPage = 1); Navigator.pop(context); }, context: context)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         );
-      },
+      }),
     );
   }
 
-  Widget _buildFilterSection({
-    required String title,
-    required List<Map<String, String>> options,
-    required Set<String> selectedItems,
-    required Function(String, bool) onChanged,
-  }) {
+  Widget _buildFilterSection({ required String title, required List<Map<String, String>> options, required Set<String> selectedItems, required Function(String, bool) onChanged}) {
     final textColor = context.textPrimaryColor;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-        ),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0), child: Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor))),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 8, runSpacing: 8,
             children: options.map((option) {
               final isSelected = selectedItems.contains(option['key']);
               return FilterChip(
                 label: Text(option['label'] ?? ''),
                 selected: isSelected,
-                onSelected: (bool value) {
-                  onChanged(option['key']!, value);
-                },
+                onSelected: (bool value) => onChanged(option['key']!, value),
                 selectedColor: AppColors.primary.withOpacity(0.2),
-                checkmarkColor: textColor,
+                checkmarkColor: isSelected ? AppColors.primary : textColor,
                 backgroundColor: context.secondaryCardColor,
-                labelStyle: TextStyle(
-                  color: isSelected ? textColor : Colors.grey[400],
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                ),
+                labelStyle: TextStyle(color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.light ? Colors.grey[700] : Colors.grey[400]), fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal),
+                shape: StadiumBorder(side: BorderSide(color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.light ? Colors.grey[400]! : Colors.grey[700]!))),
               );
             }).toList(),
           ),
         ),
         const SizedBox(height: 16),
-        Divider(
-          color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600],
-        ),
+        Divider(color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600]),
       ],
     );
   }
 
-  Widget _buildSearchableFilterSection({
-    required String title,
-    required List<String> options,
-    required Set<String> selectedItems,
-    required Function(String, bool) onChanged,
-  }) {
+  Widget _buildSearchableFilterSection({ required String title, required List<String> options, required Set<String> selectedItems, required Function(String, bool) onChanged}) {
     final strings = S.of(context);
     final TextEditingController searchController = TextEditingController();
-    List<String> filteredOptions = options;
+    List<String> filteredOptions = List.from(options);
     final textColor = context.textPrimaryColor;
 
-    return StatefulBuilder(
-      builder: (context, setLocalState) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
+    return StatefulBuilder(builder: (context, setLocalState) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0), child: Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor))),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(hintText: strings.searchPlazaHint, hintStyle: TextStyle(color: Colors.grey[400]), prefixIcon: Icon(Icons.search, color: textColor), contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0), border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey[300]!)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey[300]!)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primary))),
+              style: TextStyle(color: textColor),
+              onChanged: (value) => setLocalState(() { filteredOptions = options.where((option) => option.toLowerCase().contains(value.toLowerCase())).toList(); }),
+            ),
+          ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 200),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Wrap(
+                  spacing: 8, runSpacing: 8,
+                  children: filteredOptions.map((option) {
+                    final isSelected = selectedItems.contains(option);
+                    return FilterChip(
+                      label: Text(option), selected: isSelected, onSelected: (bool value) => onChanged(option, value),
+                      selectedColor: AppColors.primary.withOpacity(0.2), checkmarkColor: isSelected ? AppColors.primary : textColor, backgroundColor: context.secondaryCardColor,
+                      labelStyle: TextStyle(color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.light ? Colors.grey[700] : Colors.grey[400]), fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal),
+                      shape: StadiumBorder(side: BorderSide(color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.light ? Colors.grey[400]! : Colors.grey[700]!))),
+                    );
+                  }).toList(),
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: TextField(
-                controller: searchController,
-                decoration: InputDecoration(
-                  hintText: strings.searchPlazaHint,
-                  hintStyle: TextStyle(color: Colors.grey[400]),
-                  prefixIcon: Icon(Icons.search, color: textColor),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.grey[400]!),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.grey[400]!),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: AppColors.primary),
-                  ),
-                ),
-                style: TextStyle(color: textColor),
-                onChanged: (value) {
-                  setLocalState(() {
-                    filteredOptions =
-                        options.where((option) => option.toLowerCase().contains(value.toLowerCase())).toList();
-                  });
-                },
-              ),
-            ),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 300),
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: filteredOptions.map((option) {
-                      final isSelected = selectedItems.contains(option);
-                      return FilterChip(
-                        label: Text(option),
-                        selected: isSelected,
-                        onSelected: (bool value) {
-                          onChanged(option, value);
-                        },
-                        selectedColor: AppColors.primary.withOpacity(0.2),
-                        checkmarkColor: textColor,
-                        backgroundColor: context.secondaryCardColor,
-                        labelStyle: TextStyle(
-                          color: isSelected ? textColor : Colors.grey[400],
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Divider(
-              color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600],
-            ),
-          ],
-        );
-      },
-    );
+          ),
+          const SizedBox(height: 16),
+          Divider(color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600]),
+        ],
+      );
+    });
   }
 
   Widget _buildSearchField(S strings) {
     return SizedBox(
       width: MediaQuery.of(context).size.width * 0.95,
       child: Card(
-        margin: EdgeInsets.zero,
-        elevation: Theme.of(context).cardTheme.elevation,
-        color: context.secondaryCardColor,
+        margin: EdgeInsets.zero, elevation: Theme.of(context).cardTheme.elevation, color: context.cardColor,
         shape: Theme.of(context).cardTheme.shape,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              CustomFormFields.searchFormField(
-                controller: _searchController,
-                hintText: strings.searchTicketHistoryHint,
-                context: context,
-              ),
+              CustomFormFields.searchFormField(controller: _searchController, hintText: strings.searchTicketHistoryHint, context: context),
               const SizedBox(height: 8),
-              Text(
-                '${strings.lastUpdated}: ${DateTime.now().toString().substring(0, 16)}. ${strings.swipeToRefresh}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
-                textAlign: TextAlign.center,
-              ),
+              Text('${strings.lastUpdated}: ${DateFormat('dd MMM, hh:mm a').format(DateTime.now())}. ${strings.swipeToRefresh}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400]), textAlign: TextAlign.center),
             ],
           ),
         ),
@@ -706,250 +538,90 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
   Future<DateTimeRange?> _selectCustomDateRange(BuildContext context, DateTimeRange? initialRange) async {
     final strings = S.of(context);
     final earliestDate = DateTime.now().subtract(const Duration(days: 365 * 5));
+    final latestDate = DateTime.now();
 
     final picked = await showDateRangePicker(
-      context: context,
-      firstDate: earliestDate,
-      lastDate: DateTime.now(),
-      initialDateRange: initialRange,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme(
-              brightness: Theme.of(context).brightness,
-              primary: AppColors.primary,
-              onPrimary: Colors.white,
-              secondary: AppColors.primary.withOpacity(0.2),
-              onSecondary: context.textPrimaryColor,
-              surface: context.cardColor,
-              onSurface: context.textPrimaryColor,
-              background: context.cardColor,
-              onBackground: context.textPrimaryColor,
-              error: Colors.red,
-              onError: Colors.white,
-            ),
+      context: context, firstDate: earliestDate, lastDate: latestDate, initialDateRange: initialRange,
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(primary: AppColors.primary, onPrimary: Colors.white, surface: context.cardColor, onSurface: context.textPrimaryColor),
             dialogBackgroundColor: context.cardColor,
-            textTheme: TextTheme(
-              bodyMedium: TextStyle(color: context.textPrimaryColor),
-              titleLarge: TextStyle(color: context.textPrimaryColor),
-            ),
-          ),
-          child: child!,
-        );
-      },
+            textTheme: Theme.of(context).textTheme.apply(bodyColor: context.textPrimaryColor, displayColor: context.textPrimaryColor),
+            textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: AppColors.primary))),
+        child: child!,
+      ),
     );
-
     if (picked == null) return null;
-
     final start = picked.start.isBefore(earliestDate) ? earliestDate : picked.start;
-    final end = picked.end.isAfter(DateTime.now()) ? DateTime.now() : picked.end;
-
-    final maxAllowedRange = const Duration(days: 365);
+    var end = picked.end.isAfter(latestDate) ? latestDate : picked.end;
+    end = DateTime(end.year, end.month, end.day, 23, 59, 59, 999, 999);
+    const maxAllowedRange = Duration(days: 365);
     if (end.difference(start) > maxAllowedRange) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            strings.dateRangeTooLongWarning,
-            style: TextStyle(color: context.textPrimaryColor),
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(strings.dateRangeTooLongWarning), backgroundColor: Colors.red));
       return null;
     }
-
     return DateTimeRange(start: start, end: end);
   }
 
   void _showDateFilterDialog() {
     final strings = S.of(context);
     showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: context.cardColor,
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         DateTimeRange? tempDateRange = _selectedDateRange;
         String? selectedOption = _getSelectedOption(tempDateRange);
         final textColor = context.textPrimaryColor;
-
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return Container(
-              decoration: BoxDecoration(
-                color: context.cardColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              height: MediaQuery.of(context).size.height * 0.4,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12.0),
-                    child: Container(
-                      width: 50,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.light
-                            ? Colors.grey[300]
-                            : Colors.grey[600],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    child: Text(
-                      strings.selectDateRangeLabel,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Row(
-                            children: [
-                              _buildQuickDateChip(
-                                label: strings.todayLabel,
-                                isSelected: selectedOption == 'Today',
-                                onTap: () {
-                                  setDialogState(() {
-                                    final now = DateTime.now();
-                                    tempDateRange = DateTimeRange(
-                                      start: DateTime(now.year, now.month, now.day),
-                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
-                                    );
-                                    selectedOption = 'Today';
-                                  });
-                                },
-                              ),
-                              const SizedBox(width: 8),
-                              _buildQuickDateChip(
-                                label: strings.yesterdayLabel,
-                                isSelected: selectedOption == 'Yesterday',
-                                onTap: () {
-                                  setDialogState(() {
-                                    final yesterday = DateTime.now().subtract(const Duration(days: 1));
-                                    tempDateRange = DateTimeRange(
-                                      start: DateTime(yesterday.year, yesterday.month, yesterday.day),
-                                      end: DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59),
-                                    );
-                                    selectedOption = 'Yesterday';
-                                  });
-                                },
-                              ),
-                              const SizedBox(width: 8),
-                              _buildQuickDateChip(
-                                label: strings.last7DaysLabel,
-                                isSelected: selectedOption == 'Last 7 Days',
-                                onTap: () {
-                                  setDialogState(() {
-                                    final now = DateTime.now();
-                                    tempDateRange = DateTimeRange(
-                                      start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7)),
-                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
-                                    );
-                                    selectedOption = 'Last 7 Days';
-                                  });
-                                },
-                              ),
-                              const SizedBox(width: 8),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              _buildQuickDateChip(
-                                label: strings.last30DaysLabel,
-                                isSelected: selectedOption == 'Last 30 Days',
-                                onTap: () {
-                                  setDialogState(() {
-                                    final now = DateTime.now();
-                                    tempDateRange = DateTimeRange(
-                                      start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 30)),
-                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
-                                    );
-                                    selectedOption = 'Last 30 Days';
-                                  });
-                                },
-                              ),
-                              const SizedBox(width: 8),
-                              _buildQuickDateChip(
-                                label: strings.customLabel,
-                                isSelected: selectedOption == 'Custom',
-                                onTap: () async {
-                                  final picked = await _selectCustomDateRange(context, tempDateRange);
-                                  if (picked != null) {
-                                    setDialogState(() {
-                                      tempDateRange = picked;
-                                      selectedOption = 'Custom';
-                                    });
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (selectedOption == 'Custom' && tempDateRange != null) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                      child: Text(
-                        '${strings.selectedRangeLabel}: ${DateFormat('dd MMM yyyy').format(tempDateRange!.start)} - ${DateFormat('dd MMM yyyy').format(tempDateRange!.end)}',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor),
-                      ),
-                    ),
-                  ],
-                  const Spacer(),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
+        return StatefulBuilder(builder: (context, setDialogState) {
+          return Container(
+            decoration: BoxDecoration(color: context.cardColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+            height: MediaQuery.of(context).size.height * 0.45,
+            child: Column(
+              children: [
+                Padding(padding: const EdgeInsets.symmetric(vertical: 12.0), child: Container(width: 50, height: 5, decoration: BoxDecoration(color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600], borderRadius: BorderRadius.circular(10)))),
+                Padding(padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0), child: Text(strings.selectDateRangeLabel, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor))),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: CustomButtons.secondaryButton(
-                            height: 40,
-                            text: strings.clearLabel,
-                            onPressed: () {
-                              setDialogState(() {
-                                tempDateRange = null;
-                                selectedOption = null;
-                              });
-                            },
-                            context: context,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildQuickDateChip(label: strings.todayLabel, isSelected: selectedOption == 'Today', onTap: () => setDialogState(() { final now = DateTime.now(); tempDateRange = DateTimeRange(start: DateTime(now.year, now.month, now.day), end: DateTime(now.year, now.month, now.day, 23, 59, 59, 999, 999)); selectedOption = 'Today'; })), const SizedBox(width: 8),
+                            _buildQuickDateChip(label: strings.yesterdayLabel, isSelected: selectedOption == 'Yesterday', onTap: () => setDialogState(() { final yesterday = DateTime.now().subtract(const Duration(days: 1)); tempDateRange = DateTimeRange(start: DateTime(yesterday.year, yesterday.month, yesterday.day), end: DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59, 999, 999)); selectedOption = 'Yesterday'; })), const SizedBox(width: 8),
+                            _buildQuickDateChip(label: strings.last7DaysLabel, isSelected: selectedOption == 'Last 7 Days', onTap: () => setDialogState(() { final now = DateTime.now(); tempDateRange = DateTimeRange(start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 6)), end: DateTime(now.year, now.month, now.day, 23, 59, 59, 999, 999)); selectedOption = 'Last 7 Days'; })),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: CustomButtons.primaryButton(
-                            height: 40,
-                            text: strings.applyLabel,
-                            onPressed: () {
-                              setState(() {
-                                _selectedDateRange = tempDateRange;
-                                _currentPage = 1;
-                              });
-                              Navigator.pop(context);
-                            },
-                            context: context,
-                          ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildQuickDateChip(label: strings.last30DaysLabel, isSelected: selectedOption == 'Last 30 Days', onTap: () => setDialogState(() { final now = DateTime.now(); tempDateRange = DateTimeRange(start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 29)), end: DateTime(now.year, now.month, now.day, 23, 59, 59, 999, 999)); selectedOption = 'Last 30 Days'; })), const SizedBox(width: 8),
+                            _buildQuickDateChip(label: strings.customLabel, isSelected: selectedOption == 'Custom', onTap: () async { final picked = await _selectCustomDateRange(context, tempDateRange); if (picked != null) setDialogState(() { tempDateRange = picked; selectedOption = 'Custom'; }); }),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            );
-          },
-        );
+                ),
+                if (selectedOption == 'Custom' && tempDateRange != null) Padding(padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0), child: Text('${strings.selectedRangeLabel}: ${DateFormat('dd MMM yyyy').format(tempDateRange!.start)} - ${DateFormat('dd MMM yyyy').format(tempDateRange!.end)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor))),
+                const Spacer(),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Expanded(child: CustomButtons.secondaryButton(height: 40, text: strings.clearLabel, onPressed: () => setDialogState(() { tempDateRange = null; selectedOption = null; }), context: context)), const SizedBox(width: 16),
+                      Expanded(child: CustomButtons.primaryButton(height: 40, text: strings.applyLabel, onPressed: () { if (mounted) setState(() { _selectedDateRange = tempDateRange; _currentPage = 1; }); Navigator.pop(context); }, context: context)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        });
       },
     );
   }
@@ -963,113 +635,71 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
     return 'Custom';
   }
 
-  Widget _buildQuickDateChip({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildQuickDateChip({required String label, required bool isSelected, required VoidCallback onTap}) {
     final textColor = context.textPrimaryColor;
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.2) : context.secondaryCardColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? AppColors.primary : Colors.transparent, width: 1),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? AppColors.primary : textColor,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
+        decoration: BoxDecoration(color: isSelected ? AppColors.primary.withOpacity(0.2) : context.secondaryCardColor, borderRadius: BorderRadius.circular(20), border: Border.all(color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.light ? Colors.grey[400]! : Colors.grey[700]!), width: 1)),
+        child: Text(label, style: TextStyle(color: isSelected ? AppColors.primary : textColor, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal)),
       ),
     );
   }
 
+  bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
+
   bool _isTodayRange(DateTimeRange range) {
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
-    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-    return range.start == todayStart && range.end.isAtSameMomentAs(todayEnd);
+    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59, 999, 999);
+    return _isSameDay(range.start, todayStart) && _isSameDay(range.end, todayEnd);
   }
 
   bool _isYesterdayRange(DateTimeRange range) {
     final yesterday = DateTime.now().subtract(const Duration(days: 1));
     final yesterdayStart = DateTime(yesterday.year, yesterday.month, yesterday.day);
-    final yesterdayEnd = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
-    return range.start == yesterdayStart && range.end.isAtSameMomentAs(yesterdayEnd);
+    final yesterdayEnd = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59, 999, 999);
+    return _isSameDay(range.start, yesterdayStart) && _isSameDay(range.end, yesterdayEnd);
   }
 
   bool _isLast7DaysRange(DateTimeRange range) {
     final now = DateTime.now();
-    final sevenDaysAgo = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7));
-    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-    return range.start == sevenDaysAgo && range.end.isAtSameMomentAs(todayEnd);
+    final sevenDaysAgoStart = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 6));
+    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59, 999, 999);
+    return _isSameDay(range.start, sevenDaysAgoStart) && _isSameDay(range.end, todayEnd);
   }
 
   bool _isLast30DaysRange(DateTimeRange range) {
     final now = DateTime.now();
-    final thirtyDaysAgo = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 30));
-    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-    return range.start == thirtyDaysAgo && range.end.isAtSameMomentAs(todayEnd);
+    final thirtyDaysAgoStart = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 29));
+    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59, 999, 999);
+    return _isSameDay(range.start, thirtyDaysAgoStart) && _isSameDay(range.end, todayEnd);
   }
 
   Widget _buildTicketCard(Map<String, dynamic> ticket, S strings) {
-    DateTime createdTime = DateTime.parse(ticket['ticketCreationTime'] ?? DateTime.now().toIso8601String());
-    String formattedCreatedTime = DateFormat('dd MMM, hh:mm a').format(createdTime);
+    final rawCreatedTimeUtc = ticket['ticketCreationTime'] as DateTime?;
+    String formattedCreatedTime = _formatDateTimeForDisplayInScreen(rawCreatedTimeUtc);
     Color statusColor;
-    final ticketStatus = ticket['ticketStatus'] is Status
-        ? ticket['ticketStatus'].toString().split('.').last.toLowerCase()
-        : ticket['ticketStatus']?.toString().toLowerCase() ?? '';
+    final ticketStatus = ticket['ticketStatus']?.toString().toLowerCase() ?? '';
     switch (ticketStatus) {
-      case 'open':
-        statusColor = Colors.green;
-        break;
-      case 'rejected':
-        statusColor = Colors.red;
-        break;
-      case 'completed':
-        statusColor = Colors.blue;
-        break;
-      default:
-        statusColor = Colors.orange;
+      case 'open': statusColor = AppColors.success; break;
+      case 'rejected': statusColor = AppColors.error; break;
+      case 'completed': statusColor = AppColors.info; break;
+      default: statusColor = AppColors.warning;
     }
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       elevation: Theme.of(context).cardTheme.elevation,
       color: context.secondaryCardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: statusColor.withOpacity(0.2), width: 1),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: statusColor.withOpacity(0.2), width: 1)),
       child: InkWell(
         onTap: () {
-          developer.log('Ticket card tapped: ${ticket['ticketId']}', name: 'TicketHistory');
           if (ticketStatus == 'open') {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ChangeNotifierProvider<OpenTicketViewModel>.value(
-                  value: Provider.of<OpenTicketViewModel>(context, listen: false),
-                  child: ViewOpenTicketScreen(ticketId: ticket['ticketId'].toString()),
-                ),
-              ),
-            ).then((_) => _refreshData());
+            Navigator.push(context, MaterialPageRoute(builder: (context) => ChangeNotifierProvider(create: (_) => OpenTicketViewModel(), child: ViewOpenTicketScreen(ticketId: ticket['ticketId'].toString(), isEditable: false)))).then((_) => _refreshData());
           } else {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ChangeNotifierProvider<TicketHistoryViewModel>.value(
-                  value: _viewModel,
-                  child: ViewTicketScreen(ticketId: ticket['ticketId'].toString()),
-                ),
-              ),
-            ).then((_) => _refreshData());
+            Navigator.push(context, MaterialPageRoute(builder: (context) => ChangeNotifierProvider<TicketHistoryViewModel>.value(value: _viewModel, child: ViewTicketScreen(ticketId: ticket['ticketId'].toString())))).then((_) => _refreshData());
           }
         },
         child: Padding(
@@ -1081,48 +711,21 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '${ticket['plazaName']?.toString() ?? strings.naLabel} | ${ticket['entryLaneId']?.toString() ?? strings.naLabel} | ${ticket['ticketRefId']?.toString() ?? strings.naLabel}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textPrimaryColor),
-                    ),
+                    Text('${ticket['plazaName']?.toString() ?? strings.naLabel} | ${ticket['entryLaneId']?.toString() ?? strings.naLabel} | ${ticket['ticketRefId']?.toString() ?? strings.naLabel}', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textPrimaryColor), maxLines: 1, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 6),
-                    Text(
-                      '${ticket['vehicleNumber']?.toString() ?? strings.naLabel} | ${ticket['vehicleType']?.toString() ?? strings.naLabel} | $formattedCreatedTime',
-                      style: TextStyle(color: context.textPrimaryColor, fontSize: 14),
-                    ),
-                    if (ticket['remarks']?.isNotEmpty ?? false)
-                      Text(
-                        ticket['remarks'],
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: context.textPrimaryColor, fontSize: 14),
-                      ),
+                    Text('${ticket['vehicleNumber']?.toString() ?? strings.naLabel} | ${ticket['vehicleType']?.toString() ?? strings.naLabel} | $formattedCreatedTime', style: TextStyle(color: context.textPrimaryColor, fontSize: 14), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    if (ticket['remarks']?.isNotEmpty ?? false) Padding(padding: const EdgeInsets.only(top: 4.0), child: Text('${strings.labelRemarks}: ${ticket['remarks']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey[600], fontSize: 12, fontStyle: FontStyle.italic))),
                   ],
                 ),
               ),
-
               SizedBox(
                 width: 75,
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        ticketStatus.capitalize(),
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color, size: 20),
+                    Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: statusColor.withOpacity(0.2), borderRadius: BorderRadius.circular(10)), child: Text(ticketStatus.capitalize(), style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w600))),
+                    const SizedBox(height: 8),
+                    Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color?.withOpacity(0.7), size: 20),
                   ],
                 ),
               ),
@@ -1138,124 +741,43 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: 10,
-      itemBuilder: (context, index) {
-        return Shimmer.fromColors(
-          baseColor: Theme.of(context).brightness == Brightness.light
-              ? AppColors.shimmerBaseLight
-              : AppColors.shimmerBaseDark,
-          highlightColor: Theme.of(context).brightness == Brightness.light
-              ? AppColors.shimmerHighlightLight
-              : AppColors.shimmerHighlightDark,
-          child: Card(
-            elevation: Theme.of(context).cardTheme.elevation,
-            shape: Theme.of(context).cardTheme.shape,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(width: 150, height: 18, color: context.backgroundColor),
-                        const SizedBox(height: 4),
-                        Container(width: 100, height: 14, color: context.backgroundColor),
-                        const SizedBox(height: 4),
-                        Container(width: 120, height: 14, color: context.backgroundColor),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+      itemBuilder: (context, index) => Shimmer.fromColors(
+        baseColor: Theme.of(context).brightness == Brightness.light ? AppColors.shimmerBaseLight : AppColors.shimmerBaseDark,
+        highlightColor: Theme.of(context).brightness == Brightness.light ? AppColors.shimmerHighlightLight : AppColors.shimmerHighlightDark,
+        child: Card(
+          elevation: Theme.of(context).cardTheme.elevation, shape: Theme.of(context).cardTheme.shape,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [Container(width: 150, height: 18, color: context.cardColor), const SizedBox(height: 4), Container(width: 100, height: 14, color: context.cardColor), const SizedBox(height: 4), Container(width: 120, height: 14, color: context.cardColor)])),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
   Widget _buildErrorState(S strings) {
     String errorTitle = strings.errorUnableToLoadTicketsHistory;
     String errorMessage = strings.errorGeneric;
-
     final error = _viewModel.error;
     if (error != null) {
-      developer.log('Error occurred: $error', name: 'TicketHistory');
-      switch (error.runtimeType) {
-        case NoInternetException:
-          errorTitle = strings.errorNoInternet;
-          errorMessage = strings.errorNoInternetMessage;
-          break;
-        case RequestTimeoutException:
-          errorTitle = strings.errorRequestTimeout;
-          errorMessage = strings.errorRequestTimeoutMessage;
-          break;
-        case HttpException:
-          final httpError = error as HttpException;
-          errorTitle = strings.errorServerError;
-          errorMessage = strings.errorServerErrorMessage;
-          switch (httpError.statusCode) {
-            case 400:
-              errorTitle = strings.errorInvalidRequest;
-              errorMessage = strings.errorInvalidRequestMessage;
-              break;
-            case 401:
-              errorTitle = strings.errorUnauthorized;
-              errorMessage = strings.errorUnauthorizedMessage;
-              break;
-            case 403:
-              errorTitle = strings.errorAccessDenied;
-              errorMessage = strings.errorAccessDeniedMessage;
-              break;
-            case 404:
-              errorTitle = strings.errorNotFound;
-              errorMessage = strings.errorNotFoundMessage;
-              break;
-            case 500:
-              errorTitle = strings.errorServerIssue;
-              errorMessage = strings.errorServerIssueMessage;
-              break;
-            case 502:
-              errorTitle = strings.errorServiceUnavailable;
-              errorMessage = strings.errorServiceUnavailableMessage;
-              break;
-            case 503:
-              errorTitle = strings.errorServiceOverloaded;
-              errorMessage = strings.errorServiceOverloadedMessage;
-              break;
-          }
-          break;
-        case ServiceException:
-          errorTitle = strings.errorUnexpected;
-          errorMessage = strings.errorUnexpectedMessage;
-          break;
-        default:
-          errorTitle = strings.errorUnexpected;
-          errorMessage = error.toString();
-      }
+      if (error is NoInternetException) { errorTitle = strings.errorNoInternet; errorMessage = strings.errorNoInternetMessage; }
+      else if (error is RequestTimeoutException) { errorTitle = strings.errorRequestTimeout; errorMessage = strings.errorRequestTimeoutMessage; }
+      else if (error is HttpException) { errorTitle = strings.errorServerError; errorMessage = strings.errorServerErrorMessage; /* Could add switch for status codes */ }
+      else if (error is ServiceException) { errorTitle = strings.errorUnexpected; errorMessage = strings.errorUnexpectedMessage; }
+      else { errorTitle = strings.errorUnexpected; errorMessage = error.toString(); }
     }
-
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
-          const SizedBox(height: 16),
-          Text(errorTitle, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.textPrimaryColor)),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(errorMessage, style: TextStyle(fontSize: 16, color: context.textPrimaryColor), textAlign: TextAlign.center),
-          ),
-          const SizedBox(height: 24),
-          CustomButtons.primaryButton(
-            height: 40,
-            width: 150,
-            text: strings.buttonRetry,
-            onPressed: _refreshData,
-            context: context,
-          ),
+          Icon(Icons.error_outline, size: 64, color: Colors.red.shade400), const SizedBox(height: 16),
+          Text(errorTitle, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.textPrimaryColor)), const SizedBox(height: 8),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 16.0), child: Text(errorMessage, style: TextStyle(fontSize: 16, color: context.textPrimaryColor), textAlign: TextAlign.center)), const SizedBox(height: 24),
+          CustomButtons.primaryButton(height: 40, width: 150, text: strings.buttonRetry, onPressed: _refreshData, context: context),
         ],
       ),
     );
@@ -1266,25 +788,9 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.history_toggle_off,
-            size: 50,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            strings.noTicketsFoundLabel,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textPrimaryColor),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(
-              strings.adjustFiltersMessage,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
-              textAlign: TextAlign.center,
-            ),
-          ),
+          Icon(Icons.history_toggle_off, size: 50, color: Colors.grey[400]), const SizedBox(height: 16),
+          Text(strings.noTicketsFoundLabel, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textPrimaryColor)), const SizedBox(height: 8),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 16.0), child: Text(strings.adjustFiltersMessage, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400]), textAlign: TextAlign.center)),
         ],
       ),
     );
@@ -1301,13 +807,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: CustomAppBar.appBarWithNavigationAndActions(
-            screenTitle: strings.titleTicketHistory,
-            onPressed: () => Navigator.pop(context),
-            darkBackground: Theme.of(context).brightness == Brightness.dark,
-            actions: [],
-            context: context,
-          ),
+          appBar: CustomAppBar.appBarWithNavigationAndActions(screenTitle: strings.titleTicketHistory, onPressed: () => Navigator.pop(context), darkBackground: Theme.of(context).brightness == Brightness.dark, actions: [], context: context),
           body: Column(
             children: [
               const SizedBox(height: 4),
@@ -1316,50 +816,28 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: _refreshData,
+                  color: Theme.of(context).colorScheme.primary,
                   child: Stack(
                     children: [
-                      ListView(
-                        controller: _scrollController,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          const SizedBox(height: 8),
-                          if (viewModel.error != null && !viewModel.isLoading)
-                            SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.6,
-                              child: _buildErrorState(strings),
-                            )
-                          else if (filteredTickets.isEmpty && !viewModel.isLoading)
-                            SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.6,
-                              child: _buildEmptyState(strings),
-                            )
-                          else if (!viewModel.isLoading)
-                              ...paginatedTickets.map((ticket) => _buildTicketCard(ticket, strings)),
-                        ],
-                      ),
-                      if (viewModel.isLoading)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: _buildShimmerList(),
-                        ),
+                      if (viewModel.isLoading && viewModel.tickets.isEmpty) Padding(padding: const EdgeInsets.only(top: 8.0), child: _buildShimmerList())
+                      else if (viewModel.error != null && !viewModel.isLoading && viewModel.tickets.isEmpty) SizedBox(height: MediaQuery.of(context).size.height * 0.6, child: _buildErrorState(strings))
+                      else if (filteredTickets.isEmpty && !viewModel.isLoading) SizedBox(height: MediaQuery.of(context).size.height * 0.6, child: _buildEmptyState(strings))
+                        else ListView.builder(
+                            controller: _scrollController,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: paginatedTickets.length,
+                            padding: const EdgeInsets.only(top:8.0, bottom: 8.0),
+                            itemBuilder: (context, index) => _buildTicketCard(paginatedTickets[index], strings),
+                          ),
+                      if (viewModel.isLoading && viewModel.tickets.isNotEmpty) Positioned(bottom: 0, left: 0, right: 0, child: Container(padding: const EdgeInsets.all(8.0), color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.5), child: const Center(child: CircularProgressIndicator()))),
                     ],
                   ),
                 ),
               ),
             ],
           ),
-          bottomNavigationBar: filteredTickets.isNotEmpty && !viewModel.isLoading
-              ? Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            padding: const EdgeInsets.all(4.0),
-            child: SafeArea(
-              child: PaginationControls(
-                currentPage: _currentPage,
-                totalPages: totalPages,
-                onPageChange: _updatePage,
-              ),
-            ),
-          )
+          bottomNavigationBar: filteredTickets.isNotEmpty && !viewModel.isLoading && totalPages > 1
+              ? Container(color: Theme.of(context).scaffoldBackgroundColor, padding: const EdgeInsets.all(4.0), child: SafeArea(child: PaginationControls(currentPage: _currentPage, totalPages: totalPages, onPageChange: _updatePage)))
               : null,
         );
       },
@@ -1369,6 +847,7 @@ class _TicketHistoryScreenState extends State<TicketHistoryScreen>
 
 extension StringExtension on String {
   String capitalize() {
+    if (isEmpty) return this;
     return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
   }
 }

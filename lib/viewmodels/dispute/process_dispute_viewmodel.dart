@@ -1,6 +1,6 @@
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import '../../models/dispute.dart';
 import '../../models/ticket.dart';
@@ -10,21 +10,21 @@ import '../../services/core/ticket_service.dart';
 class ProcessDisputeViewModel extends ChangeNotifier {
   final DisputesService _disputesService;
   final TicketService _ticketService;
-  final ImagePicker _imagePicker = ImagePicker();
 
   Dispute? dispute;
   Ticket? ticket;
   String? selectedAction;
   String remark = '';
-  List<String> imagePaths = [];
+  List<String> filePaths = [];
   List<String>? capturedImageUrls;
   bool isLoading = false;
   String? actionError;
   String? remarkError;
-  String? imageError;
-  String? generalError;
+  String? fileError;
+  String? error;
 
-  final List<String> disputeActions = ['Accepted', 'Rejected', 'Inprogress'];
+  final List<String> disputeActions = ['Accepted', 'Rejected'];
+  final _dateFormat = DateFormat('dd MMM yyyy, hh:mm a');
 
   ProcessDisputeViewModel({
     DisputesService? disputesService,
@@ -35,38 +35,67 @@ class ProcessDisputeViewModel extends ChangeNotifier {
   void updateAction(String? action) {
     selectedAction = action;
     actionError = null;
-    generalError = null;
+    error = null;
     notifyListeners();
   }
 
   void updateRemark(String value) {
     remark = value;
     remarkError = null;
-    generalError = null;
+    error = null;
     notifyListeners();
   }
 
-  Future<void> pickImage() async {
+  Future<void> pickFile() async {
     try {
-      final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.rear,
+      developer.log('Attempting to pick files with FileType.custom', name: 'ProcessDisputeViewModel.PickFile');
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+        allowMultiple: true,
       );
-      if (image != null) {
-        imagePaths.add(image.path);
-        imageError = null;
-        notifyListeners();
+      developer.log('FilePicker result: ${result?.paths}', name: 'ProcessDisputeViewModel.PickFile');
+
+      if (result != null) {
+        filePaths.addAll(result.paths.where((path) => path != null).cast<String>());
+        fileError = null;
+      } else {
+        fileError = 'No files selected';
       }
     } catch (e) {
-      imageError = 'Failed to capture image: $e';
-      notifyListeners();
+      fileError = 'Error picking files: $e';
+      developer.log('Error picking files: $e', name: 'ProcessDisputeViewModel.PickFile');
+      if (e.toString().contains('MissingPluginException')) {
+        try {
+          FilePickerResult? fallbackResult = await FilePicker.platform.pickFiles(
+            type: FileType.any,
+            allowMultiple: true,
+          );
+          if (fallbackResult != null) {
+            final allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
+            filePaths.addAll(fallbackResult.paths
+                .where((path) =>
+            path != null &&
+                allowedExtensions.contains(path.split('.').last.toLowerCase()))
+                .cast<String>());
+            fileError = filePaths.isEmpty ? 'No valid files selected' : null;
+          } else {
+            fileError = 'No files selected';
+          }
+        } catch (fallbackError) {
+          fileError = 'Fallback file picking failed: $fallbackError';
+          developer.log('Fallback file picking failed: $fallbackError',
+              name: 'ProcessDisputeViewModel.PickFile');
+        }
+      }
     }
+    notifyListeners();
   }
 
-  void removeImage(int index) {
-    if (index >= 0 && index < imagePaths.length) {
-      imagePaths.removeAt(index);
-      imageError = null;
+  void removeFile(int index) {
+    if (index >= 0 && index < filePaths.length) {
+      filePaths.removeAt(index);
+      fileError = null;
       notifyListeners();
     }
   }
@@ -81,6 +110,11 @@ class ProcessDisputeViewModel extends ChangeNotifier {
       remarkError = 'Please provide a remark';
       isValid = false;
     }
+
+    if (filePaths.isEmpty) {
+      fileError = 'Please upload at least one file';
+      isValid = false;
+    }
     notifyListeners();
     return isValid;
   }
@@ -89,28 +123,21 @@ class ProcessDisputeViewModel extends ChangeNotifier {
     if (isLoading) return;
 
     isLoading = true;
-    generalError = null;
-    dispute = null;
-    ticket = null;
-    capturedImageUrls = null;
     notifyListeners();
 
     try {
-      // Fetch ticket details
       ticket = await _ticketService.getTicketDetails(ticketId);
       capturedImageUrls = ticket!.capturedImages ?? [];
-
-      // Fetch dispute details
       final disputes = await _disputesService.getDisputesByTicket(ticketId);
       if (disputes.isNotEmpty) {
         dispute = disputes.first;
         developer.log('[ProcessDisputeViewModel] Fetched dispute for ticket $ticketId',
             name: 'ProcessDisputeViewModel');
       } else {
-        generalError = 'No dispute found for ticket ID: $ticketId';
+        error = 'No dispute found for ticket ID: $ticketId';
       }
     } catch (e) {
-      generalError = 'Failed to fetch dispute details: $e';
+      error = 'Failed to fetch dispute details: $e';
       developer.log('[ProcessDisputeViewModel] Error: $e',
           name: 'ProcessDisputeViewModel');
     } finally {
@@ -134,46 +161,54 @@ class ProcessDisputeViewModel extends ChangeNotifier {
       parkingDuration = '${duration.inHours}h ${duration.inMinutes % 60}m';
     }
 
+    String? formatDateTime(dynamic dateTime) {
+      if (dateTime == null) return 'N/A';
+      try {
+        final parsedDate = dateTime is String ? DateTime.parse(dateTime) : dateTime as DateTime;
+        return _dateFormat.format(parsedDate);
+      } catch (e) {
+        developer.log('Error formatting date: $dateTime, error: $e',
+            name: 'ProcessDisputeViewModel.FormatDate');
+        return 'N/A';
+      }
+    }
+
     return {
       'ticketId': dispute!.ticketId ?? 'N/A',
-      // TODO: Replace with actual plaza name lookup from plazaId
       'plazaName': dispute!.plazaId != null ? 'Plaza ${dispute!.plazaId}' : 'N/A',
       'vehicleNumber': dispute!.vehicleNumber ?? 'N/A',
       'vehicleType': dispute!.vehicleType ?? 'N/A',
-      'vehicleEntryTime': entryTime != null
-          ? DateFormat('dd-MM-yyyy HH:mm:ss').format(entryTime)
-          : 'N/A',
-      'vehicleExitTime': exitTime != null
-          ? DateFormat('dd-MM-yyyy HH:mm:ss').format(exitTime)
-          : 'N/A',
+      'vehicleEntryTime': formatDateTime(entryTime),
+      'vehicleExitTime': formatDateTime(exitTime),
       'parkingDuration': parkingDuration ?? dispute!.parkingDuration ?? 'N/A',
       'paymentAmount': dispute!.paymentAmount != null ? '₹${dispute!.paymentAmount}' : 'N/A',
       'fareType': payment?.fareType ?? 'N/A',
       'fareAmount': dispute!.fareAmount != null ? '₹${dispute!.fareAmount}' : 'N/A',
-      'paymentDate': dispute!.paymentTime ?? 'N/A',
-      'disputeExpiryDate': dispute!.ticketCreationTime ?? 'N/A',
+      'paymentDate': formatDateTime(dispute!.paymentTime),
+      'disputeExpiryDate': formatDateTime(dispute!.ticketCreationTime),
       'disputeReason': dispute!.disputeReason ?? 'N/A',
       'disputeAmount': dispute!.disputeAmount != null ? '₹${dispute!.disputeAmount}' : 'N/A',
       'disputeRemark': dispute!.remarks ?? 'N/A',
       'disputeStatus': dispute!.status ?? 'N/A',
       'disputeRaisedBy': dispute!.userId != null ? 'User ${dispute!.userId}' : 'N/A',
-      'disputeRaisedDate': dispute!.ticketCreationTime ?? 'N/A',
+      'disputeRaisedDate': formatDateTime(dispute!.ticketCreationTime),
       'disputeProcessedBy': dispute!.processedBy ?? 'N/A',
-      'disputeProcessedDate': dispute!.latestRemark != null ? dispute!.ticketCreationTime : 'N/A',
+      'disputeProcessedDate': dispute!.latestRemark != null
+          ? formatDateTime(dispute!.ticketCreationTime)
+          : 'N/A',
     };
   }
 
   Future<bool> submitDisputeAction(String processedBy) async {
     if (isLoading || !validateInputs() || dispute == null || dispute!.disputeId == null) {
-      generalError = dispute == null || dispute!.disputeId == null
+      error = dispute == null || dispute!.disputeId == null
           ? 'No dispute loaded to process'
-          : generalError;
+          : error;
       notifyListeners();
       return false;
     }
 
     isLoading = true;
-    generalError = null;
     notifyListeners();
 
     try {
@@ -182,20 +217,20 @@ class ProcessDisputeViewModel extends ChangeNotifier {
         processStatus: selectedAction!,
         remark: remark.trim(),
         processedBy: processedBy,
-        uploadedFiles: imagePaths,
+        uploadedFiles: filePaths,
       );
 
       if (success) {
         selectedAction = null;
         remark = '';
-        imagePaths.clear();
-        await fetchDisputeDetails(dispute!.ticketId!); // Refresh details
+        filePaths.clear();
+        await fetchDisputeDetails(dispute!.ticketId!);
         developer.log('[ProcessDisputeViewModel] Processed dispute ID: ${dispute!.disputeId}',
             name: 'ProcessDisputeViewModel');
       }
       return success;
     } catch (e) {
-      generalError = 'Failed to process dispute: $e';
+      error = 'Failed to process dispute: $e';
       developer.log('[ProcessDisputeViewModel] Error processing: $e',
           name: 'ProcessDisputeViewModel');
       return false;
@@ -210,12 +245,12 @@ class ProcessDisputeViewModel extends ChangeNotifier {
     ticket = null;
     selectedAction = null;
     remark = '';
-    imagePaths.clear();
+    filePaths.clear();
     capturedImageUrls = null;
     actionError = null;
     remarkError = null;
-    imageError = null;
-    generalError = null;
+    fileError = null;
+    error = null;
     isLoading = false;
     notifyListeners();
   }

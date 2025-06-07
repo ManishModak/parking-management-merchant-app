@@ -42,7 +42,7 @@ class _MenuScreenState extends State<MenuScreen> {
     'modifyViewUser': ['Plaza Owner', 'Plaza Admin'],
     'openTickets': ['Plaza Owner', 'Centralized Controller', 'Plaza Admin', 'Plaza Operator'],
     'newTicket': ['Plaza Owner', 'Plaza Admin', 'Plaza Operator'],
-    'rejectTicket': ['Plaza Owner', 'Plaza Admin', 'Plaza Operator'],
+    //'rejectTicket': ['Plaza Owner', 'Plaza Admin', 'Plaza Operator'],
     'ticketHistory': ['Plaza Owner', 'Centralized Controller', 'Plaza Admin', 'Plaza Operator'],
     'raiseDispute': ['Plaza Owner', 'Plaza Admin'],
     'viewDispute': ['Plaza Owner', 'Centralized Controller', 'Plaza Admin', 'Plaza Operator'],
@@ -195,17 +195,17 @@ class _MenuScreenState extends State<MenuScreen> {
                             'newTicket',
                           ),
                         ),
-                        MenuCardItem(
-                          title: strings.menuRejectTicket,
-                          icon: Icons.cancel_outlined,
-                          allowedRoles: _accessRules['rejectTicket']!,
-                          onTap: () => _handleNavigation(
-                            context,
-                            AppRoutes.rejectTicket,
-                            userRole,
-                            'rejectTicket',
-                          ),
-                        ),
+                        // MenuCardItem(
+                        //   title: strings.menuRejectTicket,
+                        //   icon: Icons.cancel_outlined,
+                        //   allowedRoles: _accessRules['rejectTicket']!,
+                        //   onTap: () => _handleNavigation(
+                        //     context,
+                        //     AppRoutes.rejectTicket,
+                        //     userRole,
+                        //     'rejectTicket',
+                        //   ),
+                        // ),
                         MenuCardItem(
                           title: strings.menuTicketHistory,
                           icon: Icons.history,

@@ -42,7 +42,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
   void initState() {
     super.initState();
     _viewModel = Provider.of<OpenTicketViewModel>(context, listen: false);
-    _setDefaultDateRange();
+    _setDefaultDateRange(); // Set default to Today initially
     _loadInitialData();
     _searchController.addListener(_debounceSearch);
   }
@@ -62,7 +62,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
     final now = DateTime.now();
     _selectedDateRange = DateTimeRange(
       start: DateTime(now.year, now.month, now.day),
-      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
+      end: DateTime(now.year, now.month, now.day, 23, 59, 59, 999, 999),
     );
   }
 
@@ -111,14 +111,22 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
     }
 
     if (_selectedDateRange != null) {
+      final rangeStartLocal = _selectedDateRange!.start;
+      final rangeEndLocal = DateTime(
+          _selectedDateRange!.end.year,
+          _selectedDateRange!.end.month,
+          _selectedDateRange!.end.day,
+          23, 59, 59, 999, 999);
+
       filtered = filtered.where((ticket) {
-        final entryTime = ticket['entryTime'];
-        if (entryTime == null) return false;
-        final inRange = entryTime.isAfter(_selectedDateRange!.start.subtract(const Duration(milliseconds: 1))) &&
-            entryTime.isBefore(_selectedDateRange!.end.add(const Duration(milliseconds: 1)));
-        return inRange;
+        final entryTimeUtc = ticket['entryTime'] as DateTime?;
+        if (entryTimeUtc == null) return false;
+        final isInRange = !entryTimeUtc.isBefore(rangeStartLocal) &&
+            !entryTimeUtc.isAfter(rangeEndLocal);
+        return isInRange;
       }).toList();
     }
+
 
     if (_selectedStatuses.isNotEmpty) {
       filtered = filtered.where((ticket) => _selectedStatuses.contains(ticket['ticketStatus']?.toString().toLowerCase())).toList();
@@ -143,7 +151,11 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
   void _updatePage(int newPage) {
     final filteredTickets = _getFilteredTickets(_viewModel.tickets);
     final totalPages = (filteredTickets.length / _itemsPerPage).ceil();
-    if (newPage < 1 || newPage > totalPages) return;
+    if (newPage < 1 && totalPages > 0) newPage = 1;
+    if (totalPages > 0 && newPage > totalPages) newPage = totalPages;
+    if (totalPages == 0 && newPage != 1) newPage = 1;
+
+
     setState(() {
       _currentPage = newPage;
       _scrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
@@ -152,7 +164,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
 
   Widget _buildDateFilterChip(S strings) {
     String displayText = _selectedDateRange == null
-        ? strings.dateRangeLabel
+        ? strings.dateRangeLabel // Show "Date Range" if null
         : _isTodayRange(_selectedDateRange!)
         ? strings.todayLabel
         : _isYesterdayRange(_selectedDateRange!)
@@ -164,6 +176,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
         : '${DateFormat('dd MMM').format(_selectedDateRange!.start)} - ${DateFormat('dd MMM').format(_selectedDateRange!.end)}';
 
     final textColor = context.textPrimaryColor;
+    final isActive = _selectedDateRange != null;
 
     return GestureDetector(
       onTap: _showDateFilterDialog,
@@ -171,18 +184,18 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: _selectedDateRange != null ? AppColors.primary.withOpacity(0.1) : context.secondaryCardColor,
+          color: isActive ? AppColors.primary.withOpacity(0.1) : context.secondaryCardColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.calendar_today, color: _selectedDateRange != null ? AppColors.primary : textColor, size: 16),
+            Icon(Icons.calendar_today, color: isActive ? AppColors.primary : textColor, size: 16),
             const SizedBox(width: 6),
             Text(displayText,
                 style: TextStyle(
-                    color: _selectedDateRange != null ? AppColors.primary : textColor,
-                    fontWeight: _selectedDateRange != null ? FontWeight.w600 : FontWeight.normal)),
+                    color: isActive ? AppColors.primary : textColor,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.normal)),
           ],
         ),
       ),
@@ -216,8 +229,15 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
     );
   }
 
+  bool _hasAnyActiveFilter() {
+    return _selectedDateRange != null ||
+        _selectedStatuses.isNotEmpty ||
+        _selectedVehicleTypes.isNotEmpty ||
+        _selectedPlazaNames.isNotEmpty;
+  }
+
   Widget _buildFilterChipsRow(S strings) {
-    final selectedFilters = [
+    final selectedOtherFilters = [
       ..._selectedStatuses.map((s) => '${strings.statusLabel}: ${s.capitalize()}'),
       ..._selectedVehicleTypes.map((v) => '${strings.vehicleLabel}: ${v.capitalize()}'),
       ..._selectedPlazaNames.map((p) => '${strings.plazaLabel}: $p'),
@@ -232,13 +252,13 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
           child: Row(
             children: [
-              if (selectedFilters.isNotEmpty || _selectedDateRange != null) ...[
+              if (_hasAnyActiveFilter()) ...[
                 GestureDetector(
                   onTap: () => setState(() {
                     _selectedStatuses.clear();
                     _selectedVehicleTypes.clear();
                     _selectedPlazaNames.clear();
-                    _selectedDateRange = null;
+                    _selectedDateRange = null; // Clear date filter too
                     _currentPage = 1;
                   }),
                   child: Container(
@@ -250,11 +270,10 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                 const SizedBox(width: 8),
               ],
               _buildDateFilterChip(strings),
-              const SizedBox(width: 8),
               _buildMoreFiltersChip(strings),
-              if (selectedFilters.isNotEmpty) ...[
+              if (selectedOtherFilters.isNotEmpty) ...[
                 const SizedBox(width: 8),
-                ...selectedFilters.map((filter) => Container(
+                ...selectedOtherFilters.map((filter) => Container(
                   margin: const EdgeInsets.only(right: 8),
                   child: Chip(
                     label: Text(filter),
@@ -430,11 +449,16 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                 selected: isSelected,
                 onSelected: (value) => onChanged(option['key']!, value),
                 selectedColor: AppColors.primary.withOpacity(0.2),
-                checkmarkColor: textColor,
+                checkmarkColor: textColor, // Consider AppColors.primary for checkmark
                 backgroundColor: context.secondaryCardColor,
                 labelStyle: TextStyle(
-                  color: isSelected ? textColor : Colors.grey[400],
+                  color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.light ? Colors.grey[700] : Colors.grey[400]),
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+                shape: StadiumBorder(
+                    side: BorderSide(
+                      color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.light ? Colors.grey[400]! : Colors.grey[700]!),
+                    )
                 ),
               );
             }).toList(),
@@ -458,7 +482,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
   }) {
     final strings = S.of(context);
     final TextEditingController searchController = TextEditingController();
-    List<String> filteredOptions = options;
+    List<String> filteredOptions = List.from(options);
     final textColor = context.textPrimaryColor;
 
     return StatefulBuilder(builder: (context, setLocalState) {
@@ -490,7 +514,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
             ),
           ),
           ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 300),
+            constraints: const BoxConstraints(maxHeight: 200),
             child: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -504,11 +528,17 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                       selected: isSelected,
                       onSelected: (value) => onChanged(option, value),
                       selectedColor: AppColors.primary.withOpacity(0.2),
-                      checkmarkColor: textColor,
+                      checkmarkColor: textColor, // Consider AppColors.primary
                       backgroundColor: context.secondaryCardColor,
                       labelStyle: TextStyle(
-                          color: isSelected ? textColor : Colors.grey[400],
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal),
+                        color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.light ? Colors.grey[700] : Colors.grey[400]),
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                      shape: StadiumBorder(
+                          side: BorderSide(
+                            color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.light ? Colors.grey[400]! : Colors.grey[700]!),
+                          )
+                      ),
                     );
                   }).toList(),
                 ),
@@ -536,10 +566,10 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               CustomFormFields.searchFormField(
-                  controller: _searchController, hintText: strings.searchHint ?? 'Search open tickets...', context: context),
+                  controller: _searchController, hintText: strings.searchHint, context: context),
               const SizedBox(height: 8),
               Text(
-                '${strings.lastUpdated}: ${DateTime.now().toString().substring(0, 16)}. ${strings.swipeToRefresh}',
+                '${strings.lastUpdated}: ${DateFormat('dd MMM, hh:mm a').format(DateTime.now())}. ${strings.swipeToRefresh}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
                 textAlign: TextAlign.center,
               ),
@@ -553,18 +583,34 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
   Future<DateTimeRange?> _selectCustomDateRange(BuildContext context, DateTimeRange? initialRange) async {
     final strings = S.of(context);
     final earliestDate = DateTime.now().subtract(const Duration(days: 365 * 5));
+    final latestDate = DateTime.now();
 
     final picked = await showDateRangePicker(
       context: context,
       firstDate: earliestDate,
-      lastDate: DateTime.now(),
+      lastDate: latestDate,
       initialDateRange: initialRange,
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: ColorScheme.light(
-              primary: AppColors.primary, onPrimary: context.textPrimaryColor, surface: context.cardColor, onSurface: context.textPrimaryColor),
+          colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: AppColors.primary,
+              onPrimary: Theme.of(context).brightness == Brightness.light ? Colors.white : Colors.black,
+              surface: context.cardColor,
+              onSurface: context.textPrimaryColor
+          ),
           dialogBackgroundColor: context.cardColor,
-          textTheme: Theme.of(context).textTheme.copyWith(bodyLarge: TextStyle(color: context.textPrimaryColor), bodyMedium: TextStyle(color: context.textPrimaryColor)),
+          textTheme: Theme.of(context).textTheme.copyWith(
+            bodyLarge: TextStyle(color: context.textPrimaryColor),
+            bodyMedium: TextStyle(color: context.textPrimaryColor),
+            titleMedium: TextStyle(color: context.textPrimaryColor),
+          ),
+          buttonTheme: Theme.of(context).buttonTheme.copyWith(
+            buttonColor: AppColors.primary,
+            textTheme: ButtonTextTheme.primary,
+          ),
+          textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary)
+          ),
         ),
         child: child!,
       ),
@@ -573,11 +619,15 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
     if (picked == null) return null;
 
     final start = picked.start.isBefore(earliestDate) ? earliestDate : picked.start;
-    final end = picked.end.isAfter(DateTime.now()) ? DateTime.now() : picked.end;
+    var end = picked.end.isAfter(latestDate) ? latestDate : picked.end;
+    end = DateTime(end.year, end.month, end.day, 23, 59, 59, 999, 999);
+
 
     const maxAllowedRange = Duration(days: 365);
     if (end.difference(start) > maxAllowedRange) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(strings.dateRangeTooLongWarning), backgroundColor: Colors.red));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(strings.dateRangeTooLongWarning), backgroundColor: Colors.red));
+      }
       return null;
     }
 
@@ -599,7 +649,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
         return StatefulBuilder(builder: (context, setDialogState) {
           return Container(
             decoration: BoxDecoration(color: context.cardColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
-            height: MediaQuery.of(context).size.height * 0.4,
+            height: MediaQuery.of(context).size.height * 0.45,
             child: Column(
               children: [
                 Padding(
@@ -622,9 +672,10 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             _buildQuickDateChip(
                                 label: strings.todayLabel,
@@ -633,7 +684,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                                   final now = DateTime.now();
                                   tempDateRange = DateTimeRange(
                                       start: DateTime(now.year, now.month, now.day),
-                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59));
+                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59, 999, 999));
                                   selectedOption = 'Today';
                                 })),
                             const SizedBox(width: 8),
@@ -644,7 +695,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                                   final yesterday = DateTime.now().subtract(const Duration(days: 1));
                                   tempDateRange = DateTimeRange(
                                       start: DateTime(yesterday.year, yesterday.month, yesterday.day),
-                                      end: DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59));
+                                      end: DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59, 999, 999));
                                   selectedOption = 'Yesterday';
                                 })),
                             const SizedBox(width: 8),
@@ -654,14 +705,15 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                                 onTap: () => setDialogState(() {
                                   final now = DateTime.now();
                                   tempDateRange = DateTimeRange(
-                                      start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7)),
-                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59));
+                                      start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 6)),
+                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59, 999, 999));
                                   selectedOption = 'Last 7 Days';
                                 })),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             _buildQuickDateChip(
                                 label: strings.last30DaysLabel,
@@ -669,8 +721,8 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                                 onTap: () => setDialogState(() {
                                   final now = DateTime.now();
                                   tempDateRange = DateTimeRange(
-                                      start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 30)),
-                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59));
+                                      start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 29)),
+                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59, 999, 999));
                                   selectedOption = 'Last 30 Days';
                                 })),
                             const SizedBox(width: 8),
@@ -707,7 +759,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                             height: 40,
                             text: strings.clearLabel,
                             onPressed: () => setDialogState(() {
-                              tempDateRange = null;
+                              tempDateRange = null; // Clear the date range
                               selectedOption = null;
                             }),
                             context: context),
@@ -755,39 +807,44 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
         decoration: BoxDecoration(
             color: isSelected ? AppColors.primary.withOpacity(0.2) : context.secondaryCardColor,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isSelected ? AppColors.primary : Colors.transparent, width: 1)),
+            border: Border.all(color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.light ? Colors.grey[400]! : Colors.grey[700]!), width: 1)),
         child: Text(label,
             style: TextStyle(color: isSelected ? AppColors.primary : textColor, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal)),
       ),
     );
   }
 
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
   bool _isTodayRange(DateTimeRange range) {
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
-    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-    return range.start == todayStart && range.end.isAtSameMomentAs(todayEnd);
+    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59, 999, 999);
+    return _isSameDay(range.start, todayStart) && _isSameDay(range.end, todayEnd);
   }
 
   bool _isYesterdayRange(DateTimeRange range) {
-    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+    final now = DateTime.now();
+    final yesterday = now.subtract(const Duration(days: 1));
     final yesterdayStart = DateTime(yesterday.year, yesterday.month, yesterday.day);
-    final yesterdayEnd = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
-    return range.start == yesterdayStart && range.end.isAtSameMomentAs(yesterdayEnd);
+    final yesterdayEnd = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59, 999, 999);
+    return _isSameDay(range.start, yesterdayStart) && _isSameDay(range.end, yesterdayEnd);
   }
 
   bool _isLast7DaysRange(DateTimeRange range) {
     final now = DateTime.now();
-    final sevenDaysAgo = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7));
-    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-    return range.start == sevenDaysAgo && range.end.isAtSameMomentAs(todayEnd);
+    final sevenDaysAgoStart = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 6));
+    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59, 999, 999);
+    return _isSameDay(range.start, sevenDaysAgoStart) && _isSameDay(range.end, todayEnd);
   }
 
   bool _isLast30DaysRange(DateTimeRange range) {
     final now = DateTime.now();
-    final thirtyDaysAgo = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 30));
-    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-    return range.start == thirtyDaysAgo && range.end.isAtSameMomentAs(todayEnd);
+    final thirtyDaysAgoStart = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 29));
+    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59, 999, 999);
+    return _isSameDay(range.start, thirtyDaysAgoStart) && _isSameDay(range.end, todayEnd);
   }
 
   Widget _buildEmptyState(S strings) {
@@ -803,34 +860,33 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
                 _searchQuery.isEmpty &&
-                    _selectedDateRange == null &&
-                    _selectedStatuses.isEmpty &&
-                    _selectedVehicleTypes.isEmpty &&
-                    _selectedPlazaNames.isEmpty
+                    !_hasAnyActiveFilter() // Check if no filters are active at all
                     ? strings.noTicketsToRejectMessage
                     : strings.noTicketsMatchSearchMessage,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
                 textAlign: TextAlign.center),
           ),
-          if (_searchQuery.isNotEmpty || _selectedDateRange != null || _selectedStatuses.isNotEmpty || _selectedVehicleTypes.isNotEmpty || _selectedPlazaNames.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            TextButton(
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() {
-                    _selectedDateRange = null;
-                    _selectedStatuses.clear();
-                    _selectedVehicleTypes.clear();
-                    _selectedPlazaNames.clear();
-                    _currentPage = 1;
-                  });
-                },
-                child: Text(strings.clearSearchLabel, style: const TextStyle(color: AppColors.primary)))
-          ],
+          if (_searchQuery.isNotEmpty || _hasAnyActiveFilter())
+            ...[
+              const SizedBox(height: 16),
+              TextButton(
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _selectedDateRange = null; // Clear date filter
+                      _selectedStatuses.clear();
+                      _selectedVehicleTypes.clear();
+                      _selectedPlazaNames.clear();
+                      _currentPage = 1;
+                    });
+                  },
+                  child: Text(strings.clearSearchLabel, style: const TextStyle(color: AppColors.primary)))
+            ],
         ],
       ),
     );
   }
+
 
   Widget _buildShimmerList() {
     return ListView.builder(
@@ -848,6 +904,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
           child: Card(
             elevation: Theme.of(context).cardTheme.elevation,
             shape: Theme.of(context).cardTheme.shape,
+            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
@@ -857,11 +914,11 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(width: 150, height: 18, color: context.backgroundColor),
+                        Container(width: 150, height: 18, color: context.cardColor),
                         const SizedBox(height: 4),
-                        Container(width: 100, height: 14, color: context.backgroundColor),
+                        Container(width: 100, height: 14, color: context.cardColor),
                         const SizedBox(height: 4),
-                        Container(width: 120, height: 14, color: context.backgroundColor),
+                        Container(width: 120, height: 14, color: context.cardColor),
                       ],
                     ),
                   ),
@@ -881,27 +938,21 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
 
     if (error != null) {
       developer.log('Error occurred: $error', name: 'OpenTicketsScreen');
-      switch (error.runtimeType) {
-        case NoInternetException:
-          errorTitle = strings.errorNoInternet;
-          errorMessage = strings.errorNoInternetMessage;
-          break;
-        case RequestTimeoutException:
-          errorTitle = strings.errorRequestTimeout;
-          errorMessage = strings.errorRequestTimeoutMessage;
-          break;
-        case HttpException:
-          final httpError = error as HttpException;
-          errorTitle = strings.errorServerError;
-          errorMessage = httpError.message.isNotEmpty ? httpError.message : strings.errorServerErrorMessage;
-          break;
-        case ServiceException:
-          errorTitle = strings.errorUnexpected;
-          errorMessage = error.toString().split(':').last.trim();
-          break;
-        default:
-          errorTitle = strings.errorUnexpected;
-          errorMessage = error.toString().split(':').last.trim();
+      if (error is NoInternetException) {
+        errorTitle = strings.errorNoInternet;
+        errorMessage = strings.errorNoInternetMessage;
+      } else if (error is RequestTimeoutException) {
+        errorTitle = strings.errorRequestTimeout;
+        errorMessage = strings.errorRequestTimeoutMessage;
+      } else if (error is HttpException) {
+        errorTitle = strings.errorServerError;
+        errorMessage = error.message.isNotEmpty ? error.message : strings.errorServerErrorMessage;
+      } else if (error is ServiceException) {
+        errorTitle = strings.errorServiceException;
+        errorMessage = error.message;
+      } else {
+        errorTitle = strings.errorUnexpected;
+        errorMessage = error.toString().split(':').last.trim();
       }
     }
 
@@ -924,9 +975,24 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
     );
   }
 
+  String _formatUtcToIstStringForDisplay(DateTime? utcTime) {
+    if (utcTime == null) return 'N/A';
+    final istWallTimeInUtcZone = utcTime.add(const Duration(hours: 5, minutes: 30));
+    final localRepresentationOfIst = DateTime(
+      istWallTimeInUtcZone.year,
+      istWallTimeInUtcZone.month,
+      istWallTimeInUtcZone.day,
+      istWallTimeInUtcZone.hour,
+      istWallTimeInUtcZone.minute,
+      istWallTimeInUtcZone.second,
+    );
+    return DateFormat('dd MMM, hh:mm a').format(localRepresentationOfIst);
+  }
+
   Widget _buildTicketCard(Map<String, dynamic> ticket, S strings) {
-    DateTime createdTime = DateTime.parse(ticket['ticketCreationTime'] ?? DateTime.now().toIso8601String());
-    String formattedCreatedTime = DateFormat('dd MMM, hh:mm a').format(createdTime);
+    final rawCreatedTimeUtc = ticket['ticketCreationTime'] as DateTime?;
+    String formattedCreatedTime = _formatUtcToIstStringForDisplay(rawCreatedTimeUtc);
+
     Color statusColor;
     final ticketStatus = ticket['ticketStatus'] is Status
         ? ticket['ticketStatus'].toString().split('.').last.toLowerCase()
@@ -955,16 +1021,20 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
       ),
       child: InkWell(
         onTap: () {
-          developer.log('Ticket card tapped: ${ticket['ticketId']}', name: 'TicketHistory');
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ChangeNotifierProvider<OpenTicketViewModel>.value(
-                  value: Provider.of<OpenTicketViewModel>(context, listen: false),
-                  child: ViewOpenTicketScreen(ticketId: ticket['ticketId'].toString()),
-                ),
+          developer.log('Ticket card tapped: ${ticket['ticketId']}', name: 'OpenTicketsScreen');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChangeNotifierProvider<OpenTicketViewModel>.value(
+                value: _viewModel, // Pass the existing ViewModel instance
+                child: ViewOpenTicketScreen(ticketId: ticket['ticketId'].toString()),
               ),
-            ).then((_) => _refreshData());
+            ),
+          ).then((value) {
+            if (value == true) {
+              _refreshData();
+            }
+          });
         },
         child: Padding(
           padding: const EdgeInsets.only(left: 8.0, right: 4, top: 8, bottom: 8),
@@ -978,30 +1048,37 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                     Text(
                       '${ticket['plazaName']?.toString() ?? strings.naLabel} | ${ticket['entryLaneId']?.toString() ?? strings.naLabel} | ${ticket['ticketRefId']?.toString() ?? strings.naLabel}',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textPrimaryColor),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 6),
                     Text(
                       '${ticket['vehicleNumber']?.toString() ?? strings.naLabel} | ${ticket['vehicleType']?.toString() ?? strings.naLabel} | $formattedCreatedTime',
                       style: TextStyle(color: context.textPrimaryColor, fontSize: 14),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (ticket['remarks']?.isNotEmpty ?? false)
-                      Text(
-                        ticket['remarks'],
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: context.textPrimaryColor, fontSize: 14),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text(
+                          '${strings.labelRemarks}: ${ticket['remarks']}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.grey[600], fontSize: 12, fontStyle: FontStyle.italic),
+                        ),
                       ),
                   ],
                 ),
               ),
-
               SizedBox(
                 width: 75,
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
                         color: statusColor.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(10),
@@ -1015,8 +1092,8 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color, size: 20),
+                    const SizedBox(height: 8),
+                    Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color?.withOpacity(0.7), size: 20),
                   ],
                 ),
               ),
@@ -1036,7 +1113,7 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
         final totalPages = (filteredTickets.length / _itemsPerPage).ceil();
         final paginatedTickets = _getPaginatedTickets(filteredTickets);
 
-        developer.log('Filtered tickets: ${filteredTickets.length}, Paginated tickets: ${paginatedTickets.length}', name: 'OpenTicketsScreen');
+        developer.log('Filtered tickets: ${filteredTickets.length}, Paginated tickets: ${paginatedTickets.length}, CurrentPage: $_currentPage, TotalPages: $totalPages', name: 'OpenTicketsScreen');
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -1053,27 +1130,40 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
                   color: Theme.of(context).colorScheme.primary,
                   child: Stack(
                     children: [
-                      ListView(
-                        controller: _scrollController,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          const SizedBox(height: 8),
-                          if (viewModel.error != null && !viewModel.isLoading)
-                            SizedBox(height: MediaQuery.of(context).size.height * 0.6, child: _buildErrorState(strings))
-                          else if (filteredTickets.isEmpty && !viewModel.isLoading)
-                            SizedBox(height: MediaQuery.of(context).size.height * 0.6, child: _buildEmptyState(strings))
-                          else if (!viewModel.isLoading)
-                              ...paginatedTickets.map((ticket) => _buildTicketCard(ticket, strings)),
-                        ],
-                      ),
-                      if (viewModel.isLoading) Padding(padding: const EdgeInsets.only(top: 8.0), child: _buildShimmerList()),
+                      if (viewModel.isLoading && viewModel.tickets.isEmpty)
+                        Padding(padding: const EdgeInsets.only(top: 8.0), child: _buildShimmerList())
+                      else if (viewModel.error != null && !viewModel.isLoading)
+                        SizedBox(height: MediaQuery.of(context).size.height * 0.6, child: _buildErrorState(strings))
+                      else if (filteredTickets.isEmpty && !viewModel.isLoading)
+                          SizedBox(height: MediaQuery.of(context).size.height * 0.6, child: _buildEmptyState(strings))
+                        else
+                          ListView.builder(
+                            controller: _scrollController,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: paginatedTickets.length,
+                            padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+                            itemBuilder: (context, index) {
+                              return _buildTicketCard(paginatedTickets[index], strings);
+                            },
+                          ),
+                      if (viewModel.isLoading && viewModel.tickets.isNotEmpty)
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(8.0),
+                            color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.5),
+                            child: const Center(child: CircularProgressIndicator()),
+                          ),
+                        ),
                     ],
                   ),
                 ),
               ),
             ],
           ),
-          bottomNavigationBar: filteredTickets.isNotEmpty && !viewModel.isLoading
+          bottomNavigationBar: filteredTickets.isNotEmpty && !viewModel.isLoading && totalPages > 1
               ? Container(
               color: Theme.of(context).scaffoldBackgroundColor,
               padding: const EdgeInsets.all(4.0),
@@ -1086,5 +1176,8 @@ class _OpenTicketsScreenState extends State<OpenTicketsScreen> with RouteAware {
 }
 
 extension StringExtension on String {
-  String capitalize() => "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
+  String capitalize() {
+    if (isEmpty) return this;
+    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
+  }
 }

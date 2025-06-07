@@ -33,22 +33,16 @@ class UserViewModel extends ChangeNotifier {
   Exception? _error;
   final Map<String, String> _errors = {};
 
-// Getters
+  // Getters
   User? get currentUser => _currentUser;
-
   User? get currentOperator => _currentOperator;
-
   List<User> get users => _users;
-
   List<Plaza> get userPlazas => _userPlazas;
-
   bool get isLoading => _isLoading;
-
   Exception? get error => _error;
-
   String? getError(String field) => _errors[field];
 
-// State Management
+  // State Management
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
@@ -110,11 +104,11 @@ class UserViewModel extends ChangeNotifier {
         _currentOperator = user;
       }
 
-// Populate _userPlazas based on role
+      // Populate _userPlazas based on role
       if (user.role == 'Plaza Owner') {
         _userPlazas = await _plazaService.fetchUserPlazas(user.entityId!);
       } else if (user.subEntity.isNotEmpty) {
-// Use subEntity objects from response
+        // Use subEntity objects from response
         _userPlazas = user.subEntity.map((subEntityItem) {
           final data = subEntityItem as Map<String, dynamic>;
           return Plaza(
@@ -167,9 +161,9 @@ class UserViewModel extends ChangeNotifier {
           throw ServiceException('No entity ID found for Plaza Owner');
         }
         _userPlazas =
-            await _plazaService.fetchUserPlazas(_currentUser!.entityId!);
+        await _plazaService.fetchUserPlazas(_currentUser!.entityId!);
       } else if (_currentUser != null && _currentUser!.subEntity.isNotEmpty) {
-// Use subEntity objects from response
+        // Use subEntity objects from response
         _userPlazas = _currentUser!.subEntity.map((subEntityItem) {
           final data = subEntityItem as Map<String, dynamic>;
           return Plaza(
@@ -222,9 +216,9 @@ class UserViewModel extends ChangeNotifier {
           throw ServiceException('No entity ID found for Plaza Owner');
         }
         _userPlazas =
-            await _plazaService.fetchUserPlazas(_currentUser!.entityId!);
+        await _plazaService.fetchUserPlazas(_currentUser!.entityId!);
       } else if (_currentUser != null && _currentUser!.subEntity.isNotEmpty) {
-// Use subEntity objects from response
+        // Use subEntity objects from response
         _userPlazas = _currentUser!.subEntity.map((subEntityItem) {
           final data = subEntityItem as Map<String, dynamic>;
           return Plaza(
@@ -254,7 +248,7 @@ class UserViewModel extends ChangeNotifier {
     try {
       _setLoading(true);
       _error = null;
-      _users = await _userService.getUsersByEntityId(entityId);
+      _users = await _userService.getUsersList();
       developer.log('Fetched ${_users.length} users for entity: $entityId',
           name: 'UserViewModel');
     } on NoInternetException catch (e) {
@@ -332,6 +326,7 @@ class UserViewModel extends ChangeNotifier {
     required String city,
     required String state,
     required String address,
+    required String pincode,
     required bool isAppUserRegister,
     String? role,
     String? entity,
@@ -343,37 +338,37 @@ class UserViewModel extends ChangeNotifier {
       _error = null;
       clearErrors();
 
-// Validate role
+      // Validate role
       final currentUserRole = await _secureStorageService.getUserRole();
       final allowedRoles = {
-            'Plaza Owner': [
-              'Plaza Owner',
-              'Centralized Controller',
-              'Plaza Admin',
-              'Plaza Operator',
-              'Cashier',
-              'Backend Monitoring Operator',
-              'Supervisor'
-            ],
-            'Plaza Admin': [
-              'Plaza Operator',
-              'Cashier',
-              'Backend Monitoring Operator',
-              'Supervisor'
-            ],
-          }[currentUserRole] ??
+        'Plaza Owner': [
+          'Plaza Owner',
+          'Centralized Controller',
+          'Plaza Admin',
+          'Plaza Operator',
+          'Cashier',
+          'Backend Monitoring Operator',
+          'Supervisor'
+        ],
+        'Plaza Admin': [
+          'Plaza Operator',
+          'Cashier',
+          'Backend Monitoring Operator',
+          'Supervisor'
+        ],
+      }[currentUserRole] ??
           [];
       if (role != null && !allowedRoles.contains(role)) {
         throw ServiceException('Unauthorized role assignment: $role');
       }
 
-// Validate entityId
+      // Validate entityId
       final currentEntityId = await _secureStorageService.getEntityId();
       if (entityId != null && entityId != currentEntityId) {
         throw ServiceException('Unauthorized entity assignment: $entityId');
       }
 
-// Validate subEntity
+      // Validate subEntity
       if (role != 'Plaza Owner' &&
           role != 'Centralized Controller' &&
           (subEntity == null || subEntity.length != 1)) {
@@ -394,6 +389,7 @@ class UserViewModel extends ChangeNotifier {
         city: city,
         state: state,
         address: address,
+        pincode: pincode,
         isAppUserRegister: isAppUserRegister,
         role: role,
         entity: entity,
@@ -443,6 +439,7 @@ class UserViewModel extends ChangeNotifier {
     String? address,
     String? city,
     String? state,
+    String? pincode,
     String? role,
     List<String>? subEntity,
     required bool isCurrentAppUser,
@@ -451,31 +448,31 @@ class UserViewModel extends ChangeNotifier {
       _setLoading(true);
       _error = null;
 
-// Validate role
+      // Validate role
       final currentUserRole = await _secureStorageService.getUserRole();
       final allowedRoles = {
-            'Plaza Owner': [
-              'Plaza Owner',
-              'Centralized Controller',
-              'Plaza Admin',
-              'Plaza Operator',
-              'Cashier',
-              'Backend Monitoring Operator',
-              'Supervisor'
-            ],
-            'Plaza Admin': [
-              'Plaza Operator',
-              'Cashier',
-              'Backend Monitoring Operator',
-              'Supervisor'
-            ],
-          }[currentUserRole] ??
+        'Plaza Owner': [
+          'Plaza Owner',
+          'Centralized Controller',
+          'Plaza Admin',
+          'Plaza Operator',
+          'Cashier',
+          'Backend Monitoring Operator',
+          'Supervisor'
+        ],
+        'Plaza Admin': [
+          'Plaza Operator',
+          'Cashier',
+          'Backend Monitoring Operator',
+          'Supervisor'
+        ],
+      }[currentUserRole] ??
           [];
       if (role != null && !allowedRoles.contains(role)) {
         throw ServiceException('Unauthorized role assignment: $role');
       }
 
-// Validate subEntity
+      // Validate subEntity
       if (role != null) {
         if (role == 'Plaza Owner' &&
             subEntity != null &&
@@ -503,6 +500,7 @@ class UserViewModel extends ChangeNotifier {
         address: address,
         city: city,
         state: state,
+        pincode: pincode,
         role: role,
         subEntity: role == 'Plaza Owner' ? null : subEntity,
       );
@@ -519,6 +517,7 @@ class UserViewModel extends ChangeNotifier {
             address: address,
             city: city,
             state: state,
+            pincode: pincode,
             entityName: _currentUser?.entityName,
             entityId: _currentUser?.entityId,
             subEntity: subEntity ?? _currentUser?.subEntity ?? [],
@@ -534,6 +533,7 @@ class UserViewModel extends ChangeNotifier {
             address: address,
             city: city,
             state: state,
+            pincode: pincode,
             entityName: _currentOperator?.entityName,
             entityId: _currentOperator?.entityId,
             subEntity: subEntity ?? _currentOperator?.subEntity ?? [],
@@ -577,26 +577,26 @@ class UserViewModel extends ChangeNotifier {
       _error = null;
       clearErrors();
 
-// Validate role permissions
+      // Validate role permissions
       final currentUserRole = await _secureStorageService.getUserRole();
       final user = await _userService.fetchUserInfo(userId, false);
       final allowedRoles = {
-            'Plaza Owner': [
-              'Plaza Owner',
-              'Centralized Controller',
-              'Plaza Admin',
-              'Plaza Operator',
-              'Cashier',
-              'Backend Monitoring Operator',
-              'Supervisor'
-            ],
-            'Plaza Admin': [
-              'Plaza Operator',
-              'Cashier',
-              'Backend Monitoring Operator',
-              'Supervisor'
-            ],
-          }[currentUserRole] ??
+        'Plaza Owner': [
+          'Plaza Owner',
+          'Centralized Controller',
+          'Plaza Admin',
+          'Plaza Operator',
+          'Cashier',
+          'Backend Monitoring Operator',
+          'Supervisor'
+        ],
+        'Plaza Admin': [
+          'Plaza Operator',
+          'Cashier',
+          'Backend Monitoring Operator',
+          'Supervisor'
+        ],
+      }[currentUserRole] ??
           [];
       if (!allowedRoles.contains(user.role)) {
         throw ServiceException(
@@ -629,7 +629,7 @@ class UserViewModel extends ChangeNotifier {
     }
   }
 
-// Validation Methods
+  // Validation Methods
   Map<String, String> validateRegistration({
     required String username,
     required String email,
@@ -637,6 +637,7 @@ class UserViewModel extends ChangeNotifier {
     required String city,
     required String state,
     required String address,
+    required String pincode,
     required String password,
     required String confirmPassword,
     required bool isMobileVerified,
@@ -678,11 +679,17 @@ class UserViewModel extends ChangeNotifier {
       errors['address'] = 'Address is required';
     }
 
+    if (pincode.isEmpty) {
+      errors['pincode'] = 'Pincode is required';
+    } else if (!Validation.isValidPincode(pincode)) {
+      errors['pincode'] = 'Invalid pincode format';
+    }
+
     if (password.isEmpty) {
       errors['password'] = 'Password is required';
     } else if (!Validation.isValidPassword(password)) {
       errors['password'] =
-          'Password must be at least 8 characters with uppercase, lowercase, number, and special character';
+      'Password must be at least 8 characters with uppercase, lowercase, number, and special character';
     }
 
     if (confirmPassword.isEmpty) {
@@ -703,12 +710,12 @@ class UserViewModel extends ChangeNotifier {
         role != 'Centralized Controller' &&
         (subEntity == null || subEntity.isEmpty)) {
       errors['subEntity'] =
-          'Exactly one sub-entity is required for role: $role';
+      'Exactly one sub-entity is required for role: $role';
     }
     if (role == 'Centralized Controller' &&
         (subEntity == null || subEntity.isEmpty)) {
       errors['subEntity'] =
-          'At least one sub-entity is required for Centralized Controller';
+      'At least one sub-entity is required for Centralized Controller';
     }
 
     return errors;
@@ -721,6 +728,7 @@ class UserViewModel extends ChangeNotifier {
     required String address,
     required String city,
     required String state,
+    required String pincode,
     required bool isMobileVerified,
     String? originalMobile,
     String? role,
@@ -761,6 +769,12 @@ class UserViewModel extends ChangeNotifier {
       errors['address'] = 'Address is required';
     }
 
+    if (pincode.isEmpty) {
+      errors['pincode'] = 'Pincode is required';
+    } else if (!Validation.isValidPincode(pincode)) {
+      errors['pincode'] = 'Invalid pincode format';
+    }
+
     if (!isProfile) {
       if (role == null || role.isEmpty) {
         errors['role'] = 'Role is required';
@@ -769,12 +783,12 @@ class UserViewModel extends ChangeNotifier {
           role != 'Centralized Controller' &&
           (subEntity == null || subEntity.isEmpty)) {
         errors['subEntity'] =
-            'Exactly one sub-entity is required for role: $role';
+        'Exactly one sub-entity is required for role: $role';
       }
       if (role == 'Centralized Controller' &&
           (subEntity == null || subEntity.isEmpty)) {
         errors['subEntity'] =
-            'At least one sub-entity is required for Centralized Controller';
+        'At least one sub-entity is required for Centralized Controller';
       }
     }
 
@@ -791,7 +805,7 @@ class UserViewModel extends ChangeNotifier {
       errors['password'] = 'Password is required';
     } else if (!Validation.isValidPassword(password)) {
       errors['password'] =
-          'Password must be at least 8 characters with uppercase, lowercase, number, and special character';
+      'Password must be at least 8 characters with uppercase, lowercase, number, and special character';
     }
 
     if (confirmPassword.isEmpty) {

@@ -1,15 +1,19 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../config/app_colors.dart';
 import '../../config/app_routes.dart';
+import '../../config/app_theme.dart';
+import '../../generated/l10n.dart';
 import '../../utils/components/appbar.dart';
+import '../../utils/components/button.dart';
 import '../../utils/components/form_field.dart';
 import '../../utils/components/pagination_controls.dart';
-import '../../utils/exceptions.dart';
+import '../../utils/components/pagination_mixin.dart';
 import '../../viewmodels/dispute/dispute_list_viewmodel.dart';
 
 class DisputeList extends StatefulWidget {
@@ -21,18 +25,16 @@ class DisputeList extends StatefulWidget {
   State<DisputeList> createState() => _DisputeListState();
 }
 
-class _DisputeListState extends State<DisputeList> with RouteAware {
+class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedListMixin<Map<String, dynamic>> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   late DisputeListViewModel _viewModel;
   late RouteObserver<ModalRoute> _routeObserver;
   String _searchQuery = '';
   int _currentPage = 1;
-  static const int _itemsPerPage = 10;
-  bool _isLoading = false;
   Timer? _debounce;
+  bool _isInitialized = false;
 
-  // Filter-related state
   Set<String> _selectedStatuses = {};
   Set<String> _selectedVehicleTypes = {};
   Set<String> _selectedPlazaNames = {};
@@ -41,9 +43,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
   @override
   void initState() {
     super.initState();
-    _viewModel = DisputeListViewModel();
-    _setDefaultDateRange(); // Set "Today" as default
-    _loadInitialData();
+    _viewModel = Provider.of<DisputeListViewModel>(context, listen: false);
+    _setDefaultDateRange();
     _searchController.addListener(() {
       if (_debounce?.isActive ?? false) _debounce?.cancel();
       _debounce = Timer(const Duration(milliseconds: 300), () {
@@ -52,6 +53,9 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
           _currentPage = 1;
         });
       });
+    });
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _loadInitialData();
     });
   }
 
@@ -65,17 +69,17 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
 
   Future<void> _loadInitialData() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
-    await _viewModel.fetchOpenTickets();
-    if (mounted) setState(() => _isLoading = false);
+    await _viewModel.fetchOpenDisputes(reset: true);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _routeObserver =
-        Provider.of<RouteObserver<ModalRoute>>(context, listen: false);
+    _routeObserver = Provider.of<RouteObserver<ModalRoute>>(context, listen: false);
     _routeObserver.subscribe(this, ModalRoute.of(context)!);
+    if (!_isInitialized) {
+      _isInitialized = true;
+    }
   }
 
   @override
@@ -84,7 +88,6 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
     _routeObserver.unsubscribe(this);
     _scrollController.dispose();
     _searchController.dispose();
-    _viewModel.dispose();
     super.dispose();
   }
 
@@ -93,106 +96,99 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
 
   Future<void> _refreshData() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
-    await _viewModel.fetchOpenTickets();
-    if (mounted) setState(() => _isLoading = false);
+    developer.log('Refreshing dispute list data', name: 'DisputeList');
+    await _viewModel.fetchOpenDisputes(reset: true);
   }
 
-  List<Map<String, dynamic>> _getFilteredTickets(
-      List<Map<String, dynamic>> tickets) {
-    return tickets.where((ticket) {
-      final matchesSearch = _searchQuery.isEmpty ||
-          (ticket['ticketID']
-                  ?.toString()
-                  .toLowerCase()
-                  .contains(_searchQuery) ??
-              false) ||
-          (ticket['plazaID']?.toString().toLowerCase().contains(_searchQuery) ??
-              false) ||
-          (ticket['vehicleNumber']
-                  ?.toString()
-                  .toLowerCase()
-                  .contains(_searchQuery) ??
-              false) ||
-          (ticket['vehicleType']
-                  ?.toString()
-                  .toLowerCase()
-                  .contains(_searchQuery) ??
-              false) ||
-          (ticket['plazaName']
-                  ?.toString()
-                  .toLowerCase()
-                  .contains(_searchQuery) ??
-              false) ||
-          (ticket['status']?.toString().toLowerCase().contains(_searchQuery) ??
-              false);
+  List<Map<String, dynamic>> _getFilteredDisputes(List<Map<String, dynamic>> disputes) {
+    return disputes.where((dispute) {
+      final entryTime = DateTime.tryParse(dispute['entryTime']?.toString() ?? '');
+      final entryTimeString = entryTime != null ? DateFormat('dd MMM yyyy, hh:mm a').format(entryTime) : '';
 
-      final matchesStatus = _selectedStatuses.isEmpty ||
-          _selectedStatuses
-              .contains(ticket['status']?.toString().toLowerCase());
+      final matchesSearch = _searchQuery.isEmpty ||
+          (dispute['disputeId']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
+          (dispute['plazaId']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
+          (dispute['vehicleNumber']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
+          (dispute['vehicleType']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
+          (dispute['plazaName']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
+          (dispute['status']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
+          entryTimeString.toLowerCase().contains(_searchQuery);
+
+      final disputeStatus = dispute['status']?.toString().toLowerCase() ?? '';
+      final matchesStatus = _selectedStatuses.isEmpty || _selectedStatuses.contains(disputeStatus);
 
       final matchesVehicleType = _selectedVehicleTypes.isEmpty ||
-          _selectedVehicleTypes
-              .contains(ticket['vehicleType']?.toString().toLowerCase());
+          _selectedVehicleTypes.contains(dispute['vehicleType']?.toString().toLowerCase());
 
       final matchesPlazaName = _selectedPlazaNames.isEmpty ||
-          _selectedPlazaNames
-              .contains(ticket['plazaName']?.toString().toLowerCase());
+          _selectedPlazaNames.contains(dispute['plazaName']?.toString().toLowerCase());
 
-      // Ensure entryTime is treated as a String before parsing
-      final entryTimeString = ticket['entryTime']?.toString() ?? '';
-      final entryTime = DateTime.tryParse(entryTimeString);
       final matchesDate = _selectedDateRange == null ||
           (entryTime != null &&
-              entryTime.isAfter(_selectedDateRange!.start
-                  .subtract(const Duration(days: 1))) &&
-              entryTime.isBefore(
-                  _selectedDateRange!.end.add(const Duration(days: 1))));
+              entryTime.isAfter(_selectedDateRange!.start.subtract(const Duration(days: 1))) &&
+              entryTime.isBefore(_selectedDateRange!.end.add(const Duration(days: 1))));
 
-      return matchesSearch &&
-          matchesStatus &&
-          matchesVehicleType &&
-          matchesPlazaName &&
-          matchesDate;
+      return matchesSearch && matchesStatus && matchesVehicleType && matchesPlazaName && matchesDate;
     }).toList();
   }
 
-  List<Map<String, dynamic>> _getPaginatedTickets(
-      List<Map<String, dynamic>> filteredTickets) {
-    final startIndex = (_currentPage - 1) * _itemsPerPage;
-    final endIndex = startIndex + _itemsPerPage;
-    return endIndex > filteredTickets.length
-        ? filteredTickets.sublist(startIndex)
-        : filteredTickets.sublist(startIndex, endIndex);
-  }
-
   void _updatePage(int newPage) {
-    final filteredTickets = _getFilteredTickets(_viewModel.tickets);
-    final totalPages = (filteredTickets.length / _itemsPerPage)
-        .ceil()
-        .clamp(1, double.infinity)
-        .toInt();
-    if (newPage < 1 || newPage > totalPages) return;
-    setState(() => _currentPage = newPage);
+    final filteredDisputes = _getFilteredDisputes(_viewModel.disputes);
+    updatePage(newPage, filteredDisputes, (page) {
+      setState(() => _currentPage = page);
+      developer.log('Page updated to: $_currentPage', name: 'DisputeList');
+    });
   }
 
-  Widget _buildDateFilterChip() {
+  Widget _buildSearchField(S strings) {
+    return SizedBox(
+      width: MediaQuery.of(context).size.width * 0.95,
+      child: Card(
+        margin: EdgeInsets.zero,
+        elevation: Theme.of(context).cardTheme.elevation,
+        color: context.secondaryCardColor,
+        shape: Theme.of(context).cardTheme.shape,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              CustomFormFields.searchFormField(
+                controller: _searchController,
+                hintText: strings.searchDisputeHint,
+                context: context,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${strings.lastUpdated}: ${DateTime.now().toString().substring(0, 16)}. ${strings.swipeToRefresh}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateFilterChip(S strings) {
     String displayText;
     if (_selectedDateRange == null) {
-      displayText = 'Date Range';
+      displayText = strings.dateRangeLabel;
     } else if (_isTodayRange(_selectedDateRange!)) {
-      displayText = 'Today';
+      displayText = strings.todayLabel;
     } else if (_isYesterdayRange(_selectedDateRange!)) {
-      displayText = 'Yesterday';
+      displayText = strings.yesterdayLabel;
     } else if (_isLast7DaysRange(_selectedDateRange!)) {
-      displayText = 'Last 7 Days';
+      displayText = strings.last7DaysLabel;
     } else if (_isLast30DaysRange(_selectedDateRange!)) {
-      displayText = 'Last 30 Days';
+      displayText = strings.last30DaysLabel;
     } else {
       displayText =
-          '${DateFormat('dd MMM').format(_selectedDateRange!.start)} - '
-          '${DateFormat('dd MMM').format(_selectedDateRange!.end)}';
+      '${DateFormat('dd MMM').format(_selectedDateRange!.start)} - ${DateFormat('dd MMM').format(_selectedDateRange!.end)}';
     }
+
+    final textColor = context.textPrimaryColor;
 
     return GestureDetector(
       onTap: _showDateFilterDialog,
@@ -200,30 +196,19 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: _selectedDateRange != null
-              ? AppColors.primary.withOpacity(0.1)
-              : Colors.grey[200],
+          color: context.secondaryCardColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.calendar_today,
-              color:
-                  _selectedDateRange != null ? AppColors.primary : Colors.grey,
-              size: 16,
-            ),
+            Icon(Icons.calendar_today, color: textColor, size: 16),
             const SizedBox(width: 6),
             Text(
               displayText,
               style: TextStyle(
-                color: _selectedDateRange != null
-                    ? AppColors.primary
-                    : Colors.black87,
-                fontWeight: _selectedDateRange != null
-                    ? FontWeight.w600
-                    : FontWeight.normal,
+                color: textColor,
+                fontWeight: _selectedDateRange != null ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ],
@@ -232,36 +217,29 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
     );
   }
 
-  Widget _buildMoreFiltersChip() {
-    final hasActiveFilters = _selectedStatuses.isNotEmpty ||
-        _selectedVehicleTypes.isNotEmpty ||
-        _selectedPlazaNames.isNotEmpty;
+  Widget _buildMoreFiltersChip(S strings) {
+    final hasActiveFilters =
+        _selectedStatuses.isNotEmpty || _selectedVehicleTypes.isNotEmpty || _selectedPlazaNames.isNotEmpty;
+    final textColor = context.textPrimaryColor;
 
     return GestureDetector(
       onTap: _showAllFiltersDialog,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: hasActiveFilters
-              ? AppColors.primary.withOpacity(0.1)
-              : Colors.grey[200],
+          color: context.secondaryCardColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.filter_list,
-              color: hasActiveFilters ? AppColors.primary : Colors.grey,
-              size: 16,
-            ),
+            Icon(Icons.filter_list, color: textColor, size: 16),
             const SizedBox(width: 6),
             Text(
-              'Filters',
+              strings.filtersLabel,
               style: TextStyle(
-                color: hasActiveFilters ? AppColors.primary : Colors.black87,
-                fontWeight:
-                    hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
+                color: textColor,
+                fontWeight: hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ],
@@ -270,76 +248,102 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
     );
   }
 
-  Widget _buildFilterChipsRow() {
+  Widget _buildFilterChipsRow(S strings) {
     final selectedFilters = [
-      ..._selectedStatuses.map((s) => 'Status: ${s.capitalize()}'),
-      ..._selectedVehicleTypes.map((v) => 'Vehicle: ${v.capitalize()}'),
-      ..._selectedPlazaNames.map((p) => 'Plaza: $p'),
+      ..._selectedStatuses.map((s) => '${strings.labelStatus}: ${s.capitalize()}'),
+      ..._selectedVehicleTypes.map((v) => '${strings.vehicleLabel}: ${v.capitalize()}'),
+      ..._selectedPlazaNames.map((p) => '${strings.plazaLabel}: $p'),
     ];
+    final textColor = context.textPrimaryColor;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-        child: Row(
-          children: [
-            _buildDateFilterChip(),
-            const SizedBox(width: 8),
-            _buildMoreFiltersChip(),
-            if (selectedFilters.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              ...selectedFilters.map((filter) => Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    child: Chip(
-                      label: Text(filter),
-                      onDeleted: () {
-                        setState(() {
-                          if (filter.startsWith('Status:')) {
-                            _selectedStatuses
-                                .remove(filter.split(': ')[1].toLowerCase());
-                          } else if (filter.startsWith('Vehicle:')) {
-                            _selectedVehicleTypes
-                                .remove(filter.split(': ')[1].toLowerCase());
-                          } else if (filter.startsWith('Plaza:')) {
-                            _selectedPlazaNames.remove(filter.split(': ')[1]);
-                          }
-                        });
-                      },
-                      deleteIcon: const Icon(Icons.close, size: 16),
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
-                      labelStyle: TextStyle(color: AppColors.primary),
-                      deleteIconColor: AppColors.primary,
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+          child: Row(
+            children: [
+              if (selectedFilters.isNotEmpty || _selectedDateRange != null) ...[
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedStatuses.clear();
+                      _selectedVehicleTypes.clear();
+                      _selectedPlazaNames.clear();
+                      _selectedDateRange = null;
+                      _currentPage = 1;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: context.secondaryCardColor,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  )),
+                    child: Text(
+                      strings.resetAllLabel,
+                      style: TextStyle(color: textColor, fontWeight: FontWeight.normal),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              _buildDateFilterChip(strings),
+              const SizedBox(width: 8),
+              _buildMoreFiltersChip(strings),
+              if (selectedFilters.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                ...selectedFilters.map((filter) => Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  child: Chip(
+                    label: Text(filter),
+                    onDeleted: () {
+                      setState(() {
+                        if (filter.startsWith('${strings.labelStatus}:')) {
+                          _selectedStatuses.remove(filter.split(': ')[1].toLowerCase());
+                        } else if (filter.startsWith('${strings.vehicleLabel}:')) {
+                          _selectedVehicleTypes.remove(filter.split(': ')[1].toLowerCase());
+                        } else if (filter.startsWith('${strings.plazaLabel}:')) {
+                          _selectedPlazaNames.remove(filter.split(': ')[1]);
+                        }
+                      });
+                    },
+                    deleteIcon: const Icon(Icons.close, size: 16),
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    labelStyle: TextStyle(color: textColor),
+                    deleteIconColor: textColor,
+                  ),
+                )),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 
   void _showAllFiltersDialog() {
-    final plazaNames = _viewModel.tickets
-        .map((t) => t['plazaName']?.toString().trim() ?? '')
+    final strings = S.of(context);
+    final plazaNames = _viewModel.disputes
+        .map((d) => d['plazaName']?.toString().trim() ?? '')
         .where((name) => name.isNotEmpty)
         .toSet()
         .toList()
-      ..sort((a, b) => a.compareTo(b));
+      ..sort();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: context.cardColor,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              decoration: BoxDecoration(
+                color: context.cardColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               height: MediaQuery.of(context).size.height * 0.8,
               child: Column(
@@ -350,33 +354,28 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                       width: 50,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                        color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600],
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     child: Text(
-                      'Advanced Filters',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
+                      strings.advancedFiltersLabel,
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.textPrimaryColor),
                     ),
                   ),
                   Expanded(
                     child: ListView(
                       children: [
                         _buildFilterSection(
-                          title: 'Dispute Status',
+                          title: strings.disputeStatusLabel,
                           options: [
-                            {'key': 'open', 'label': 'Open'},
-                            {'key': 'inprogress', 'label': 'Inprogress'},
-                            {'key': 'accepted', 'label': 'Accepted'},
-                            {'key': 'rejected', 'label': 'Rejected'},
+                            {'key': 'open', 'label': strings.openDisputesLabel},
+                            {'key': 'inprogress', 'label': strings.inProgressDisputesLabel},
+                            {'key': 'accepted', 'label': strings.acceptedDisputesLabel},
+                            {'key': 'rejected', 'label': strings.rejectedDisputesLabel},
                           ],
                           selectedItems: _selectedStatuses,
                           onChanged: (value, isSelected) {
@@ -390,14 +389,14 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                           },
                         ),
                         _buildFilterSection(
-                          title: 'Vehicle Type',
+                          title: strings.vehicleTypeLabel,
                           options: [
-                            {'key': 'bike', 'label': 'Bike'},
-                            {'key': '3-wheeler', 'label': '3-Wheeler'},
-                            {'key': '4-wheeler', 'label': '4-Wheeler'},
-                            {'key': 'bus', 'label': 'Bus'},
-                            {'key': 'truck', 'label': 'Truck'},
-                            {'key': 'hmv', 'label': 'Heavy Machinery'},
+                            {'key': 'bike', 'label': strings.bikeLabel},
+                            {'key': '3-wheeler', 'label': strings.threeWheelerLabel},
+                            {'key': '4-wheeler', 'label': strings.fourWheelerLabel},
+                            {'key': 'bus', 'label': strings.busLabel},
+                            {'key': 'truck', 'label': strings.truckLabel},
+                            {'key': 'hmv', 'label': strings.heavyMachineryLabel},
                           ],
                           selectedItems: _selectedVehicleTypes,
                           onChanged: (value, isSelected) {
@@ -411,7 +410,7 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                           },
                         ),
                         _buildSearchableFilterSection(
-                          title: 'Plaza Name',
+                          title: strings.plazaNameLabel,
                           options: plazaNames,
                           selectedItems: _selectedPlazaNames,
                           onChanged: (value, isSelected) {
@@ -432,14 +431,9 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                     child: Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.primary,
-                              side: BorderSide(color: AppColors.primary),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
+                          child: CustomButtons.secondaryButton(
+                            height: 40,
+                            text: strings.clearAllLabel,
                             onPressed: () {
                               setDialogState(() {
                                 _selectedStatuses.clear();
@@ -447,26 +441,19 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                                 _selectedPlazaNames.clear();
                               });
                             },
-                            child: const Text('Clear All'),
+                            context: context,
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
+                          child: CustomButtons.primaryButton(
+                            height: 40,
+                            text: strings.applyLabel,
                             onPressed: () {
-                              setState(() {
-                                _currentPage = 1;
-                              });
+                              setState(() => _currentPage = 1);
                               Navigator.pop(context);
                             },
-                            child: const Text('Apply',
-                                style: TextStyle(color: Colors.white)),
+                            context: context,
                           ),
                         ),
                       ],
@@ -487,6 +474,7 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
     required Set<String> selectedItems,
     required Function(String, bool) onChanged,
   }) {
+    final textColor = context.textPrimaryColor;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -494,11 +482,7 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           child: Text(
             title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primary,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
           ),
         ),
         Padding(
@@ -513,10 +497,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                 selected: isSelected,
                 onSelected: (bool value) => onChanged(option['key']!, value),
                 selectedColor: AppColors.primary.withOpacity(0.2),
-                checkmarkColor: AppColors.primary,
-                backgroundColor: Colors.grey[200],
+                checkmarkColor: textColor,
+                backgroundColor: context.secondaryCardColor,
                 labelStyle: TextStyle(
-                  color: isSelected ? AppColors.primary : Colors.black87,
+                  color: isSelected ? textColor : Colors.grey[400],
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),
               );
@@ -524,7 +508,7 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
           ),
         ),
         const SizedBox(height: 16),
-        const Divider(),
+        Divider(color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600]),
       ],
     );
   }
@@ -535,8 +519,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
     required Set<String> selectedItems,
     required Function(String, bool) onChanged,
   }) {
+    final strings = S.of(context);
     final TextEditingController searchController = TextEditingController();
     List<String> filteredOptions = options;
+    final textColor = context.textPrimaryColor;
 
     return StatefulBuilder(
       builder: (context, setLocalState) {
@@ -544,34 +530,39 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
               child: Text(
                 title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
               ),
             ),
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: TextField(
                 controller: searchController,
                 decoration: InputDecoration(
-                  hintText: 'Search $title',
-                  prefixIcon: const Icon(Icons.search),
+                  hintText: strings.searchPlazaHint,
+                  hintStyle: TextStyle(color: Colors.grey[400]),
+                  prefixIcon: Icon(Icons.search, color: textColor),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Colors.grey[400]!),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Colors.grey[400]!),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.primary),
+                  ),
                 ),
+                style: TextStyle(color: textColor),
                 onChanged: (value) {
                   setLocalState(() {
-                    filteredOptions = options
-                        .where((option) =>
-                            option.toLowerCase().contains(value.toLowerCase()))
-                        .toList();
+                    filteredOptions =
+                        options.where((option) => option.toLowerCase().contains(value.toLowerCase())).toList();
                   });
                 },
               ),
@@ -591,13 +582,11 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                         selected: isSelected,
                         onSelected: (bool value) => onChanged(option, value),
                         selectedColor: AppColors.primary.withOpacity(0.2),
-                        checkmarkColor: AppColors.primary,
-                        backgroundColor: Colors.grey[200],
+                        checkmarkColor: textColor,
+                        backgroundColor: context.secondaryCardColor,
                         labelStyle: TextStyle(
-                          color:
-                              isSelected ? AppColors.primary : Colors.black87,
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                          color: isSelected ? textColor : Colors.grey[400],
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                         ),
                       );
                     }).toList(),
@@ -606,72 +595,59 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
               ),
             ),
             const SizedBox(height: 16),
-            const Divider(),
+            Divider(color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600]),
           ],
         );
       },
     );
   }
 
-  Widget _buildSearchField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        _buildFilterChipsRow(),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-          child: CustomFormFields.searchFormField(
-            controller: _searchController,
-            hintText: 'Search by Ticket ID, Status, Plaza, Vehicle Number...',
-            context: context,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(
-            'Last updated: ${DateTime.now().toString().substring(0, 16)}. Swipe down to refresh.',
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<DateTimeRange?> _selectCustomDateRange(
-      BuildContext context, DateTimeRange? initialRange) async {
+  Future<DateTimeRange?> _selectCustomDateRange(BuildContext context, DateTimeRange? initialRange) async {
+    final strings = S.of(context);
     final earliestDate = DateTime.now().subtract(const Duration(days: 365 * 5));
+
     final picked = await showDateRangePicker(
       context: context,
       firstDate: earliestDate,
       lastDate: DateTime.now(),
       initialDateRange: initialRange,
-      builder: (context, child) => Theme(
-        data: ThemeData.light().copyWith(
-          colorScheme: ColorScheme.light(
-            primary: AppColors.primary,
-            onPrimary: Colors.white,
-            surface: Colors.white,
-            onSurface: Colors.black,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme(
+              brightness: Theme.of(context).brightness,
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              secondary: AppColors.primary.withOpacity(0.2),
+              onSecondary: context.textPrimaryColor,
+              surface: context.cardColor,
+              onSurface: context.textPrimaryColor,
+              background: context.cardColor,
+              onBackground: context.textPrimaryColor,
+              error: Colors.red,
+              onError: Colors.white,
+            ),
+            dialogBackgroundColor: context.cardColor,
+            textTheme: TextTheme(
+              bodyMedium: TextStyle(color: context.textPrimaryColor),
+              titleLarge: TextStyle(color: context.textPrimaryColor),
+            ),
           ),
-          dialogBackgroundColor: Colors.white,
-        ),
-        child: child!,
-      ),
+          child: child!,
+        );
+      },
     );
 
     if (picked == null) return null;
 
-    final start =
-        picked.start.isBefore(earliestDate) ? earliestDate : picked.start;
-    final end =
-        picked.end.isAfter(DateTime.now()) ? DateTime.now() : picked.end;
+    final start = picked.start.isBefore(earliestDate) ? earliestDate : picked.start;
+    final end = picked.end.isAfter(DateTime.now()) ? DateTime.now() : picked.end;
 
     final maxAllowedRange = const Duration(days: 365);
     if (end.difference(start) > maxAllowedRange) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please select a date range within one year.'),
+          content: Text(strings.dateRangeTooLongWarning, style: TextStyle(color: context.textPrimaryColor)),
           backgroundColor: Colors.red,
         ),
       );
@@ -682,23 +658,23 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
   }
 
   void _showDateFilterDialog() {
+    final strings = S.of(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: context.cardColor,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         DateTimeRange? tempDateRange = _selectedDateRange;
         String? selectedOption = _getSelectedOption(tempDateRange);
+        final textColor = context.textPrimaryColor;
 
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              decoration: BoxDecoration(
+                color: context.cardColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               height: MediaQuery.of(context).size.height * 0.4,
               child: Column(
@@ -709,26 +685,20 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                       width: 50,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                        color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600],
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     child: Text(
-                      'Select Date Range',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
+                      strings.selectDateRangeLabel,
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Column(
@@ -737,16 +707,14 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                           Row(
                             children: [
                               _buildQuickDateChip(
-                                label: 'Today',
+                                label: strings.todayLabel,
                                 isSelected: selectedOption == 'Today',
                                 onTap: () {
                                   setDialogState(() {
                                     final now = DateTime.now();
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(
-                                          now.year, now.month, now.day),
-                                      end: DateTime(now.year, now.month,
-                                          now.day, 23, 59, 59),
+                                      start: DateTime(now.year, now.month, now.day),
+                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
                                     );
                                     selectedOption = 'Today';
                                   });
@@ -754,22 +722,14 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                               ),
                               const SizedBox(width: 8),
                               _buildQuickDateChip(
-                                label: 'Yesterday',
+                                label: strings.yesterdayLabel,
                                 isSelected: selectedOption == 'Yesterday',
                                 onTap: () {
                                   setDialogState(() {
-                                    final yesterday = DateTime.now()
-                                        .subtract(const Duration(days: 1));
+                                    final yesterday = DateTime.now().subtract(const Duration(days: 1));
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(yesterday.year,
-                                          yesterday.month, yesterday.day),
-                                      end: DateTime(
-                                          yesterday.year,
-                                          yesterday.month,
-                                          yesterday.day,
-                                          23,
-                                          59,
-                                          59),
+                                      start: DateTime(yesterday.year, yesterday.month, yesterday.day),
+                                      end: DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59),
                                     );
                                     selectedOption = 'Yesterday';
                                   });
@@ -777,17 +737,14 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                               ),
                               const SizedBox(width: 8),
                               _buildQuickDateChip(
-                                label: 'Last 7 Days',
+                                label: strings.last7DaysLabel,
                                 isSelected: selectedOption == 'Last 7 Days',
                                 onTap: () {
                                   setDialogState(() {
                                     final now = DateTime.now();
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(
-                                              now.year, now.month, now.day)
-                                          .subtract(const Duration(days: 7)),
-                                      end: DateTime(now.year, now.month,
-                                          now.day, 23, 59, 59),
+                                      start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7)),
+                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
                                     );
                                     selectedOption = 'Last 7 Days';
                                   });
@@ -796,21 +753,18 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                               const SizedBox(width: 8),
                             ],
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Row(
                             children: [
                               _buildQuickDateChip(
-                                label: 'Last 30 Days',
+                                label: strings.last30DaysLabel,
                                 isSelected: selectedOption == 'Last 30 Days',
                                 onTap: () {
                                   setDialogState(() {
                                     final now = DateTime.now();
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(
-                                              now.year, now.month, now.day)
-                                          .subtract(const Duration(days: 30)),
-                                      end: DateTime(now.year, now.month,
-                                          now.day, 23, 59, 59),
+                                      start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 30)),
+                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
                                     );
                                     selectedOption = 'Last 30 Days';
                                   });
@@ -818,11 +772,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                               ),
                               const SizedBox(width: 8),
                               _buildQuickDateChip(
-                                label: 'Custom',
+                                label: strings.customLabel,
                                 isSelected: selectedOption == 'Custom',
                                 onTap: () async {
-                                  final picked = await _selectCustomDateRange(
-                                      context, tempDateRange);
+                                  final picked = await _selectCustomDateRange(context, tempDateRange);
                                   if (picked != null) {
                                     setDialogState(() {
                                       tempDateRange = picked;
@@ -837,53 +790,35 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                       ),
                     ),
                   ),
-                  if (selectedOption == 'Custom' && tempDateRange != null) ...[
+                  if (selectedOption == 'Custom' && tempDateRange != null)
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16.0, vertical: 8.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                       child: Text(
-                        'Selected Range: ${DateFormat('dd MMM yyyy').format(tempDateRange!.start)} - '
-                        '${DateFormat('dd MMM yyyy').format(tempDateRange!.end)}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.primary,
-                        ),
+                        '${strings.selectedRangeLabel}: ${DateFormat('dd MMM yyyy').format(tempDateRange!.start)} - ${DateFormat('dd MMM yyyy').format(tempDateRange!.end)}',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor),
                       ),
                     ),
-                  ],
-                  Spacer(),
+                  const Spacer(),
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.primary,
-                              side: BorderSide(color: AppColors.primary),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            onPressed: () {
-                              setDialogState(() {
-                                tempDateRange = null;
-                                selectedOption = null;
-                              });
-                            },
-                            child: const Text('Clear'),
+                          child: CustomButtons.secondaryButton(
+                            height: 40,
+                            text: strings.clearLabel,
+                            onPressed: () => setDialogState(() {
+                              tempDateRange = null;
+                              selectedOption = null;
+                            }),
+                            context: context,
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
+                          child: CustomButtons.primaryButton(
+                            height: 40,
+                            text: strings.applyLabel,
                             onPressed: () {
                               setState(() {
                                 _selectedDateRange = tempDateRange;
@@ -891,8 +826,7 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
                               });
                               Navigator.pop(context);
                             },
-                            child: const Text('Apply',
-                                style: TextStyle(color: Colors.white)),
+                            context: context,
                           ),
                         ),
                       ],
@@ -907,6 +841,32 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
     );
   }
 
+  Widget _buildQuickDateChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final textColor = context.textPrimaryColor;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withOpacity(0.2) : context.secondaryCardColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? AppColors.primary : Colors.transparent, width: 1),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? AppColors.primary : textColor,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
   String? _getSelectedOption(DateTimeRange? range) {
     if (range == null) return null;
     if (_isTodayRange(range)) return 'Today';
@@ -916,224 +876,117 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
     return 'Custom';
   }
 
-  Widget _buildQuickDateChip({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withOpacity(0.2)
-              : Colors.grey[200],
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.transparent,
-            width: 1,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? AppColors.primary : Colors.black87,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
-      ),
-    );
-  }
-
   bool _isTodayRange(DateTimeRange range) {
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-    return range.start.isAtSameMomentAs(todayStart) &&
-        range.end.isAtSameMomentAs(todayEnd);
+    return range.start == todayStart && range.end.isAtSameMomentAs(todayEnd);
   }
 
   bool _isYesterdayRange(DateTimeRange range) {
     final yesterday = DateTime.now().subtract(const Duration(days: 1));
-    final yesterdayStart =
-        DateTime(yesterday.year, yesterday.month, yesterday.day);
-    final yesterdayEnd =
-        DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
-    return range.start.isAtSameMomentAs(yesterdayStart) &&
-        range.end.isAtSameMomentAs(yesterdayEnd);
+    final yesterdayStart = DateTime(yesterday.year, yesterday.month, yesterday.day);
+    final yesterdayEnd = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
+    return range.start == yesterdayStart && range.end.isAtSameMomentAs(yesterdayEnd);
   }
 
   bool _isLast7DaysRange(DateTimeRange range) {
     final now = DateTime.now();
-    final sevenDaysAgo = DateTime(now.year, now.month, now.day)
-        .subtract(const Duration(days: 7));
+    final sevenDaysAgo = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7));
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-    return range.start.isAtSameMomentAs(sevenDaysAgo) &&
-        range.end.isAtSameMomentAs(todayEnd);
+    return range.start == sevenDaysAgo && range.end.isAtSameMomentAs(todayEnd);
   }
 
   bool _isLast30DaysRange(DateTimeRange range) {
     final now = DateTime.now();
-    final thirtyDaysAgo = DateTime(now.year, now.month, now.day)
-        .subtract(const Duration(days: 30));
+    final thirtyDaysAgo = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 30));
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-    return range.start.isAtSameMomentAs(thirtyDaysAgo) &&
-        range.end.isAtSameMomentAs(todayEnd);
+    return range.start == thirtyDaysAgo && range.end.isAtSameMomentAs(todayEnd);
   }
 
-  Widget _buildTicketCard(Map<String, dynamic> ticket) {
-    final entryTimeString = ticket['entryTime']?.toString() ?? '';
-    final entryTime = DateTime.tryParse(entryTimeString);
-    final formattedEntryTime = entryTime != null
-        ? DateFormat('dd MMM, hh:mm a').format(entryTime)
-        : 'N/A';
-
-    Color statusColor;
-    switch (ticket['status']?.toString().toLowerCase() ?? '') {
-      case 'open':
-        statusColor = Colors.green;
-        break;
-      case 'inprogress':
-        statusColor = Colors.orange;
-        break;
-      case 'accepted':
-        statusColor = Colors.blue;
-        break;
-      case 'rejected':
-        statusColor = Colors.red;
-        break;
-      default:
-        statusColor = Colors.grey;
-    }
+  Widget _buildDisputeCard(Map<String, dynamic> dispute, S strings) {
+    final entryTime = DateTime.tryParse(dispute['entryTime']?.toString() ?? '');
+    final entryTimeString = entryTime != null ? DateFormat('dd MMM, hh:mm a').format(entryTime) : strings.naLabel;
+    final textColor = context.textPrimaryColor;
+    final status = dispute['status']?.toString().toLowerCase() ?? 'open';
+    final statusColor = _getStatusColor(status);
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      elevation: Theme.of(context).cardTheme.elevation,
+      color: context.secondaryCardColor,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         side: BorderSide(color: statusColor.withOpacity(0.2), width: 1),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
         onTap: () {
-          developer.log('Ticket card tapped: ${ticket['ticketID']}');
-          if (widget.viewDisputeOptionSelect) {
+          if (widget.viewDisputeOptionSelect) { // Fixed syntax
             Navigator.pushNamed(
               context,
-              AppRoutes.disputeDetail,
-              arguments: {'ticketId': ticket['ticketID'].toString()},
+              AppRoutes.disputeDetails,
+              arguments: {'ticketId': dispute['ticketId']},
             ).then((_) => _refreshData());
           } else {
             Navigator.pushNamed(
               context,
               AppRoutes.processDispute,
-              arguments: {'ticketId': ticket['ticketID'].toString()},
+              arguments: {'ticketId': dispute['ticketId']},
             ).then((_) => _refreshData());
           }
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.only(left: 8.0, right: 4, top: 8, bottom: 8),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            // TODO: Replace with actual plaza name lookup from plazaID
-                            '${ticket['plazaName']?.toString() ?? 'Plaza ${ticket['plazaID']}' ?? 'N/A'} | ${ticket['entryLaneId']?.toString() ?? 'N/A'}',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.normal,
-                              color: Colors.black,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            ticket['status']?.toString() ?? 'Unknown',
-                            style: TextStyle(
-                              color: statusColor,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
                     Text(
-                      ticket['ticketRefID']?.toString() ?? 'N/A',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.normal,
-                        color: Colors.black,
+                      '${dispute['plazaName']?.toString() ?? strings.naLabel} | ${dispute['disputeId']?.toString() ?? strings.naLabel}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: textColor),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${dispute['vehicleNumber']?.toString() ?? strings.naLabel} | ${dispute['vehicleType']?.toString() ?? strings.naLabel} | $entryTimeString',
+                      style: TextStyle(color: textColor, fontSize: 14),
+                    ),
+                    if (dispute['disputeReason']?.isNotEmpty ?? false)
+                      Text(
+                        dispute['disputeReason'],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: textColor, fontSize: 14),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          ticket['vehicleNumber']?.toString() ?? 'N/A',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.normal,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 6.0),
-                          child: Text('|',
-                              style: TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold)),
-                        ),
-                        Text(
-                          ticket['vehicleType']?.toString() ?? 'N/A',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.normal,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 6.0),
-                          child: Text('|',
-                              style: TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold)),
-                        ),
-                        Text(
-                          formattedEntryTime,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.normal,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                color: AppColors.primary,
-                size: 20,
+              SizedBox(
+                width: 75,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        status.capitalize(),
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color, size: 20),
+                  ],
+                ),
               ),
             ],
           ),
@@ -1142,108 +995,160 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
     );
   }
 
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'open':
+        return Colors.blue;
+      case 'inprogress':
+        return Colors.orange;
+      case 'accepted':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
   Widget _buildShimmerList() {
     return ListView.builder(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
       itemCount: 10,
-      itemBuilder: (context, index) => Shimmer.fromColors(
-        baseColor: Colors.grey[300]!,
-        highlightColor: Colors.grey[100]!,
-        child: Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: ListTile(
-            title: Container(width: 100, height: 16, color: Colors.white),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(width: 150, height: 12, color: Colors.white),
-                Container(width: 120, height: 12, color: Colors.white),
-              ],
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: Theme.of(context).brightness == Brightness.light
+              ? AppColors.shimmerBaseLight
+              : AppColors.shimmerBaseDark,
+          highlightColor: Theme.of(context).brightness == Brightness.light
+              ? AppColors.shimmerHighlightLight
+              : AppColors.shimmerHighlightDark,
+          child: Card(
+            elevation: Theme.of(context).cardTheme.elevation,
+            shape: Theme.of(context).cardTheme.shape,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(width: 150, height: 18, color: context.backgroundColor),
+                        const SizedBox(height: 4),
+                        Container(width: 100, height: 14, color: context.backgroundColor),
+                        const SizedBox(height: 4),
+                        Container(width: 120, height: 14, color: context.backgroundColor),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildErrorState() {
-    String errorTitle = 'Unable to Load Disputes';
-    String errorMessage = 'Something went wrong. Please try again.';
-    final error = _viewModel.error;
+  Widget _buildErrorState(S strings) {
+    String errorTitle = strings.errorUnableToLoadDisputes;
+    String errorMessage = strings.errorGeneric;
+
+    final error = _viewModel.errorMessage;
     if (error != null) {
-      developer.log('Error occurred: $error');
-      if (error is NoInternetException) {
-        errorTitle = 'No Internet Connection';
-        errorMessage = 'Please check your internet connection and try again.';
-      } else if (error is RequestTimeoutException) {
-        errorTitle = 'Request Timed Out';
-        errorMessage =
-            'The server is taking too long to respond. Please try again later.';
-      } else if (error is HttpException) {
-        errorTitle = 'Server Error';
-        errorMessage = 'We couldn’t reach the server. Please try again.';
-        switch (error.statusCode) {
-          case 400:
-            errorTitle = 'Invalid Request';
-            errorMessage = 'The request was incorrect.';
-            break;
-          case 401:
-            errorTitle = 'Unauthorized';
-            errorMessage = 'Please log in again.';
-            break;
-          case 403:
-            errorTitle = 'Access Denied';
-            errorMessage = 'You don’t have permission.';
-            break;
-          case 404:
-            errorTitle = 'Not Found';
-            errorMessage = 'No disputes were found.';
-            break;
-          case 500:
-            errorTitle = 'Server Issue';
-            errorMessage = 'Problem on our end.';
-            break;
-        }
-      } else if (error is ServiceException) {
-        errorTitle = 'Unexpected Error';
-        errorMessage = 'An unexpected issue occurred.';
+      developer.log('Error occurred: $error', name: 'DisputeList');
+      switch (error) {
+        case 'No internet connection. Please check your network.':
+          errorTitle = strings.errorNoInternet;
+          errorMessage = strings.errorNoInternetMessage;
+          break;
+        case 'Request timed out. Please try again.':
+          errorTitle = strings.errorRequestTimeout;
+          errorMessage = strings.errorRequestTimeoutMessage;
+          break;
+        default:
+          if (error.contains('HTTP error')) {
+            errorTitle = strings.errorServerError;
+            errorMessage = strings.errorServerErrorMessage;
+            if (error.contains('400')) {
+              errorTitle = strings.errorInvalidRequest;
+              errorMessage = strings.errorInvalidRequestMessage;
+            } else if (error.contains('401')) {
+              errorTitle = strings.errorUnauthorized;
+              errorMessage = strings.errorUnauthorizedMessage;
+            } else if (error.contains('403')) {
+              errorTitle = strings.errorAccessDenied;
+              errorMessage = strings.errorAccessDeniedMessage;
+            } else if (error.contains('404')) {
+              errorTitle = strings.errorNotFound;
+              errorMessage = strings.errorNotFoundMessage;
+            } else if (error.contains('500')) {
+              errorTitle = strings.errorServerIssue;
+              errorMessage = strings.errorServerIssueMessage;
+            } else if (error.contains('502')) {
+              errorTitle = strings.errorServiceUnavailable;
+              errorMessage = strings.errorServiceUnavailableMessage;
+            } else if (error.contains('503')) {
+              errorTitle = strings.errorServiceOverloaded;
+              errorMessage = strings.errorServiceOverloadedMessage;
+            }
+          } else {
+            errorTitle = strings.errorUnexpected;
+            errorMessage = error;
+          }
       }
     }
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 50, color: Colors.red),
-          SizedBox(height: 16),
-          Text(errorTitle,
-              style:
-                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          SizedBox(height: 8),
-          Text(errorMessage,
-              style: const TextStyle(fontSize: 14),
-              textAlign: TextAlign.center),
-          SizedBox(height: 16),
-          ElevatedButton(onPressed: _refreshData, child: const Text('Retry')),
+          Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
+          const SizedBox(height: 16),
+          Text(errorTitle, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.textPrimaryColor)),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(errorMessage, style: TextStyle(fontSize: 16, color: context.textPrimaryColor), textAlign: TextAlign.center),
+          ),
+          const SizedBox(height: 24),
+          CustomButtons.primaryButton(
+            height: 40,
+            width: 150,
+            text: strings.buttonRetry,
+            onPressed: _refreshData,
+            context: context,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(S strings) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.history_toggle_off, size: 50, color: Colors.grey),
-          SizedBox(height: 16),
-          Text(
-            'No disputes found.',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+          Icon(
+            Icons.history_toggle_off,
+            size: 50,
+            color: Colors.grey[400],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 16),
           Text(
-            'Try adjusting your filters or swipe down to refresh.',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
-            textAlign: TextAlign.center,
+            strings.noDisputesFound,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textPrimaryColor),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(
+              strings.adjustFiltersMessage,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
+              textAlign: TextAlign.center,
+            ),
           ),
         ],
       ),
@@ -1252,66 +1157,83 @@ class _DisputeListState extends State<DisputeList> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
-    final filteredTickets = _getFilteredTickets(_viewModel.tickets);
-    final totalPages = (filteredTickets.length / _itemsPerPage)
-        .ceil()
-        .clamp(1, double.infinity)
-        .toInt();
-    final paginatedTickets = _getPaginatedTickets(filteredTickets);
+    final strings = S.of(context);
+    return Consumer<DisputeListViewModel>(
+      builder: (context, viewModel, _) {
+        final filteredDisputes = _getFilteredDisputes(viewModel.disputes);
+        final totalPages = getTotalPages(filteredDisputes);
+        final paginatedDisputes = getPaginatedItems(filteredDisputes, _currentPage);
 
-    return Scaffold(
-      backgroundColor: AppColors.lightThemeBackground,
-      appBar: CustomAppBar.appBarWithNavigation(
-        screenTitle: "Dispute Tickets",
-        onPressed: () => Navigator.pop(context),
-        darkBackground: true,
-        context: context,
-      ),
-      body: Column(
-        children: [
-          _buildSearchField(),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _refreshData,
-              child: Stack(
-                children: [
-                  ListView(
-                    controller: _scrollController,
-                    physics: const AlwaysScrollableScrollPhysics(),
+        return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: CustomAppBar.appBarWithNavigationAndActions(
+            screenTitle: strings.titleDisputeList, // Add appropriate title
+            onPressed: () => Navigator.pop(context),
+            darkBackground: Theme.of(context).brightness == Brightness.dark,
+            actions: [],
+            context: context,
+          ),
+          body: Column(
+            children: [
+              const SizedBox(height: 4),
+              _buildFilterChipsRow(strings),
+              _buildSearchField(strings),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _refreshData,
+                  child: Stack(
                     children: [
-                      if (_viewModel.error != null)
-                        SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.6,
-                          child: _buildErrorState(),
-                        )
-                      else if (filteredTickets.isEmpty && !_isLoading)
-                        SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.6,
-                          child: _buildEmptyState(),
-                        )
-                      else if (!_isLoading)
-                        ...paginatedTickets
-                            .map((ticket) => _buildTicketCard(ticket)),
+                      ListView(
+                        controller: _scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          const SizedBox(height: 8),
+                          if (viewModel.errorMessage != null && !viewModel.isLoading)
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.6,
+                              child: _buildErrorState(strings),
+                            )
+                          else if (filteredDisputes.isEmpty && !viewModel.isLoading)
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.6,
+                              child: _buildEmptyState(strings),
+                            )
+                          else if (!viewModel.isLoading)
+                              ...paginatedDisputes.map((dispute) => _buildDisputeCard(dispute, strings)),
+                        ],
+                      ),
+                      if (viewModel.isLoading)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: _buildShimmerList(),
+                        ),
                     ],
                   ),
-                  if (_isLoading) _buildShimmerList(),
-                ],
+                ),
+              ),
+            ],
+          ),
+          bottomNavigationBar: filteredDisputes.isNotEmpty && !viewModel.isLoading
+              ? Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            padding: const EdgeInsets.all(4.0),
+            child: SafeArea(
+              child: PaginationControls(
+                currentPage: _currentPage,
+                totalPages: totalPages,
+                onPageChange: _updatePage,
               ),
             ),
-          ),
-          if (!_isLoading && filteredTickets.isNotEmpty)
-            PaginationControls(
-              currentPage: _currentPage,
-              totalPages: totalPages,
-              onPageChange: _updatePage,
-            ),
-        ],
-      ),
+          )
+              : null,
+        );
+      },
     );
   }
 }
 
 extension StringExtension on String {
-  String capitalize() =>
-      "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
+  String capitalize() {
+    return isEmpty ? this : this[0].toUpperCase() + substring(1).toLowerCase();
+  }
 }

@@ -114,15 +114,16 @@ class _PlazaListScreenState extends State<PlazaListScreen>
     if (!mounted) return;
     await customCacheManager.emptyCache();
     _viewModel.clearPlazaImages();
-    final userId = await _secureStorage.getUserId();
-    if (userId != null) {
-      developer.log('Refreshing plaza list for userId: $userId', name: 'PlazaList');
+    final userData = await _secureStorage.getUserData(); // Get userData
+    if (userData != null && userData['entityId'] != null) {
+      final entityId = userData['entityId'].toString();
+      developer.log('Refreshing plaza list for entityId: $entityId', name: 'PlazaList');
       // Fetch plazas
-      await _viewModel.fetchUserPlazas(userId);
+      await _viewModel.fetchUserPlazas(entityId);
 
       // Check if the fetch was successful before fetching images
       if (!mounted) return; // Check mount status again after async gap
-      if (_viewModel.error == null) { // <--- Check for error
+      if (_viewModel.error == null) {
         await _fetchImagesForCurrentPage();
       } else {
         developer.log('Skipping image fetch during refresh due to error in fetching plazas.', name: 'PlazaList');

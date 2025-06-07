@@ -1,5 +1,3 @@
-import 'package:merchant_app/config/api_config.dart';
-
 enum Status {
   Open,
   Rejected,
@@ -131,11 +129,11 @@ class Ticket {
   final double? totalCharges;
   final int? parkingDuration;
   final String? disputeStatus;
-  final String? disputeId;
+  final int? disputeId; // Changed to int?
   final String? paymentMode;
   final List<TicketPayment>? payments;
-  final String? geoLatitude; // New field
-  final String? geoLongitude; // New field
+  final String? geoLatitude;
+  final String? geoLongitude;
 
   Ticket({
     this.ticketId,
@@ -193,7 +191,8 @@ class Ticket {
     int? parseInt(dynamic value) {
       if (value == null) return null;
       if (value is int) return value;
-      return int.tryParse(value.toString());
+      if (value is String) return int.tryParse(value);
+      return null;
     }
 
     DateTime? parseDateTime(dynamic value) {
@@ -239,7 +238,7 @@ class Ticket {
       totalCharges: successfulPayment?.totalTransaction ?? parseDouble(json['total_transaction']),
       parkingDuration: successfulPayment?.duration ?? parseInt(json['duration']),
       disputeStatus: json['dispute_status'] as String? ?? 'Not Raised',
-      disputeId: json['disputeId'] as String?,
+      disputeId: parseInt(json['disputeId']), // Updated to use parseInt
       paymentMode: successfulPayment?.paymentMethod ?? json['payment_method'] as String?,
       payments: paymentsList,
       geoLatitude: json['geo_latitude'] as String?,
@@ -273,7 +272,7 @@ class Ticket {
     double? totalCharges,
     int? parkingDuration,
     String? disputeStatus,
-    String? disputeId,
+    int? disputeId, // Updated to int?
     String? paymentMode,
     List<TicketPayment>? payments,
     String? geoLatitude,
@@ -340,10 +339,10 @@ class Ticket {
       'total_transaction': totalCharges,
       'duration': parkingDuration,
       'dispute_status': disputeStatus,
-      'disputeId': disputeId,
+      'disputeId': disputeId, // Updated to int?
       'payment_method': paymentMode,
-      'geo_latitude': geoLatitude, // New field
-      'geo_longitude': geoLongitude, // New field
+      'geo_latitude': geoLatitude,
+      'geo_longitude': geoLongitude,
       'payments': payments?.map((p) => {
         'id': p.id,
         'ticket_id': p.ticketId,
@@ -390,8 +389,9 @@ class Ticket {
       'entry_lane_direction': entryLaneDirection ?? 'Unknown',
       if (capturedImages != null && capturedImages!.isNotEmpty) 'captured_images': capturedImages,
       'remarks': remarks ?? '',
-      'geo_latitude': geoLatitude, // New field
-      'geo_longitude': geoLongitude, // New field
+      'geo_latitude': geoLatitude,
+      'geo_longitude': geoLongitude,
+      if (disputeId != null) 'disputeId': disputeId, // Updated to int?
     };
     return json;
   }
@@ -411,8 +411,8 @@ class Ticket {
       'entry_lane_direction': entryLaneDirection ?? 'Unknown',
       if (capturedImages != null && capturedImages!.isNotEmpty) 'captured_images': capturedImages,
       'remarks': remarks ?? '',
+      if (disputeId != null) 'disputeId': disputeId, // Updated to int?
     };
-    // json.removeWhere((key, value) => value == null); // Optional: remove nulls
     return json;
   }
 

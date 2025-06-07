@@ -137,3 +137,12 @@ class EmailInUseException implements Exception {
   @override
   String toString() => 'EmailInUseException: $message';
 }
+
+class UnauthenticatedException implements Exception {
+  final String message;
+
+  UnauthenticatedException([this.message = 'Authentication failed. Please log in again.']);
+
+  @override
+  String toString() => 'UnauthenticatedException: $message';
+}

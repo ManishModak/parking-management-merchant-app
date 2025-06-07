@@ -566,6 +566,9 @@ class BasicDetailsViewModel extends ChangeNotifier {
     for (var key in stringKeys) {
       if (payload[key] is String) {
         payload[key] = payload[key].toString().trim();
+        if (key == 'email') {
+          payload[key] = payload[key].toString().toLowerCase();
+        }
       }
     }
 

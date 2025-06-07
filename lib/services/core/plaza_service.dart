@@ -53,7 +53,7 @@ class PlazaService {
 
     developer.log(
         '[PLAZA] Fetching user plazas at URL: $fullUrl', name: 'PlazaService');
-    developer.log('[PLAZA] User ID: $userId', name: 'PlazaService');
+    developer.log('[PLAZA] Entity Id: $userId', name: 'PlazaService');
 
     try {
       final response = await _client

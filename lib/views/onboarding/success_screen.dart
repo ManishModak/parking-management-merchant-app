@@ -97,7 +97,7 @@ class _SuccessScreenState extends State<SuccessScreen> with SingleTickerProvider
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
                 CustomButtons.primaryButton(
                   height: 50,
                   text: strings.buttonContinue,

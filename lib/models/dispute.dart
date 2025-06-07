@@ -62,7 +62,7 @@ class Dispute {
       status: json['status'] as String? ?? 'Open',
       paymentTime: json['paymentTime'] as String?,
       paymentMode: json['paymentMode'] as String?,
-      vehicleNumber: json['vehicleNumber'] as String? ?? '', // Fixed: use vehicleNumber
+      vehicleNumber: json['vehicleNumber'] as String? ?? '',
       vehicleType: json['vehicleType'] as String? ?? '',
       parkingDuration: json['parkingDuration']?.toString() ?? '',
       fareAmount: tryParseDouble(json['fareAmount']) ?? 0.0,
@@ -97,7 +97,7 @@ class Dispute {
       'status': status,
       'paymentTime': paymentTime,
       'paymentMode': paymentMode ?? '',
-      'vehicleNumber': vehicleNumber, // Fixed: use vehicleNumber
+      'vehicleNumber': vehicleNumber,
       'vehicleType': vehicleType,
       'parkingDuration': parkingDuration,
       'fareAmount': fareAmount,
@@ -123,7 +123,7 @@ class Dispute {
       'status': status,
       'paymentTime': paymentTime,
       'paymentMode': paymentMode,
-      'vehicleNumber': vehicleNumber, // Fixed: use vehicleNumber
+      'vehicleNumber': vehicleNumber,
       'vehicleType': vehicleType,
       'parkingDuration': parkingDuration,
       'fareAmount': fareAmount,
@@ -158,7 +158,7 @@ class Dispute {
       return error;
     }
     if (ticketCreationTime.isEmpty ||
-        !RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$').hasMatch(ticketCreationTime)) {
+        !RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$').hasMatch(ticketCreationTime)) {
       final error = 'Ticket creation time must be a valid ISO date.';
       developer.log('Validation failed: $error, ticketCreationTime=$ticketCreationTime',
           name: 'Dispute.ValidateForCreate');
@@ -170,7 +170,7 @@ class Dispute {
       return error;
     }
     if (paymentTime != null &&
-        !RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$').hasMatch(paymentTime!)) {
+        !RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$').hasMatch(paymentTime!)) {
       final error = 'Payment time must be a valid ISO date if provided.';
       developer.log('Validation failed: $error, paymentTime=$paymentTime',
           name: 'Dispute.ValidateForCreate');
@@ -222,30 +222,82 @@ class Dispute {
   }
 
   String? validateForUpdate() {
-    if (disputeId == null || disputeId! < 1) return 'Dispute ID must be a positive number.';
-    if (userId < 1) return 'User ID must be a positive number.';
-    if (ticketId.isEmpty) return 'Ticket ID cannot be empty.';
-    if (plazaId < 1) return 'Plaza ID must be a positive number.';
-    if (ticketCreationTime.isEmpty ||
-        !RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$').hasMatch(ticketCreationTime)) {
-      return 'Ticket creation time must be a valid ISO date.';
+    if (disputeId == null || disputeId! < 1) {
+      final error = 'Dispute ID must be a positive number.';
+      developer.log('Validation failed: $error', name: 'Dispute.ValidateForUpdate');
+      return error;
     }
-    if (!validStatuses.contains(status)) return 'Invalid status. Must be one of: ${validStatuses.join(", ")}';
+    if (userId < 1) {
+      final error = 'User ID must be a positive number.';
+      developer.log('Validation failed: $error', name: 'Dispute.ValidateForUpdate');
+      return error;
+    }
+    if (ticketId.isEmpty) {
+      final error = 'Ticket ID cannot be empty.';
+      developer.log('Validation failed: $error', name: 'Dispute.ValidateForUpdate');
+      return error;
+    }
+    if (plazaId < 1) {
+      final error = 'Plaza ID must be a positive number.';
+      developer.log('Validation failed: $error', name: 'Dispute.ValidateForUpdate');
+      return error;
+    }
+    if (ticketCreationTime.isEmpty ||
+        !RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$').hasMatch(ticketCreationTime)) {
+      final error = 'Ticket creation time must be a valid ISO date.';
+      developer.log('Validation failed: $error, ticketCreationTime=$ticketCreationTime',
+          name: 'Dispute.ValidateForUpdate');
+      return error;
+    }
+    if (!validStatuses.contains(status)) {
+      final error = 'Invalid status. Must be one of: ${validStatuses.join(", ")}';
+      developer.log('Validation failed: $error', name: 'Dispute.ValidateForUpdate');
+      return error;
+    }
     if (paymentTime != null &&
-        !RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$').hasMatch(paymentTime!)) {
-      return 'Payment time must be a valid ISO date if provided.';
+        !RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$').hasMatch(paymentTime!)) {
+      final error = 'Payment time must be a valid ISO date if provided.';
+      developer.log('Validation failed: $error, paymentTime=$paymentTime',
+          name: 'Dispute.ValidateForUpdate');
+      return error;
     }
     if (vehicleNumber.isEmpty || !RegExp(vehicleNumberPattern).hasMatch(vehicleNumber)) {
-      return 'Vehicle number must match pattern: XX12XX1234 (e.g., MH12AB1234).';
+      final error = 'Vehicle number must match pattern: XX12XX1234 (e.g., MH12AB1234).';
+      developer.log('Validation failed: $error, vehicleNumber=$vehicleNumber',
+          name: 'Dispute.ValidateForUpdate');
+      return error;
     }
-    if (vehicleType.isEmpty) return 'Vehicle type cannot be empty.';
-    if (fareAmount < 0) return 'Fare amount must be non-negative.';
-    if (paymentAmount < 0) return 'Payment amount must be non-negative.';
-    if (disputeAmount < 0) return 'Dispute amount must be non-negative.';
+    if (vehicleType.isEmpty) {
+      final error = 'Vehicle type cannot be empty.';
+      developer.log('Validation failed: $error', name: 'Dispute.ValidateForUpdate');
+      return error;
+    }
+    if (fareAmount < 0) {
+      final error = 'Fare amount must be non-negative.';
+      developer.log('Validation failed: $error', name: 'Dispute.ValidateForUpdate');
+      return error;
+    }
+    if (paymentAmount < 0) {
+      final error = 'Payment amount must be non-negative.';
+      developer.log('Validation failed: $error', name: 'Dispute.ValidateForUpdate');
+      return error;
+    }
+    if (disputeAmount < 0) {
+      final error = 'Dispute amount must be non-negative.';
+      developer.log('Validation failed: $error', name: 'Dispute.ValidateForUpdate');
+      return error;
+    }
     if (disputeReason.isEmpty || disputeReason.length < 3 || disputeReason.length > 255) {
-      return 'Dispute reason must be between 3 and 255 characters.';
+      final error = 'Dispute reason must be between 3 and 255 characters.';
+      developer.log('Validation failed: $error', name: 'Dispute.ValidateForUpdate');
+      return error;
     }
-    if (remarks != null && remarks!.length > 500) return 'Remarks must not exceed 500 characters.';
+    if (remarks != null && remarks!.length > 500) {
+      final error = 'Remarks must not exceed 500 characters.';
+      developer.log('Validation failed: $error', name: 'Dispute.ValidateForUpdate');
+      return error;
+    }
+    developer.log('Validation passed for Dispute', name: 'Dispute.ValidateForUpdate');
     return null;
   }
 

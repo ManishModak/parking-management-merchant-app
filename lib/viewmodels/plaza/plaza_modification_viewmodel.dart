@@ -633,7 +633,7 @@ class PlazaModificationViewModel extends ChangeNotifier {
         formState.basicDetails['plazaClosingTime'] = closeTime;
         _populateBasicDetailsControllers();
         await _showSuccessDialog(context,
-            message: strings.basicDetailsUpdateSuccess, onConfirmed: () {});
+            message: strings.basicDetailsUpdateSuccess, onConfirmed: () {Navigator.pop(context);});
       } else {
         developer.log('Plaza update failed (service returned false).',
             name: 'PlazaModifyVM', level: 900);
@@ -712,7 +712,7 @@ class PlazaModificationViewModel extends ChangeNotifier {
         _isBankEditable = false;
         _populateBankDetailsControllers();
         await _showSuccessDialog(context,
-            message: strings.bankDetailsSuccess(operation), onConfirmed: () {});
+            message: strings.bankDetailsSuccess(operation), onConfirmed: () {Navigator.pop(context);});
       } else {
         developer.log(
             'Bank details $operation failed (service returned false).',
@@ -769,8 +769,9 @@ class PlazaModificationViewModel extends ChangeNotifier {
         final index =
             _lanes.indexWhere((lane) => lane.laneId?.toString() == laneId);
         if (index != -1) _lanes[index] = updatedLane;
-        if (_selectedLane?.laneId?.toString() == laneId)
+        if (_selectedLane?.laneId?.toString() == laneId) {
           _selectedLane = updatedLane;
+        }
         notifyListeners();
       } else {
         developer.log('Lane update failed (service returned false).',
@@ -862,7 +863,7 @@ class PlazaModificationViewModel extends ChangeNotifier {
           message: newImageFiles.isNotEmpty
               ? strings.imagesUploadedSuccess
               : strings.noNewImagesToUpload,
-          onConfirmed: wantPop ? () => Navigator.maybePop(context) : null);
+          onConfirmed: wantPop ? () => Navigator.pop(context) : null);
     } catch (e) {
       developer.log('Error saving images: $e',
           name: 'PlazaModifyVM.ImageOps', error: e);

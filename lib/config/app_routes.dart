@@ -22,7 +22,6 @@ import '../views/plaza/plaza_modification/basic_details.dart';
 import '../views/plaza/plaza_modification/lane_details/lane_details.dart';
 import '../views/plaza/plaza_modification/plaza_images.dart';
 import '../views/settings/profile.dart';
-import '../views/tickets/mark_exit/mark_exit.dart';
 import '../views/tickets/new_ticket/new_ticket.dart';
 import '../views/tickets/open_ticket/open_ticket_list.dart';
 import '../views/tickets/reject_ticket/reject_ticket_list.dart';
@@ -61,7 +60,7 @@ class AppRoutes {
   static const String ticketHistory = '/ticket-history';
   static const String markExit = '/mark-exit';
   static const String disputeList = '/dispute-list';
-  static const String disputeDetail = '/dispute-detail';
+  static const String disputeDetails = '/dispute-detail';
   static const String processDispute = '/process-dispute';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -91,7 +90,8 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const LoadingScreen());
       case plazaInfo:
         final plazaId = settings.arguments;
-        return MaterialPageRoute(builder: (_) => PlazaInfoScreen(plazaId: plazaId));
+        return MaterialPageRoute(
+            builder: (_) => PlazaInfoScreen(plazaId: plazaId));
       case home:
         return MaterialPageRoute(builder: (_) => const HomeScreen());
       case notification:
@@ -101,35 +101,45 @@ class AppRoutes {
       case userInfo:
         final args = settings.arguments as Map<String, dynamic>?;
         final operatorId = args?['operatorId'] as String? ?? '';
-        return MaterialPageRoute(builder: (_) => UserInfoScreen(operatorId: operatorId));
+        return MaterialPageRoute(
+            builder: (_) => UserInfoScreen(operatorId: operatorId));
       case userRegistration:
-        return MaterialPageRoute(builder: (_) => const UserRegistrationScreen());
+        return MaterialPageRoute(
+            builder: (_) => const UserRegistrationScreen());
       case plazaRegistration:
-        return MaterialPageRoute(builder: (_) => const PlazaRegistrationScreen());
+        return MaterialPageRoute(
+            builder: (_) => const PlazaRegistrationScreen());
       case basicDetailsModification:
-      // Pass the settings object along so ModalRoute works inside the screen
+        // Pass the settings object along so ModalRoute works inside the screen
         return MaterialPageRoute(
           builder: (_) => const BasicDetailsModificationScreen(),
           settings: settings, // <--- ADD THIS LINE
         );
       case bankDetailsModification:
-        return MaterialPageRoute(builder: (_) => const BankDetailsModificationScreen(),settings: settings);
+        return MaterialPageRoute(
+            builder: (_) => const BankDetailsModificationScreen(),
+            settings: settings);
       case laneDetailsModification:
-        final plazaId = settings.arguments as String?; // Extract plazaId from arguments
+        final plazaId =
+            settings.arguments as String?; // Extract plazaId from arguments
         return MaterialPageRoute(
           builder: (_) => LaneDetailsModificationScreen(
             plazaId: plazaId ?? '', // Use empty string as fallback
           ),
         );
       case plazaImagesModification:
-        return MaterialPageRoute(builder: (_) => const PlazaImagesModificationScreen(),settings: settings);
+        return MaterialPageRoute(
+            builder: (_) => const PlazaImagesModificationScreen(),
+            settings: settings);
       case plazaAddFare:
         final args = settings.arguments as Map<String, dynamic>?;
         final selectedPlaza = args?['plaza'] as Plaza?;
-        return MaterialPageRoute(builder: (_) => AddFareScreen(selectedPlaza: selectedPlaza));
+        return MaterialPageRoute(
+            builder: (_) => AddFareScreen(selectedPlaza: selectedPlaza));
       case plazaFaresList:
         final plaza = settings.arguments as Plaza;
-        return MaterialPageRoute(builder: (_) => PlazaFaresListScreen(plaza: plaza));
+        return MaterialPageRoute(
+            builder: (_) => PlazaFaresListScreen(plaza: plaza));
       case newTicket:
         return MaterialPageRoute(builder: (_) => const NewTicketScreen());
       case openTickets:
@@ -141,19 +151,32 @@ class AppRoutes {
           builder: (_) => const TicketHistoryScreen(),
           settings: settings,
         );
-      case markExit:
-        return MaterialPageRoute(builder: (_) => const MarkExitScreen());
       case disputeList:
         final args = settings.arguments as Map<String, dynamic>?;
-        final viewDisputeOptionSelect = args?['viewDisputeOptionSelect'] as bool? ?? true;
+        final viewDisputeOptionSelect =
+            args?['viewDisputeOptionSelect'] as bool? ?? true;
         return MaterialPageRoute(
-            builder: (_) => DisputeList(viewDisputeOptionSelect: viewDisputeOptionSelect));
-      case disputeDetail:
+            builder: (_) =>
+                DisputeList(viewDisputeOptionSelect: viewDisputeOptionSelect));
+      case AppRoutes.disputeDetails:
         final args = settings.arguments as Map<String, dynamic>?;
         final ticketId = args?['ticketId'] as String? ?? '';
+        final disputeId = args?['disputeId'] as String?;
         return MaterialPageRoute(
-          builder: (_) => ViewDisputeDetailsScreen(ticketId: ticketId),
+          builder: (_) => ViewDisputeDetailsScreen(
+            ticketId: ticketId,
+          ),
+          settings: RouteSettings(arguments: {
+            'ticketId': ticketId,
+            'disputeId': disputeId,
+          }),
         );
+      // case disputeDetails:
+      //   final args = settings.arguments as Map<String, dynamic>?;
+      //   final ticketId = args?['ticketId'] as String? ?? '';
+      //   return MaterialPageRoute(
+      //     builder: (_) => ViewDisputeDetailsScreen(ticketId: ticketId),
+      //   );
       case processDispute:
         final args = settings.arguments as Map<String, dynamic>?;
         final ticketId = args?['ticketId'] as String? ?? '';
@@ -163,8 +186,9 @@ class AppRoutes {
       default:
         return MaterialPageRoute(
             builder: (_) => Scaffold(
-              body: Center(child: Text('No route defined for ${settings.name}')),
-            ));
+                  body: Center(
+                      child: Text('No route defined for ${settings.name}')),
+                ));
     }
   }
 }

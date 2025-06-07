@@ -1,23 +1,24 @@
 import 'dart:developer' as developer;
-
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import '../../models/dispute.dart';
 import '../../services/core/dispute_service.dart';
 
 class RaiseDisputeViewModel extends ChangeNotifier {
   final DisputesService _disputesService;
-  final ImagePicker _imagePicker = ImagePicker();
+  final _dateFormat = DateFormat('dd MMM yyyy, hh:mm a');
 
   String? selectedReason;
   String disputeAmount = '';
   String remark = '';
-  List<String> imagePaths = [];
+  List<String> filePaths = [];
   bool isLoading = false;
   String? reasonError;
   String? amountError;
   String? remarkError;
-  String? imageError;
+  String? fileError;
   String? generalError;
 
   final List<String> disputeReasons = [
@@ -50,27 +51,31 @@ class RaiseDisputeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> pickImage() async {
+  Future<void> pickFile() async {
     try {
-      final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.rear,
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+        allowMultiple: true,
       );
-      if (image != null) {
-        imagePaths.add(image.path);
-        imageError = null;
-        notifyListeners();
+
+      if (result != null) {
+        filePaths.addAll(result.paths.where((path) => path != null).cast<String>());
+        fileError = null;
+      } else {
+        fileError = 'No files selected';
       }
     } catch (e) {
-      imageError = 'Error capturing image: $e';
-      notifyListeners();
+      fileError = 'Error picking files: $e';
+      developer.log('Error picking files: $e', name: 'RaiseDisputeViewModel.PickFile');
     }
+    notifyListeners();
   }
 
-  void removeImage(int index) {
-    if (index >= 0 && index < imagePaths.length) {
-      imagePaths.removeAt(index);
-      imageError = null;
+  void removeFile(int index) {
+    if (index >= 0 && index < filePaths.length) {
+      filePaths.removeAt(index);
+      fileError = null;
       notifyListeners();
     }
   }
@@ -98,8 +103,24 @@ class RaiseDisputeViewModel extends ChangeNotifier {
       remarkError = 'Remark must be between 3 and 255 characters';
       isValid = false;
     }
+    if (filePaths.isEmpty) {
+      fileError = 'Please upload at least one file';
+      isValid = false;
+    }
     notifyListeners();
     return isValid;
+  }
+
+  String? formatDateTime(String? dateTime) {
+    if (dateTime == null) return null;
+    try {
+      final parsedDate = DateTime.parse(dateTime);
+      return '${_dateFormat.format(parsedDate)}, IST';
+    } catch (e) {
+      developer.log('Error formatting date: $dateTime, error: $e',
+          name: 'RaiseDisputeViewModel.FormatDate');
+      return dateTime;
+    }
   }
 
   Future<bool> submitDispute({
@@ -126,11 +147,14 @@ class RaiseDisputeViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final formattedTicketCreationTime = formatDateTime(ticketCreationTime) ?? ticketCreationTime;
+      final formattedPaymentTime = formatDateTime(paymentTime) ?? paymentTime;
+
       final dispute = Dispute(
         userId: userId,
         ticketId: ticketId,
         plazaId: plazaId,
-        ticketCreationTime: ticketCreationTime,
+        ticketCreationTime: ticketCreationTime, // Keep original for backend
         vehicleNumber: vehicleNumber,
         vehicleType: vehicleType,
         parkingDuration: parkingDuration ?? 'Unknown',
@@ -146,18 +170,9 @@ class RaiseDisputeViewModel extends ChangeNotifier {
 
       developer.log('Dispute Object: ${dispute.toJsonForCreate()}', name: 'RaiseDisputeViewModel.Dispute');
 
-      final validationError = dispute.validateForCreate();
-      if (validationError != null) {
-        generalError = validationError;
-        developer.log('Validation error: $validationError', name: 'RaiseDisputeViewModel.Validation');
-        isLoading = false;
-        notifyListeners();
-        return false;
-      }
-
       final createdDispute = await _disputesService.createDispute(
         dispute,
-        uploadedFiles: imagePaths,
+        uploadedFiles: filePaths,
       );
 
       developer.log('Dispute created successfully: ${createdDispute.disputeId}',
@@ -166,7 +181,7 @@ class RaiseDisputeViewModel extends ChangeNotifier {
       selectedReason = null;
       disputeAmount = '';
       remark = '';
-      imagePaths.clear();
+      filePaths.clear();
       return true;
     } catch (e) {
       generalError = 'Failed to submit dispute: $e';
@@ -182,11 +197,11 @@ class RaiseDisputeViewModel extends ChangeNotifier {
     selectedReason = null;
     disputeAmount = '';
     remark = '';
-    imagePaths.clear();
+    filePaths.clear();
     reasonError = null;
     amountError = null;
     remarkError = null;
-    imageError = null;
+    fileError = null;
     generalError = null;
     isLoading = false;
     notifyListeners();

@@ -42,12 +42,12 @@ class PlazaListViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchUserPlazas(String userId) async {
+  Future<void> fetchUserPlazas(String entityId) async {
     _setLoading(true);
     _clearError();
-    developer.log('Fetching plazas for userId: $userId', name: 'PlazaListViewModel');
+    developer.log('Fetching plazas for EntityId: $entityId', name: 'PlazaListViewModel');
     try {
-      _userPlazas = await _plazaService.fetchUserPlazas(userId);
+      _userPlazas = await _plazaService.fetchUserPlazas(entityId);
       developer.log('Fetched ${_userPlazas.length} plazas successfully', name: 'PlazaListViewModel');
     } catch (e) {
       developer.log('Error in fetchUserPlazas: $e', name: 'PlazaListViewModel', error: e, level: 1000);

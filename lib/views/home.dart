@@ -27,48 +27,67 @@ class _HomeScreenState extends State<HomeScreen> {
   final _secureStorage = SecureStorageService();
   int _selectedIndex = 0;
   bool _isLoadingProfile = false;
+  bool _isInitialized = false;
 
-  late final List<Widget> _screens;
+  List<Widget>? _screens;
 
   @override
   void initState() {
     super.initState();
     developer.log('Initializing HomeScreen', name: 'HomeScreen');
+  }
 
-    _screens = [
-      const DashboardScreen(key: PageStorageKey('dashboard')),
-      const MenuScreen(key: PageStorageKey('menu')),
-      const NotificationsScreenWrapper(key: PageStorageKey('notifications')),
-      const AccountSettingsScreen(key: PageStorageKey('settings')),
-    ];
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkAuthentication();
-      _loadProfileData();
-    });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _initializeData();
+      _isInitialized = true;
+    }
   }
 
   void _onItemTapped(int index) {
-    developer.log('Navigation bar item tapped: $index, switching to ${_screens[index].runtimeType}', name: 'HomeScreen');
+    developer.log(
+        'Navigation bar item tapped: $index, switching to ${_screens?[index].runtimeType}',
+        name: 'HomeScreen');
     HapticFeedback.selectionClick();
     setState(() {
       _selectedIndex = index;
     });
   }
 
+  Future<void> _initializeData() async {
+    await _checkAuthentication();
+    if (mounted) {
+      await _loadProfileData();
+      setState(() {
+        _screens = [
+          const DashboardScreen(key: PageStorageKey('dashboard')),
+          const MenuScreen(key: PageStorageKey('menu')),
+          const NotificationsScreenWrapper(
+              key: PageStorageKey('notifications')),
+          const AccountSettingsScreen(key: PageStorageKey('settings')),
+        ];
+      });
+    }
+  }
+
   Future<void> _checkAuthentication() async {
     try {
       final strings = S.of(context);
       String? token = await _secureStorage.getAuthToken();
-      developer.log("Authentication token ${token != null ? 'exists' : 'missing'}", name: 'HomeScreen');
+      developer.log(
+          "Authentication token ${token != null ? 'exists' : 'missing'}",
+          name: 'HomeScreen');
 
       if (token == null) {
-        developer.log('No auth token found, redirecting to welcome', name: 'HomeScreen', level: 900);
+        developer.log('No auth token found, redirecting to welcome',
+            name: 'HomeScreen', level: 900);
         if (mounted) {
           Navigator.pushNamedAndRemoveUntil(
             context,
             AppRoutes.welcome,
-                (route) => false,
+            (route) => false,
           );
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -83,7 +102,8 @@ class _HomeScreenState extends State<HomeScreen> {
       String? ownerId = await _secureStorage.getUserId();
       developer.log("Owner ID: ${ownerId ?? 'not found'}", name: 'HomeScreen');
     } catch (e) {
-      developer.log("Error checking authentication: $e", name: 'HomeScreen', level: 1000);
+      developer.log("Error checking authentication: $e",
+          name: 'HomeScreen', level: 1000);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -97,7 +117,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadProfileData() async {
     final strings = S.of(context);
-    final settingsViewModel = Provider.of<SettingsViewModel>(context, listen: false);
+    final settingsViewModel =
+        Provider.of<SettingsViewModel>(context, listen: false);
     developer.log('Loading profile data', name: 'HomeScreen');
 
     try {
@@ -105,14 +126,6 @@ class _HomeScreenState extends State<HomeScreen> {
       final userId = await _secureStorage.getUserId();
       if (userId == null) {
         developer.log('User ID not found', name: 'HomeScreen', level: 900);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(strings.errorUserIdNotFound),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
         return;
       }
 
@@ -120,29 +133,17 @@ class _HomeScreenState extends State<HomeScreen> {
         userId: userId,
         isCurrentAppUser: true,
       );
-      developer.log('User profile ${success ? 'fetched and stored' : 'failed to fetch/store'} for ID: $userId', name: 'HomeScreen');
+      developer.log(
+          'User profile ${success ? 'fetched and stored' : 'failed to fetch/store'} for ID: $userId',
+          name: 'HomeScreen');
 
       if (!success || settingsViewModel.currentUser == null) {
-        developer.log('No user data returned or failed to store', name: 'HomeScreen', level: 900);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(strings.errorLoadingUserProfile),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
+        developer.log('No user data returned or failed to store',
+            name: 'HomeScreen', level: 900);
       }
     } catch (e) {
-      developer.log("Error fetching/storing user data: $e", name: 'HomeScreen', level: 1000);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(strings.errorLoadingUserProfile),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
+      developer.log("Error fetching/storing user data: $e",
+          name: 'HomeScreen', level: 1000);
     } finally {
       if (mounted) {
         setState(() => _isLoadingProfile = false);
@@ -156,24 +157,27 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: context.backgroundColor,
       body: Stack(
         children: [
-          if (_isLoadingProfile)
+          if (_isLoadingProfile || _screens == null)
             const Center(child: CircularProgressIndicator()),
-          ..._screens.asMap().entries.map((entry) {
-            final index = entry.key;
-            final screen = entry.value;
-            return Offstage(
-              offstage: _selectedIndex != index,
-              child: TickerMode(
-                enabled: _selectedIndex == index,
-                child: screen,
-              ),
-            );
-          }),
+          if (_screens != null)
+            ..._screens!.asMap().entries.map((entry) {
+              final index = entry.key;
+              final screen = entry.value;
+              return Offstage(
+                offstage: _selectedIndex != index,
+                child: TickerMode(
+                  enabled: _selectedIndex == index,
+                  child: screen,
+                ),
+              );
+            }),
         ],
       ),
-      bottomNavigationBar: CustomNavigationBar(
-        selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
+      bottomNavigationBar: SafeArea(
+        child: CustomNavigationBar(
+          selectedIndex: _selectedIndex,
+          onItemTapped: _onItemTapped,
+        ),
       ),
     );
   }

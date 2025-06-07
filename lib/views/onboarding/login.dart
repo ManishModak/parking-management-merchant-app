@@ -83,9 +83,8 @@ class _LoginScreenState extends State<LoginScreen> {
             .contains('failed to connect to the authentication server')) {
       message = strings.errorServerConnectionRefused;
       backgroundColor = AppColors.error;
-    } else if (errorMessage
-        .toLowerCase()
-        .contains('serverconnectionexception')) {
+    } else if (errorMessage.toLowerCase().contains('serverconnectionexception') ||
+        errorMessage.toLowerCase().contains('server unavailable')) { // Add this check
       message = strings.errorServerUnavailable;
       backgroundColor = AppColors.error;
     } else if (errorMessage.toLowerCase().contains('server error') ||

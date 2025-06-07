@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
 import 'dart:developer' as developer;
-import 'package:merchant_app/config/app_config.dart'; // Import AppThemeMode from app_config.dart
+import 'package:merchant_app/config/app_config.dart'; // Import AppThemeMode
 
 class AppTheme {
   static ThemeData lightTheme = ThemeData(
@@ -21,7 +21,7 @@ class AppTheme {
     ),
     scaffoldBackgroundColor: AppColors.backgroundLight,
     cardColor: AppColors.cardLight,
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: AppColors.cardLight,
       elevation: 4,
       shadowColor: AppColors.shadowLight,
@@ -225,7 +225,7 @@ class AppTheme {
         return AppColors.inputBorderLight;
       }),
     ),
-    dialogTheme: DialogTheme(
+    dialogTheme: DialogThemeData(
       backgroundColor: AppColors.backgroundLight,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -241,7 +241,7 @@ class AppTheme {
       ),
     ),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: AppColors.grey, // Neutral background for visibility
+      backgroundColor: AppColors.grey,
       contentTextStyle: const TextStyle(color: AppColors.textLight),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
@@ -269,7 +269,7 @@ class AppTheme {
     ),
     scaffoldBackgroundColor: AppColors.backgroundDark,
     cardColor: AppColors.cardDark,
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: AppColors.cardDark,
       elevation: 4,
       shadowColor: AppColors.shadowDark,
@@ -473,7 +473,7 @@ class AppTheme {
         return AppColors.inputBorderDark;
       }),
     ),
-    dialogTheme: DialogTheme(
+    dialogTheme: DialogThemeData(
       backgroundColor: AppColors.backgroundDark,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -489,7 +489,7 @@ class AppTheme {
       ),
     ),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: AppColors.greyDark, // Neutral background for visibility
+      backgroundColor: AppColors.greyDark,
       contentTextStyle: const TextStyle(color: AppColors.textPrimaryDark),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(

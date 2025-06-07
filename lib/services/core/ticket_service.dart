@@ -1,3 +1,4 @@
+// merchant_app/lib/services/core/ticket_service.dart
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
@@ -27,7 +28,8 @@ class TicketService {
   Future<Map<String, String>> _getHeaders() async {
     final token = await _secureStorageService.getAuthToken();
     return {
-      'Content-Type': 'application/json',
+      'Accept': 'application/json', // Expect JSON response
+      // Content-Type for the request body is set specifically in each method
       if (token != null) 'Authorization': 'Bearer $token',
     };
   }
@@ -48,35 +50,46 @@ class TicketService {
 
     try {
       final headers = await _getHeaders();
-      developer.log('[TICKET] Headers Sent: $headers', name: 'TicketService'); // Log headers
+      // For GET requests, 'Content-Type' in the request header is usually not needed.
+      developer.log('[TICKET] Headers Sent for getOpenTickets: $headers', name: 'TicketService');
       final response = await _client.get(
         serverUrl,
         headers: headers,
       ).timeout(const Duration(seconds: 10));
 
-      developer.log('[TICKET] Response Status Code: ${response.statusCode}', name: 'TicketService');
-      developer.log('[TICKET] Response Body: ${response.body}', name: 'TicketService');
+      developer.log('[TICKET] Response Status Code for getOpenTickets: ${response.statusCode}', name: 'TicketService');
+      developer.log('[TICKET] Response Body for getOpenTickets: ${response.body}', name: 'TicketService');
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        if (responseData["data"] != null) {
-          final List<Ticket> tickets = (responseData['data'] as List)
+        // CORRECTED: Check for the presence of the "data" array.
+        // This endpoint's success is implied by 200 OK and the presence of "data".
+        if (responseData["data"] != null && responseData["data"] is List) {
+          final List<dynamic> ticketListJson = responseData['data'];
+          if (ticketListJson.isEmpty) {
+            developer.log('[TICKET] Successfully retrieved 0 open tickets (empty data array).', name: 'TicketService');
+            return [];
+          }
+          final List<Ticket> tickets = ticketListJson
               .map((ticketJson) => Ticket.fromJson(ticketJson))
               .toList();
-          developer.log('[TICKET] Successfully retrieved ${tickets.length} tickets', name: 'TicketService');
+          developer.log('[TICKET] Successfully retrieved and parsed ${tickets.length} open tickets.', name: 'TicketService');
           return tickets;
         }
-        developer.log('[TICKET] No tickets in response data, returning empty list', name: 'TicketService');
-        return [];
+        // If "data" is null or not a list, even with 200 OK, treat as an issue.
+        developer.log('[TICKET] "data" field is null or not a list in 200 OK response for getOpenTickets. Response: $responseData', name: 'TicketService');
+        return []; // Or throw ServiceException if this state is unexpected
       } else if (response.statusCode == 404) {
         developer.log('[TICKET] No open tickets found (404), returning empty list', name: 'TicketService');
         return [];
       }
 
       throw _handleErrorResponse(response, 'Failed to fetch open tickets');
-    } on SocketException catch (e) {
+    } on SocketException catch (e, stackTrace) {
+      developer.log('[TICKET] SocketException in getOpenTickets: $e', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw ServerConnectionException('Failed to connect to the ticket server: $e');
-    } on TimeoutException {
+    } on TimeoutException catch (e, stackTrace) {
+      developer.log('[TICKET] TimeoutException in getOpenTickets', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw RequestTimeoutException('Request timed out');
     } catch (e, stackTrace) {
       developer.log('[TICKET] Error in getOpenTickets: $e',
@@ -101,33 +114,40 @@ class TicketService {
 
     try {
       final headers = await _getHeaders();
-      developer.log('[TICKET] Headers Sent: $headers', name: 'TicketService'); // Log headers
+      developer.log('[TICKET] Headers Sent for getAllTickets: $headers', name: 'TicketService');
       final response = await _client.get(
         serverUrl,
         headers: headers,
       ).timeout(const Duration(seconds: 10));
 
-      developer.log('[TICKET] Response Status Code: ${response.statusCode}', name: 'TicketService');
-      developer.log('[TICKET] Response Body: ${response.body}', name: 'TicketService');
+      developer.log('[TICKET] Response Status Code for getAllTickets: ${response.statusCode}', name: 'TicketService');
+      developer.log('[TICKET] Response Body for getAllTickets: ${response.body}', name: 'TicketService');
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
+        // Assuming a similar structure {"message": "...", "data": [...]} or {"success":true, "data": [...]}
+        // Let's be flexible and primarily check for the 'data' array.
         final ticketData = responseData['data'] as List<dynamic>?;
 
-        if (ticketData == null || ticketData.isEmpty) {
-          developer.log('[TICKET] No tickets in response, returning empty list', name: 'TicketService');
-          return [];
+        if (ticketData != null) {
+          if (ticketData.isEmpty) {
+            developer.log('[TICKET] Successfully retrieved 0 all tickets (empty data array).', name: 'TicketService');
+            return [];
+          }
+          final tickets = ticketData.map((ticketJson) => Ticket.fromJson(ticketJson)).toList();
+          developer.log('[TICKET] Successfully retrieved and parsed ${tickets.length} all tickets.', name: 'TicketService');
+          return tickets;
         }
-
-        final tickets = ticketData.map((ticketJson) => Ticket.fromJson(ticketJson)).toList();
-        developer.log('[TICKET] Successfully retrieved ${tickets.length} tickets', name: 'TicketService');
-        return tickets;
+        developer.log('[TICKET] "data" field is null or not a list in 200 OK response for getAllTickets. Response: $responseData', name: 'TicketService');
+        return [];
       }
 
       throw _handleErrorResponse(response, 'Failed to fetch all tickets');
-    } on SocketException catch (e) {
+    } on SocketException catch (e, stackTrace) {
+      developer.log('[TICKET] SocketException in getAllTickets: $e', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw ServerConnectionException('Failed to connect to the ticket server: $e');
-    } on TimeoutException {
+    } on TimeoutException catch (e, stackTrace) {
+      developer.log('[TICKET] TimeoutException in getAllTickets', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw RequestTimeoutException('Request timed out');
     } catch (e, stackTrace) {
       developer.log('[TICKET] Error in getAllTickets: $e',
@@ -148,36 +168,42 @@ class TicketService {
       throw ServerConnectionException('Cannot reach the ticket server.', host: serverUrl.host);
     }
 
-    developer.log('[TICKET] Creating ticket at URL: $url', name: 'TicketService');
+    developer.log('[TICKET] Creating ticket (no images) at URL: $url', name: 'TicketService');
     final body = json.encode(ticket.toCreateRequest());
     developer.log('[TICKET] Request Body: $body', name: 'TicketService');
 
     try {
       final headers = await _getHeaders();
-      developer.log('[TICKET] Headers Sent: $headers', name: 'TicketService'); // Log headers
+      headers['Content-Type'] = 'application/json'; // Body is JSON
+      developer.log('[TICKET] Headers Sent for createTicket: $headers', name: 'TicketService');
       final response = await _client.post(
         serverUrl,
         headers: headers,
         body: body,
       ).timeout(const Duration(seconds: 10));
 
-      developer.log('[TICKET] Response Status Code: ${response.statusCode}', name: 'TicketService');
-      developer.log('[TICKET] Response Body: ${response.body}', name: 'TicketService');
+      developer.log('[TICKET] Response Status Code for createTicket: ${response.statusCode}', name: 'TicketService');
+      developer.log('[TICKET] Response Body for createTicket: ${response.body}', name: 'TicketService');
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 201 || response.statusCode == 200) { // Common success codes for POST
         final responseData = json.decode(response.body);
-        if (responseData['success'] == true && responseData['ticket'] != null) {
-          final createdTicket = Ticket.fromJson(responseData['ticket']);
-          developer.log('[TICKET] Successfully created ticket: ${createdTicket.ticketId}', name: 'TicketService');
+        final createdTicketJson = responseData['ticket'] ?? responseData['data']; // Adapt if structure varies
+
+        if (createdTicketJson != null && createdTicketJson['ticket_id'] != null && (responseData['success'] == true || responseData['status'] == 200 || responseData['status'] == 201 )) {
+          final createdTicket = Ticket.fromJson(createdTicketJson);
+          developer.log('[TICKET] Successfully created ticket (no images): ${createdTicket.ticketId}', name: 'TicketService');
           return createdTicket;
         }
-        throw ServiceException(responseData['message'] ?? 'Invalid response format');
+        developer.log('[TICKET] Invalid response format after createTicket. Response: $responseData', name: 'TicketService');
+        throw ServiceException(responseData['message'] ?? 'Invalid response format after ticket creation');
       }
 
       throw _handleErrorResponse(response, 'Failed to create ticket');
-    } on SocketException catch (e) {
+    } on SocketException catch (e, stackTrace) {
+      developer.log('[TICKET] SocketException in createTicket: $e', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw ServerConnectionException('Failed to connect to the ticket server: $e');
-    } on TimeoutException {
+    } on TimeoutException catch (e, stackTrace) {
+      developer.log('[TICKET] TimeoutException in createTicket', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw RequestTimeoutException('Request timed out');
     } catch (e, stackTrace) {
       developer.log('[TICKET] Error in createTicket: $e',
@@ -186,8 +212,10 @@ class TicketService {
     }
   }
 
+
   /// Creates a new ticket with associated images.
-  Future<Ticket> createTicketWithImages(
+  /// Returns a map containing 'ticket_ref_id' and 'ticket_id_uuid' upon success, or null.
+  Future<Map<String, String?>?> createTicketWithImages(
       Ticket ticket,
       List<String> imagePaths, {
         required String channelId,
@@ -209,64 +237,34 @@ class TicketService {
       throw ServerConnectionException('Cannot reach the ticket server.', host: serverUrl.host);
     }
 
-    developer.log('[TICKET] Initiating ticket creation with images', name: 'TicketService');
-    developer.log('[TICKET] Request URL: $url', name: 'TicketService');
-    developer.log('[TICKET] Channel ID: $channelId', name: 'TicketService');
-    developer.log('[TICKET] Requestanego Type: $requestType', name: 'TicketService');
-    developer.log('[TICKET] Camera ID: $cameraId', name: 'TicketService');
-    developer.log('[TICKET] Camera Read Time: $cameraReadTime', name: 'TicketService');
-    developer.log('[TICKET] Geo Latitude: $geoLatitude', name: 'TicketService');
-    developer.log('[TICKET] Geo Longitude: $geoLongitude', name: 'TicketService');
-    developer.log('[TICKET] Number of images: ${imagePaths.length}', name: 'TicketService');
+    developer.log('[TICKET] Initiating ticket creation with images. URL: $url', name: 'TicketService');
 
     try {
       var request = http.MultipartRequest('POST', serverUrl);
-
-      // Use headers with token for multipart request
       final headers = await _getHeaders();
-      headers['Accept'] = 'application/json';
-      headers['Content-Type'] = 'multipart/form-data';
       request.headers.addAll(headers);
-      developer.log('[TICKET] Headers Sent: ${request.headers}', name: 'TicketService'); // Log headers
+      // Content-Type for multipart is set by MultipartRequest itself.
+      developer.log('[TICKET] Headers Sent for createTicketWithImages: ${request.headers}', name: 'TicketService');
 
-      developer.log('[TICKET] Preparing request fields:', name: 'TicketService');
       request.fields['plaza_id'] = ticket.plazaId?.toString() ?? '';
-      developer.log('[TICKET] Plaza ID: ${request.fields['plaza_id']}', name: 'TicketService');
       request.fields['lane_id'] = ticket.entryLaneId ?? '';
       request.fields['channel_id'] = channelId;
-      developer.log('[TICKET] Channel ID: ${request.fields['channel_id']}', name: 'TicketService');
       request.fields['request_type'] = requestType;
-      developer.log('[TICKET] Request Type: ${request.fields['request_type']}', name: 'TicketService');
       request.fields['entry_time'] = ticket.entryTime?.toIso8601String() ?? '';
-      developer.log('[TICKET] Entry Time: ${request.fields['entry_time']}', name: 'TicketService');
       request.fields['camera_id'] = cameraId;
-      developer.log('[TICKET] Camera ID: ${request.fields['camera_id']}', name: 'TicketService');
       request.fields['cameraReadTime'] = cameraReadTime;
-      developer.log('[TICKET] Camera Read Time: ${request.fields['cameraReadTime']}', name: 'TicketService');
       request.fields['geo_latitude'] = geoLatitude;
-      developer.log('[TICKET] Geo Latitude: ${request.fields['geo_latitude']}', name: 'TicketService');
       request.fields['geo_longitude'] = geoLongitude;
-      developer.log('[TICKET] Geo Longitude: ${request.fields['geo_longitude']}', name: 'TicketService');
 
-      if (requestType == '1') {
+      if (requestType == '1') { // Manual Ticket
         request.fields['vehicle_number'] = ticket.vehicleNumber ?? '';
-        developer.log('[TICKET] Vehicle Number: ${request.fields['vehicle_number']}', name: 'TicketService');
         request.fields['vehicle_type'] = ticket.vehicleType ?? '';
-        developer.log('[TICKET] Vehicle Type: ${request.fields['vehicle_type']}', name: 'TicketService');
-      } else {
-        developer.log('[TICKET] Request type is $requestType, skipping vehicle details', name: 'TicketService');
       }
+      developer.log('[TICKET] Request Fields: ${request.fields}', name: 'TicketService');
 
-      developer.log('[TICKET] Processing images:', name: 'TicketService');
       for (var i = 0; i < imagePaths.length; i++) {
         final file = File(imagePaths[i]);
         if (await file.exists()) {
-          final fileSize = await file.length();
-          final fileBytes = await file.readAsBytes();
-          developer.log(
-            '[TICKET] Adding image $i: ${imagePaths[i]} (Size: ${fileSize ~/ 1024} KB, First 10 bytes: ${fileBytes.take(10).toList()})',
-            name: 'TicketService',
-          );
           request.files.add(await http.MultipartFile.fromPath(
             'images',
             file.path,
@@ -278,55 +276,62 @@ class TicketService {
           throw ServiceException('Image file not found: ${imagePaths[i]}');
         }
       }
-
-      developer.log('[TICKET] Final Request Fields: ${request.fields}', name: 'TicketService');
       developer.log('[TICKET] Attached Files: ${request.files.map((f) => f.filename).toList()}', name: 'TicketService');
 
       final streamedResponse = await request.send().timeout(const Duration(seconds: 180));
       final response = await http.Response.fromStream(streamedResponse);
 
-      developer.log('[TICKET] Response Status Code: ${response.statusCode}', name: 'TicketService');
+      developer.log('[TICKET] Response Status Code for createTicketWithImages: ${response.statusCode}', name: 'TicketService');
       developer.log('[TICKET] Response Headers: ${response.headers}', name: 'TicketService');
       developer.log('[TICKET] Response Body: ${response.body}', name: 'TicketService');
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        if (responseData['data'] != null) {
-          final createdTicket = Ticket.fromJson(responseData['data']);
-          developer.log('[TICKET] Successfully created ticket with ID: ${createdTicket.ticketId}', name: 'TicketService');
-          developer.log('[TICKET] Ticket Details: ${createdTicket.toJson()}', name: 'TicketService');
-          return createdTicket;
+        if (responseData['status'] == 200 &&
+            responseData['data'] != null &&
+            responseData['data']['data'] != null) {
+
+          final innerTicketData = responseData['data']['data'];
+          final String? ticketRefId = innerTicketData['ticket_ref_id'] as String?;
+          final String? ticketIdUuid = innerTicketData['ticket_id'] as String?;
+
+          if (ticketRefId != null && ticketIdUuid != null) {
+            developer.log('[TICKET] Successfully created ticket. Ticket ID (UUID): $ticketIdUuid, Ticket Ref ID: $ticketRefId', name: 'TicketService');
+            return {
+              'ticket_ref_id': ticketRefId,
+              'ticket_id_uuid': ticketIdUuid,
+            };
+          } else {
+            developer.log('[TICKET] Invalid response format: missing ticket_ref_id or ticket_id in inner data. InnerData: $innerTicketData', name: 'TicketService');
+            return null;
+          }
         } else {
-          developer.log('[TICKET] Invalid response format: ${responseData['message']}', name: 'TicketService');
-          throw ServiceException(responseData['message'] ?? 'Invalid response format');
+          developer.log('[TICKET] Invalid response format: top-level status not 200 or data/inner-data missing. Response: $responseData', name: 'TicketService');
+          return null;
         }
       } else if (response.statusCode == 400 && requestType == '0') {
         final responseData = json.decode(response.body);
-        developer.log('[TICKET] ANPR Failure Details: ${responseData.toString()}', name: 'TicketService');
+        developer.log('[TICKET] ANPR Failure Details: $responseData', name: 'TicketService');
         if (responseData['message']?.contains('ANPR') == true) {
-          developer.log('[TICKET] ANPR processing failed for request type 0', name: 'TicketService');
+          developer.log('[TICKET] ANPR processing failed for request type 0.', name: 'TicketService');
           throw AnprFailureException('ANPR processing failed: ${responseData['message']}');
         }
       }
-
-      developer.log('[TICKET] Failed to create ticket. Status: ${response.statusCode}', name: 'TicketService');
+      developer.log('[TICKET] Failed to create ticket with images. Status: ${response.statusCode}', name: 'TicketService');
       throw _handleErrorResponse(response, 'Failed to create ticket with images');
     } on SocketException catch (e, stackTrace) {
-      developer.log('[TICKET] SocketException: Failed to connect to server: BP$e',
-          name: 'TicketService', error: e, stackTrace: stackTrace);
+      developer.log('[TICKET] SocketException in createTicketWithImages: $e', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw ServerConnectionException('Failed to connect to the ticket server: $e');
     } on TimeoutException catch (e, stackTrace) {
-      developer.log('[TICKET] TimeoutException: Request timed out after 180 seconds',
-          name: 'TicketService', error: e, stackTrace: stackTrace);
+      developer.log('[TICKET] TimeoutException in createTicketWithImages', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw RequestTimeoutException('Request timed out');
     } catch (e, stackTrace) {
-      developer.log('[TICKET] Unexpected error in createTicketWithImages: $e',
-          name: 'TicketService', error: e, stackTrace: stackTrace);
+      if (e is AnprFailureException || e is ServiceException) rethrow;
+      developer.log('[TICKET] Unexpected error in createTicketWithImages: $e', name: 'TicketService', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
 
-  /// Retrieves detailed information for a specific ticket.
   Future<Ticket> getTicketDetails(String ticketId) async {
     final url = ApiConfig.getFullUrl('${TicketApi.getTicketDetails}$ticketId');
     final serverUrl = Uri.parse(url);
@@ -339,44 +344,46 @@ class TicketService {
     }
 
     developer.log('[TICKET] Fetching ticket details at URL: $url', name: 'TicketService');
-    developer.log('[TICKET] Ticket ID: $ticketId', name: 'TicketService');
 
     try {
       final headers = await _getHeaders();
-      developer.log('[TICKET] Headers Sent: $headers', name: 'TicketService'); // Log headers
+      developer.log('[TICKET] Headers Sent for getTicketDetails: $headers', name: 'TicketService');
       final response = await _client.get(
         serverUrl,
         headers: headers,
       ).timeout(const Duration(seconds: 10));
 
-      developer.log('[TICKET] Response Status Code: ${response.statusCode}', name: 'TicketService');
-      developer.log('[TICKET] Response Body: ${response.body}', name: 'TicketService');
+      developer.log('[TICKET] Response Status Code for getTicketDetails: ${response.statusCode}', name: 'TicketService');
+      developer.log('[TICKET] Response Body for getTicketDetails: ${response.body}', name: 'TicketService');
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        if (responseData['success'] == true && responseData['ticket'] != null) {
-          final ticketData = Map<String, dynamic>.from(responseData['ticket']);
-          _mapImageUrls(ticketData);
-          final ticket = Ticket.fromJson(ticketData);
-          developer.log('[TICKET] Successfully retrieved ticket details for ID: $ticketId', name: 'TicketService');
+        final ticketJson = responseData['ticket'];
+
+        if (responseData['success'] == true && ticketJson != null && ticketJson['ticket_id'] != null) {
+          final ticketDataMap = Map<String, dynamic>.from(ticketJson);
+          _mapImageUrls(ticketDataMap);
+          final ticket = Ticket.fromJson(ticketDataMap);
+          developer.log('[TICKET] Successfully retrieved and parsed ticket details for ID: $ticketId', name: 'TicketService');
           return ticket;
         }
-        throw ServiceException('Ticket not found with ID: $ticketId');
+        developer.log('[TICKET] Invalid response format or missing ticket data for getTicketDetails. Success: ${responseData['success']}, TicketJson: $ticketJson', name: 'TicketService');
+        throw ServiceException('Ticket data not found or invalid format for ID: $ticketId. Response: $responseData');
       }
 
       throw _handleErrorResponse(response, 'Failed to fetch ticket details');
-    } on SocketException catch (e) {
+    } on SocketException catch (e, stackTrace) {
+      developer.log('[TICKET] SocketException in getTicketDetails: $e', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw ServerConnectionException('Failed to connect to the ticket server: $e');
-    } on TimeoutException {
+    } on TimeoutException catch (e, stackTrace) {
+      developer.log('[TICKET] TimeoutException in getTicketDetails', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw RequestTimeoutException('Request timed out');
     } catch (e, stackTrace) {
-      developer.log('[TICKET] Error in getTicketDetails: $e',
-          name: 'TicketService', error: e, stackTrace: stackTrace);
+      developer.log('[TICKET] Error in getTicketDetails: $e', name: 'TicketService', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
 
-  /// Rejects a ticket with provided remarks.
   Future<bool> rejectTicket(String ticketId, String remarks) async {
     final url = ApiConfig.getFullUrl('${TicketApi.rejectTicket}$ticketId');
     final serverUrl = Uri.parse(url);
@@ -389,44 +396,44 @@ class TicketService {
     }
 
     developer.log('[TICKET] Rejecting ticket at URL: $url', name: 'TicketService');
-    developer.log('[TICKET] Ticket ID: $ticketId', name: 'TicketService');
     final body = json.encode({'remarks': remarks});
-    developer.log('[TICKET] Request Body: $body', name: 'TicketService');
 
     try {
       final headers = await _getHeaders();
-      developer.log('[TICKET] Headers Sent: $headers', name: 'TicketService'); // Log headers
+      headers['Content-Type'] = 'application/json'; // Body is JSON
+      developer.log('[TICKET] Headers Sent for rejectTicket: $headers', name: 'TicketService');
       final response = await _client.post(
         serverUrl,
         headers: headers,
         body: body,
       ).timeout(const Duration(seconds: 10));
 
-      developer.log('[TICKET] Response Status Code: ${response.statusCode}', name: 'TicketService');
-      developer.log('[TICKET] Response Body: ${response.body}', name: 'TicketService');
+      developer.log('[TICKET] Response Status Code for rejectTicket: ${response.statusCode}', name: 'TicketService');
+      developer.log('[TICKET] Response Body for rejectTicket: ${response.body}', name: 'TicketService');
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        if (responseData['success'] == true) {
+        if (responseData['success'] == true || responseData['status'] == 200) {
           developer.log('[TICKET] Successfully rejected ticket: $ticketId', name: 'TicketService');
           return true;
         }
+        developer.log('[TICKET] Ticket rejection failed server-side: ${responseData['message']}', name: 'TicketService');
         return false;
       }
 
       throw _handleErrorResponse(response, 'Failed to reject ticket');
-    } on SocketException catch (e) {
+    } on SocketException catch (e, stackTrace) {
+      developer.log('[TICKET] SocketException in rejectTicket: $e', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw ServerConnectionException('Failed to connect to the ticket server: $e');
-    } on TimeoutException {
+    } on TimeoutException catch (e, stackTrace) {
+      developer.log('[TICKET] TimeoutException in rejectTicket', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw RequestTimeoutException('Request timed out');
     } catch (e, stackTrace) {
-      developer.log('[TICKET] Error in rejectTicket: $e',
-          name: 'TicketService', error: e, stackTrace: stackTrace);
+      developer.log('[TICKET] Error in rejectTicket: $e', name: 'TicketService', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
 
-  /// Modifies an existing ticket.
   Future<Ticket> modifyTicket(String ticketId, Ticket ticket) async {
     final url = ApiConfig.getFullUrl('${TicketApi.modifyTicket}$ticketId');
     final serverUrl = Uri.parse(url);
@@ -439,45 +446,45 @@ class TicketService {
     }
 
     developer.log('[TICKET] Modifying ticket at URL: $url', name: 'TicketService');
-    developer.log('[TICKET] Ticket ID: $ticketId', name: 'TicketService');
     final body = json.encode(ticket.toModifyRequest());
-    developer.log('[TICKET] Request Body: $body', name: 'TicketService');
 
     try {
       final headers = await _getHeaders();
-      developer.log('[TICKET] Headers Sent: $headers', name: 'TicketService'); // Log headers
+      headers['Content-Type'] = 'application/json'; // Body is JSON
+      developer.log('[TICKET] Headers Sent for modifyTicket: $headers', name: 'TicketService');
       final response = await _client.post(
         serverUrl,
         headers: headers,
         body: body,
       ).timeout(const Duration(seconds: 10));
 
-      developer.log('[TICKET] Response Status Code: ${response.statusCode}', name: 'TicketService');
-      developer.log('[TICKET] Response Body: ${response.body}', name: 'TicketService');
+      developer.log('[TICKET] Response Status Code for modifyTicket: ${response.statusCode}', name: 'TicketService');
+      developer.log('[TICKET] Response Body for modifyTicket: ${response.body}', name: 'TicketService');
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        if (responseData['ticket'] != null) {
-          final modifiedTicket = Ticket.fromJson(responseData['ticket']);
+        final modifiedTicketJson = responseData['ticket'] ?? responseData['data'];
+        if ((responseData['success'] == true || responseData['status'] == 200) && modifiedTicketJson != null && modifiedTicketJson['ticket_id'] != null) {
+          final modifiedTicket = Ticket.fromJson(modifiedTicketJson);
           developer.log('[TICKET] Successfully modified ticket: ${modifiedTicket.ticketId}', name: 'TicketService');
           return modifiedTicket;
         }
-        throw ServiceException(responseData['message'] ?? 'Invalid response format');
+        throw ServiceException(responseData['message'] ?? 'Invalid response format after ticket modification');
       }
 
       throw _handleErrorResponse(response, 'Failed to modify ticket');
-    } on SocketException catch (e) {
+    } on SocketException catch (e, stackTrace) {
+      developer.log('[TICKET] SocketException in modifyTicket: $e', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw ServerConnectionException('Failed to connect to the ticket server: $e');
-    } on TimeoutException {
+    } on TimeoutException catch (e, stackTrace) {
+      developer.log('[TICKET] TimeoutException in modifyTicket', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw RequestTimeoutException('Request timed out');
     } catch (e, stackTrace) {
-      developer.log('[TICKET] Error in modifyTicket: $e',
-          name: 'TicketService', error: e, stackTrace: stackTrace);
+      developer.log('[TICKET] Error in modifyTicket: $e', name: 'TicketService', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
 
-  /// Marks a ticket as exited and returns detailed exit data.
   Future<Map<String, dynamic>> markTicketExit(String ticketId) async {
     final url = ApiConfig.getFullUrl('${TicketApi.markVehicleExit}$ticketId');
     final serverUrl = Uri.parse(url);
@@ -490,77 +497,82 @@ class TicketService {
     }
 
     developer.log('[TICKET] Marking ticket as exited at URL: $url', name: 'TicketService');
-    developer.log('[TICKET] Ticket ID: $ticketId', name: 'TicketService');
 
     try {
       final headers = await _getHeaders();
-      developer.log('[TICKET] Headers Sent: $headers', name: 'TicketService'); // Log headers
-      final response = await _client.get(
+      developer.log('[TICKET] Headers Sent for markTicketExit: $headers', name: 'TicketService');
+      final response = await _client.get( // Or POST if it's a state change with potential body
         serverUrl,
         headers: headers,
       ).timeout(const Duration(seconds: 10));
 
-      developer.log('[TICKET] Response Status Code: ${response.statusCode}', name: 'TicketService');
-      developer.log('[TICKET] Response Body: ${response.body}', name: 'TicketService');
+      developer.log('[TICKET] Response Status Code for markTicketExit: ${response.statusCode}', name: 'TicketService');
+      developer.log('[TICKET] Response Body for markTicketExit: ${response.body}', name: 'TicketService');
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        if (responseData['ticket'] != null) {
-          final ticketData = Map<String, dynamic>.from(responseData['ticket']);
-          _mapImageUrls(ticketData);
+        final exitedTicketJson = responseData['ticket'] ?? responseData['data'];
+        if (exitedTicketJson != null && exitedTicketJson['ticket_id'] != null) {
+          final ticketDataMap = Map<String, dynamic>.from(exitedTicketJson);
+          _mapImageUrls(ticketDataMap);
           developer.log('[TICKET] Successfully marked ticket as exited for ID: $ticketId', name: 'TicketService');
-          return ticketData;
+          return ticketDataMap;
         }
-        throw ServiceException(responseData['message'] ?? 'Invalid response format: No ticket data');
+        throw ServiceException(responseData['message'] ?? 'Invalid response format: No ticket data for exit');
       }
 
       throw _handleErrorResponse(response, 'Failed to mark ticket as exited');
-    } on SocketException catch (e) {
+    } on SocketException catch (e, stackTrace) {
+      developer.log('[TICKET] SocketException in markTicketExit: $e', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw ServerConnectionException('Failed to connect to the ticket server: $e');
-    } on TimeoutException {
+    } on TimeoutException catch (e, stackTrace) {
+      developer.log('[TICKET] TimeoutException in markTicketExit', name: 'TicketService', error: e, stackTrace: stackTrace);
       throw RequestTimeoutException('Request timed out');
     } catch (e, stackTrace) {
-      developer.log('[TICKET] Error in markTicketExit: $e',
-          name: 'TicketService', error: e, stackTrace: stackTrace);
+      developer.log('[TICKET] Error in markTicketExit: $e', name: 'TicketService', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
 
-  /// Helper method to handle error responses consistently
   HttpException _handleErrorResponse(http.Response response, String defaultMessage) {
     String? serverMessage;
     try {
       final errorData = json.decode(response.body);
       serverMessage = errorData['message'] as String?;
     } catch (_) {
-      serverMessage = null;
+      // serverMessage remains null if parsing fails
     }
     return HttpException(
       defaultMessage,
       statusCode: response.statusCode,
-      serverMessage: serverMessage ?? 'Unknown server error',
+      serverMessage: serverMessage ?? response.reasonPhrase ?? 'Unknown server error',
     );
   }
 
-  void _mapImageUrls(Map<String, dynamic> ticketData) {
+  void _mapImageUrls(Map<String, dynamic> ticketDataMap) {
     final baseUrl = ApiConfig.baseUrl.replaceAll(RegExp(r'/+$'), '');
-    if (ticketData['images'] != null) {
-      List<String> capturedImages = [];
-      if (ticketData['images'] is List) {
-        final imagesList = ticketData['images'] as List;
-        capturedImages = imagesList
-            .map((img) => img['image_path']?.toString())
-            .where((path) => path != null && path.isNotEmpty)
-            .map((path) {
-          final normalizedPath = path!.startsWith('/') ? path.substring(1) : path;
-          return '$baseUrl/$normalizedPath';
-        })
-            .toList();
-      }
-      ticketData['captured_images'] = capturedImages;
-      developer.log('[TICKET] Mapped images to: ${ticketData['captured_images']}', name: 'TicketService');
+
+    if (ticketDataMap['images'] is List) {
+      List<String> capturedImageUrls = (ticketDataMap['images'] as List)
+          .map((imgObject) {
+        if (imgObject is Map && imgObject['image_path'] is String) {
+          String path = imgObject['image_path'] as String;
+          if (path.isNotEmpty) {
+            if (path.startsWith('http://') || path.startsWith('https://')) {
+              return path;
+            }
+            final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
+            return '$baseUrl/$normalizedPath';
+          }
+        }
+        return null;
+      })
+          .whereType<String>()
+          .toList();
+      ticketDataMap['captured_images'] = capturedImageUrls;
     } else {
-      ticketData['captured_images'] = [];
+      ticketDataMap['captured_images'] = <String>[];
     }
+    developer.log('[TICKET] Mapped image URLs for captured_images: ${ticketDataMap['captured_images']}', name: 'TicketService');
   }
 }

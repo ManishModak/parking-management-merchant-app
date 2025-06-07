@@ -194,7 +194,7 @@ class BasicDetailsStep extends StatelessWidget {
                     isEnabled ? basicDetailsVM.errors['mobileNumber'] : null,
                 keyboardType: TextInputType.phone,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                maxLength: 15,
+                maxLength: 10,
                 // Kept updated length
                 height: 80,
                 prefixIcon:
