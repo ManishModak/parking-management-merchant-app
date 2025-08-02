@@ -209,8 +209,8 @@ class DisputesService {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        if (responseData['success'] == true && responseData['dispute'] != null) {
-          final dispute = Dispute.fromJson(responseData['dispute']);
+        if (responseData['success'] == true && responseData['data'] != null) {
+          final dispute = Dispute.fromJson(responseData['data']);
           final validationError = dispute.validateForUpdate();
           if (validationError != null) {
             throw ServiceException('Invalid dispute data: $validationError');

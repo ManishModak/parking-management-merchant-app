@@ -29,7 +29,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   @override
   void initState() {
     super.initState();
-    developer.log('Initializing AccountSettingsScreen', name: 'AccountSettings');
+    developer.log('Initializing AccountSettingsScreen',
+        name: 'AccountSettings');
     _setupListeners();
     _initializeAndLoadSettings();
   }
@@ -67,14 +68,16 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     final strings = S.of(context);
     developer.log('Loading settings', name: 'AccountSettings');
     try {
-      await AppConfig.loadSettings().timeout(const Duration(seconds: 5), onTimeout: () {
+      await AppConfig.loadSettings().timeout(const Duration(seconds: 5),
+          onTimeout: () {
         throw TimeoutException('Settings load timed out');
       });
       if (mounted) {
         setState(() {});
       }
     } catch (e) {
-      developer.log('Failed to load settings: $e', name: 'AccountSettings', level: 1000);
+      developer.log('Failed to load settings: $e',
+          name: 'AccountSettings', level: 1000);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -104,132 +107,144 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       ),
       body: _isLoading
           ? Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Theme.of(context).primaryColor),
-            const SizedBox(height: 16),
-            Text(
-              strings.labelLoading,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: context.textPrimaryColor,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                      color: Theme.of(context).primaryColor),
+                  const SizedBox(height: 16),
+                  Text(
+                    strings.labelLoading,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: context.textPrimaryColor,
+                        ),
+                  ),
+                ],
+              ),
+            )
+          : SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSectionHeader(strings.sectionAccount),
+                      _buildCardSection([
+                        _buildSettingsItem(
+                          icon: CustomIcons.personIcon(context),
+                          title: strings.optionMyAccount,
+                          subtitle: strings.subtitleMyAccount,
+                          onTap: () =>
+                              _navigateTo(context, AppRoutes.userProfile),
+                        ),
+                        const Divider(height: 1, indent: 56),
+                        _buildSettingsItem(
+                          icon: CustomIcons.lockIcon(context),
+                          title: strings.optionTouchId,
+                          subtitle: strings.subtitleTouchId,
+                          trailingIcon: _isBiometricLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : Switch(
+                                  activeColor: Theme.of(context).primaryColor,
+                                  value: AppConfig.isBiometricEnabled,
+                                  onChanged: (value) => _toggleBiometric(value),
+                                ),
+                        ),
+                        const Divider(height: 1, indent: 56),
+                        _buildSettingsItem(
+                          icon: CustomIcons.logoutIcon(context),
+                          title: strings.optionLogout,
+                          subtitle: strings.subtitleLogout,
+                          onTap: _showLogoutConfirmationDialog,
+                        ),
+                      ]),
+                      const SizedBox(height: 12),
+                      _buildSectionHeader(strings.sectionPreferences),
+                      _buildCardSection([
+                        _buildSettingsItem(
+                          icon: CustomIcons.languageIcon(context),
+                          title: strings.optionLanguage,
+                          subtitle:
+                              AppConfig.getLanguageText(AppConfig.language),
+                          onTap: _showLanguageSelectionDialog,
+                        ),
+                        const Divider(height: 1, indent: 56),
+                        _buildSettingsItem(
+                          icon: CustomIcons.themeIcon(context),
+                          title: strings.optionTheme,
+                          subtitle: AppConfig.getThemeText(AppConfig.theme),
+                          onTap: _showThemeSelectionDialog,
+                        ),
+                        const Divider(height: 1, indent: 56),
+                        _buildSettingsItem(
+                          icon: CustomIcons.notificationsIcon(context),
+                          title: strings.optionNotifications,
+                          subtitle: AppConfig.isNotificationsEnabled
+                              ? strings.enabled
+                              : strings.disabled,
+                          trailingIcon: _isNotificationsLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : Switch(
+                                  activeColor: Theme.of(context).primaryColor,
+                                  value: AppConfig.isNotificationsEnabled,
+                                  onChanged: (value) =>
+                                      _toggleNotifications(value),
+                                ),
+                        ),
+                      ]),
+                      const SizedBox(height: 12),
+                      _buildSectionHeader(strings.sectionSupport),
+                      _buildCardSection([
+                        _buildSettingsItem(
+                          icon: CustomIcons.helpIcon(context),
+                          title: strings.optionHelpSupport,
+                          subtitle: strings.subtitleHelpSupport,
+                          onTap: () =>
+                              _handleNotImplemented(strings.optionHelpSupport),
+                        ),
+                        const Divider(height: 1, indent: 56),
+                        _buildSettingsItem(
+                          icon: CustomIcons.aboutIcon(context),
+                          title: strings.optionAboutApp,
+                          subtitle: strings.subtitleAboutApp,
+                          onTap: () =>
+                              _handleNotImplemented(strings.optionAboutApp),
+                        ),
+                      ]),
+                      const SizedBox(height: 12),
+                      _buildSectionHeader(strings.sectionLegal),
+                      _buildCardSection([
+                        _buildSettingsItem(
+                          icon: CustomIcons.privacyIcon(context),
+                          title: strings.optionPrivacyPolicy,
+                          onTap: () => _handleNotImplemented(
+                              strings.optionPrivacyPolicy),
+                        ),
+                        const Divider(height: 1, indent: 56),
+                        _buildSettingsItem(
+                          icon: CustomIcons.termsIcon(context),
+                          title: strings.optionTermsOfService,
+                          onTap: () => _handleNotImplemented(
+                              strings.optionTermsOfService),
+                        ),
+                      ]),
+                      const SizedBox(height: 12),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
-      )
-          : SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSectionHeader(strings.sectionAccount),
-                _buildCardSection([
-                  _buildSettingsItem(
-                    icon: CustomIcons.personIcon(context),
-                    title: strings.optionMyAccount,
-                    subtitle: strings.subtitleMyAccount,
-                    onTap: () => _navigateTo(context, AppRoutes.userProfile),
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  _buildSettingsItem(
-                    icon: CustomIcons.lockIcon(context),
-                    title: strings.optionTouchId,
-                    subtitle: strings.subtitleTouchId,
-                    trailingIcon: _isBiometricLoading
-                        ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                        : Switch(
-                      activeColor: Theme.of(context).primaryColor,
-                      value: AppConfig.isBiometricEnabled,
-                      onChanged: (value) => _toggleBiometric(value),
-                    ),
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  _buildSettingsItem(
-                    icon: CustomIcons.logoutIcon(context),
-                    title: strings.optionLogout,
-                    subtitle: strings.subtitleLogout,
-                    onTap: _showLogoutConfirmationDialog,
-                  ),
-                ]),
-                const SizedBox(height: 12),
-                _buildSectionHeader(strings.sectionPreferences),
-                _buildCardSection([
-                  _buildSettingsItem(
-                    icon: CustomIcons.languageIcon(context),
-                    title: strings.optionLanguage,
-                    subtitle: AppConfig.getLanguageText(AppConfig.language),
-                    onTap: _showLanguageSelectionDialog,
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  _buildSettingsItem(
-                    icon: CustomIcons.themeIcon(context),
-                    title: strings.optionTheme,
-                    subtitle: AppConfig.getThemeText(AppConfig.theme),
-                    onTap: _showThemeSelectionDialog,
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  _buildSettingsItem(
-                    icon: CustomIcons.notificationsIcon(context),
-                    title: strings.optionNotifications,
-                    subtitle: AppConfig.isNotificationsEnabled ? strings.enabled : strings.disabled,
-                    trailingIcon: _isNotificationsLoading
-                        ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                        : Switch(
-                      activeColor: Theme.of(context).primaryColor,
-                      value: AppConfig.isNotificationsEnabled,
-                      onChanged: (value) => _toggleNotifications(value),
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: 12),
-                _buildSectionHeader(strings.sectionSupport),
-                _buildCardSection([
-                  _buildSettingsItem(
-                    icon: CustomIcons.helpIcon(context),
-                    title: strings.optionHelpSupport,
-                    subtitle: strings.subtitleHelpSupport,
-                    onTap: () => _handleNotImplemented(strings.optionHelpSupport),
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  _buildSettingsItem(
-                    icon: CustomIcons.aboutIcon(context),
-                    title: strings.optionAboutApp,
-                    subtitle: strings.subtitleAboutApp,
-                    onTap: () => _handleNotImplemented(strings.optionAboutApp),
-                  ),
-                ]),
-                const SizedBox(height: 12),
-                _buildSectionHeader(strings.sectionLegal),
-                _buildCardSection([
-                  _buildSettingsItem(
-                    icon: CustomIcons.privacyIcon(context),
-                    title: strings.optionPrivacyPolicy,
-                    onTap: () => _handleNotImplemented(strings.optionPrivacyPolicy),
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  _buildSettingsItem(
-                    icon: CustomIcons.termsIcon(context),
-                    title: strings.optionTermsOfService,
-                    onTap: () => _handleNotImplemented(strings.optionTermsOfService),
-                  ),
-                ]),
-                const SizedBox(height: 12),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -239,10 +254,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: context.textPrimaryColor,
-          letterSpacing: 0.5,
-        ),
+              fontWeight: FontWeight.w600,
+              color: context.textPrimaryColor,
+              letterSpacing: 0.5,
+            ),
       ),
     );
   }
@@ -266,23 +281,24 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       title: Text(
         title,
         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-          fontWeight: FontWeight.w500,
-          color: context.textPrimaryColor,
-        ),
+              fontWeight: FontWeight.w500,
+              color: context.textPrimaryColor,
+            ),
       ),
       subtitle: subtitle != null
           ? Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Text(
-          subtitle,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: context.textSecondaryColor,
-          ),
-        ),
-      )
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                subtitle,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.textSecondaryColor,
+                    ),
+              ),
+            )
           : null,
       trailing: trailingIcon ??
-          Icon(Icons.chevron_right, color: context.textSecondaryColor, size: 20),
+          Icon(Icons.chevron_right,
+              color: context.textSecondaryColor, size: 20),
       onTap: onTap,
       tileColor: context.secondaryCardColor,
       shape: RoundedRectangleBorder(
@@ -299,7 +315,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       if (mounted) {
         if (result.isSuccess) {
           HapticFeedback.lightImpact();
-          developer.log('Biometric setting updated to: $value', name: 'AccountSettings');
+          developer.log('Biometric setting updated to: $value',
+              name: 'AccountSettings');
           setState(() {});
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -314,7 +331,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         }
       }
     } catch (e) {
-      developer.log('Failed to update biometric: $e', name: 'AccountSettings', level: 1000);
+      developer.log('Failed to update biometric: $e',
+          name: 'AccountSettings', level: 1000);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -340,7 +358,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       if (mounted) {
         if (result.isSuccess) {
           HapticFeedback.lightImpact();
-          developer.log('Notifications setting updated to: $value', name: 'AccountSettings');
+          developer.log('Notifications setting updated to: $value',
+              name: 'AccountSettings');
           setState(() {});
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -355,7 +374,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         }
       }
     } catch (e) {
-      developer.log('Failed to update notifications: $e', name: 'AccountSettings', level: 1000);
+      developer.log('Failed to update notifications: $e',
+          name: 'AccountSettings', level: 1000);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -376,7 +396,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   void _navigateTo(BuildContext context, String route) {
     developer.log('Navigating to $route', name: 'AccountSettings');
     Navigator.pushNamed(context, route).catchError((e) {
-      developer.log('Navigation error to $route: $e', name: 'AccountSettings', level: 1000);
+      developer.log('Navigation error to $route: $e',
+          name: 'AccountSettings', level: 1000);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('${S.of(context).errorNavigation}: $e'),
@@ -403,9 +424,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         title: Text(
           strings.dialogTitleSelectLanguage,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: context.textPrimaryColor,
-          ),
+                fontWeight: FontWeight.w600,
+                color: context.textPrimaryColor,
+              ),
         ),
         contentPadding: const EdgeInsets.symmetric(vertical: 16),
         backgroundColor: context.cardColor,
@@ -416,9 +437,12 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildLanguageOption(dialogContext, 'en', strings.languageEnglish, setDialogState),
-                  _buildLanguageOption(dialogContext, 'hi', strings.languageHindi, setDialogState),
-                  _buildLanguageOption(dialogContext, 'mr', strings.languageMarathi, setDialogState),
+                  _buildLanguageOption(dialogContext, 'en',
+                      strings.languageEnglish, setDialogState),
+                  _buildLanguageOption(dialogContext, 'hi',
+                      strings.languageHindi, setDialogState),
+                  _buildLanguageOption(dialogContext, 'mr',
+                      strings.languageMarathi, setDialogState),
                 ],
               );
             },
@@ -453,29 +477,35 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     );
   }
 
-  Widget _buildLanguageOption(
-      BuildContext dialogContext, String code, String name, StateSetter setDialogState) {
+  Widget _buildLanguageOption(BuildContext dialogContext, String code,
+      String name, StateSetter setDialogState) {
     final isSelected = AppConfig.language == code;
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () async {
-          developer.log('Language option $code tapped', name: 'AccountSettings');
+          developer.log('Language option $code tapped',
+              name: 'AccountSettings');
           final result = await AppConfig.setLanguage(code);
           if (result.isSuccess) {
             HapticFeedback.selectionClick();
             developer.log('Language set to $code', name: 'AccountSettings');
             setDialogState(() {});
           } else {
-            developer.log('Failed to set language: ${result.error}', name: 'AccountSettings', level: 1000);
+            developer.log('Failed to set language: ${result.error}',
+                name: 'AccountSettings', level: 1000);
             ScaffoldMessenger.of(dialogContext).showSnackBar(
-              SnackBar(content: Text('${S.of(dialogContext).errorGeneric}: ${result.error}')),
+              SnackBar(
+                  content: Text(
+                      '${S.of(dialogContext).errorGeneric}: ${result.error}')),
             );
           }
         },
         child: Container(
           decoration: BoxDecoration(
-            color: isSelected ? context.textPrimaryColor.withOpacity(0.1) : Colors.transparent,
+            color: isSelected
+                ? context.textPrimaryColor.withOpacity(0.1)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -485,9 +515,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               Text(
                 name,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                  color: context.textPrimaryColor,
-                ),
+                      fontWeight:
+                          isSelected ? FontWeight.w500 : FontWeight.w400,
+                      color: context.textPrimaryColor,
+                    ),
               ),
             ],
           ),
@@ -504,13 +535,14 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         title: Text(
           strings.dialogTitleChooseTheme,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: context.textPrimaryColor,
-          ),
+                fontWeight: FontWeight.w600,
+                color: context.textPrimaryColor,
+              ),
         ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         backgroundColor: context.cardColor,
-        content: Container(
+        content: SizedBox(
           width: MediaQuery.of(context).size.width * 0.85,
           child: StatefulBuilder(
             builder: (BuildContext context, StateSetter setDialogState) {
@@ -518,13 +550,25 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildThemeCard(
-                      dialogContext, AppThemeMode.light, strings.themeLight, Icons.light_mode_outlined, setDialogState),
+                      dialogContext,
+                      AppThemeMode.light,
+                      strings.themeLight,
+                      Icons.light_mode_outlined,
+                      setDialogState),
                   const SizedBox(height: 8),
                   _buildThemeCard(
-                      dialogContext, AppThemeMode.dark, strings.themeDark, Icons.dark_mode_outlined, setDialogState),
+                      dialogContext,
+                      AppThemeMode.dark,
+                      strings.themeDark,
+                      Icons.dark_mode_outlined,
+                      setDialogState),
                   const SizedBox(height: 8),
                   _buildThemeCard(
-                      dialogContext, AppThemeMode.system, strings.themeSystem, Icons.brightness_auto, setDialogState),
+                      dialogContext,
+                      AppThemeMode.system,
+                      strings.themeSystem,
+                      Icons.brightness_auto,
+                      setDialogState),
                 ],
               );
             },
@@ -559,8 +603,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     );
   }
 
-  Widget _buildThemeCard(BuildContext dialogContext, AppThemeMode themeMode, String name, IconData icon,
-      StateSetter setDialogState) {
+  Widget _buildThemeCard(BuildContext dialogContext, AppThemeMode themeMode,
+      String name, IconData icon, StateSetter setDialogState) {
     final isSelected = AppConfig.theme == themeMode;
 
     return Card(
@@ -575,16 +619,21 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () async {
-          developer.log('Theme option ${themeMode.value} tapped', name: 'AccountSettings');
+          developer.log('Theme option ${themeMode.value} tapped',
+              name: 'AccountSettings');
           final result = await AppConfig.setTheme(themeMode);
           if (result.isSuccess) {
             HapticFeedback.selectionClick();
-            developer.log('Theme set to ${themeMode.value}', name: 'AccountSettings');
+            developer.log('Theme set to ${themeMode.value}',
+                name: 'AccountSettings');
             setDialogState(() {});
           } else {
-            developer.log('Failed to set theme: ${result.error}', name: 'AccountSettings', level: 1000);
+            developer.log('Failed to set theme: ${result.error}',
+                name: 'AccountSettings', level: 1000);
             ScaffoldMessenger.of(dialogContext).showSnackBar(
-              SnackBar(content: Text('${S.of(dialogContext).errorGeneric}: ${result.error}')),
+              SnackBar(
+                  content: Text(
+                      '${S.of(dialogContext).errorGeneric}: ${result.error}')),
             );
           }
         },
@@ -605,9 +654,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                 child: Text(
                   name,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                    color: context.textPrimaryColor,
-                  ),
+                        fontWeight:
+                            isSelected ? FontWeight.w500 : FontWeight.w400,
+                        color: context.textPrimaryColor,
+                      ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -631,17 +681,17 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             Text(
               strings.dialogTitleLogout,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: context.textPrimaryColor,
-              ),
+                    fontWeight: FontWeight.w600,
+                    color: context.textPrimaryColor,
+                  ),
             ),
           ],
         ),
         content: Text(
           strings.dialogContentLogout,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: context.textSecondaryColor,
-          ),
+                color: context.textSecondaryColor,
+              ),
         ),
         backgroundColor: context.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -669,7 +719,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             ],
           ),
         ],
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
@@ -691,7 +742,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         Navigator.pushNamedAndRemoveUntil(
           context,
           AppRoutes.welcome,
-              (route) => false,
+          (route) => false,
         );
       }
     } catch (e) {

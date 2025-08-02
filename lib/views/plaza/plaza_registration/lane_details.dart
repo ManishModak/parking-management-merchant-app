@@ -245,7 +245,7 @@ class LaneDetailsStep extends StatelessWidget {
   }) {
     final theme = Theme.of(context);
     final strings = S.of(context);
-    final bool isActive = lane.laneStatus?.toLowerCase() == 'active';
+    final bool isActive = lane.laneStatus.toLowerCase() == 'active';
     final String statusText = isActive ? strings.active : strings.inactive;
     final Color statusColor =
         isActive ? theme.colorScheme.primary : theme.colorScheme.error;
@@ -253,7 +253,7 @@ class LaneDetailsStep extends StatelessWidget {
         isActive ? statusColor.withOpacity(0.1) : statusColor.withOpacity(0.1);
     final Color cardColor = isNewlyAdded
         ? theme.cardColor
-        : theme.colorScheme.surfaceVariant.withOpacity(0.65);
+        : theme.colorScheme.surfaceContainerHighest.withOpacity(0.65);
 
     // Define all possible devices, showing "N/A" if the value is null
     final devices = [
@@ -517,14 +517,16 @@ class LaneDetailsStep extends StatelessWidget {
       );
     } else {
       // NEW Check (for int? laneId)
-      if (lane.laneId == null || lane.laneId! <= 0) { // Direct check for null or non-positive int
+      if (lane.laneId == null || lane.laneId! <= 0) {
+        // Direct check for null or non-positive int
         developer.log(
             '[LaneDetailsStep] Error: Attempted to edit saved lane without valid ID (null or <= 0). Lane ID: ${lane.laneId}', // Log the actual int? value
             name: 'LaneDetailsStep._handleCardTap',
             level: 1000);
         if (currentContext.mounted) {
           ScaffoldMessenger.of(currentContext).showSnackBar(const SnackBar(
-            content: Text("Error: Cannot edit lane. Invalid or missing lane ID."), // Slightly adjusted message
+            content: Text(
+                "Error: Cannot edit lane. Invalid or missing lane ID."), // Slightly adjusted message
             backgroundColor: Colors.redAccent,
           ));
         }

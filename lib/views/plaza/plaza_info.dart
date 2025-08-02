@@ -140,6 +140,7 @@ class _PlazaInfoScreenState extends State<PlazaInfoScreen> with RouteAware {
       }
       _isFetching = false;
       developer.log('Finished _loadPlazaDetails attempt.', name: _logName);
+      developer.log('Finished _loadPlazaDetails attempt.', name: _logName);
     }
   }
 

@@ -30,7 +30,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   final TextEditingController _mobileNumberController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
-  TextEditingController();
+      TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _stateController = TextEditingController();
@@ -181,8 +181,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
     final List<String> subEntity = _selectedRole == 'Centralized Controller'
         ? _selectedPlazaIds
         : _selectedPlazaId != null
-        ? [_selectedPlazaId!]
-        : [];
+            ? [_selectedPlazaId!]
+            : [];
 
     final validationErrors = userViewModel.validateRegistration(
       username: _nameController.text,
@@ -210,7 +210,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children:
-              validationErrors.values.map((e) => Text('• $e')).toList(),
+                  validationErrors.values.map((e) => Text('• $e')).toList(),
             ),
             backgroundColor: AppColors.error,
             duration: const Duration(seconds: 5),
@@ -289,7 +289,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
     return plazas
         .where((plaza) => plaza.plazaId != null)
         .map((plaza) =>
-    '${plaza.plazaId} - ${plaza.plazaName ?? 'Unnamed Plaza'}')
+            '${plaza.plazaId} - ${plaza.plazaName ?? 'Unnamed Plaza'}')
         .toList();
   }
 
@@ -321,7 +321,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
               if (_debounce?.isActive ?? false) _debounce!.cancel();
               _debounce = Timer(const Duration(milliseconds: 300), () {
                 final userViewModel =
-                Provider.of<UserViewModel>(context, listen: false);
+                    Provider.of<UserViewModel>(context, listen: false);
                 if (value != _verifiedMobileNumber) {
                   setState(() {
                     _isMobileVerified = false;
@@ -352,36 +352,36 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
     final isMultiSelect = _selectedRole == 'Centralized Controller';
     final availablePlazas = getAvailablePlazas(userViewModel.userPlazas);
     final plazaDisplayValue =
-    getPlazaDisplayValue(_selectedPlazaId, userViewModel.userPlazas);
+        getPlazaDisplayValue(_selectedPlazaId, userViewModel.userPlazas);
     final isPlazaAdminAutoAssigned =
         _currentUserRole == 'Plaza Admin' && _selectedRole == 'Plaza Admin';
 
     return isMultiSelect
         ? SearchableMultiSelectDropdown(
-      label: strings.labelSubEntity,
-      selectedValues: _selectedPlazaIds,
-      items: userViewModel.userPlazas,
-      itemText: (item) =>
-      '${(item as Plaza).plazaId} - ${item.plazaName ?? 'Unnamed Plaza'}',
-      itemValue: (item) => (item as Plaza).plazaId!,
-      onChanged: (values) => setState(() {
-        _selectedPlazaIds = values.cast<String>();
-      }),
-      enabled: true,
-      errorText: userViewModel.getError('subEntity'),
-    )
+            label: strings.labelSubEntity,
+            selectedValues: _selectedPlazaIds,
+            items: userViewModel.userPlazas,
+            itemText: (item) =>
+                '${(item as Plaza).plazaId} - ${item.plazaName ?? 'Unnamed Plaza'}',
+            itemValue: (item) => (item as Plaza).plazaId!,
+            onChanged: (values) => setState(() {
+              _selectedPlazaIds = values.cast<String>();
+            }),
+            enabled: true,
+            errorText: userViewModel.getError('subEntity'),
+          )
         : CustomDropDown.normalDropDown(
-      context: context,
-      label: strings.labelSubEntity,
-      value: plazaDisplayValue,
-      items: availablePlazas,
-      onChanged: isPlazaAdminAutoAssigned
-          ? null
-          : (value) =>
-          setState(() => _selectedPlazaId = value?.split(' - ')[0]),
-      enabled: !isPlazaAdminAutoAssigned,
-      errorText: userViewModel.getError('subEntity'),
-    );
+            context: context,
+            label: strings.labelSubEntity,
+            value: plazaDisplayValue,
+            items: availablePlazas,
+            onChanged: isPlazaAdminAutoAssigned
+                ? null
+                : (value) =>
+                    setState(() => _selectedPlazaId = value?.split(' - ')[0]),
+            enabled: !isPlazaAdminAutoAssigned,
+            errorText: userViewModel.getError('subEntity'),
+          );
   }
 
   @override
@@ -402,136 +402,142 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: userViewModel.isLoading || _isSendingOtp
           ? Center(
-          child: CircularProgressIndicator(
-              color: Theme.of(context).primaryColor))
+              child: CircularProgressIndicator(
+                  color: Theme.of(context).primaryColor))
           : SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            CustomFormFields.normalSizedTextFormField(
-              context: context,
-              label: strings.labelFullName,
-              controller: _nameController,
-              keyboardType: TextInputType.text,
-              isPassword: false,
-              enabled: true,
-              errorText: userViewModel.getError('username'),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelFullName,
+                    controller: _nameController,
+                    keyboardType: TextInputType.text,
+                    isPassword: false,
+                    enabled: true,
+                    errorText: userViewModel.getError('username'),
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelEmail,
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    isPassword: false,
+                    enabled: true,
+                    errorText: userViewModel.getError('email'),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildMobileNumberField(strings),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelAddress,
+                    controller: _addressController,
+                    keyboardType: TextInputType.streetAddress,
+                    isPassword: false,
+                    enabled: true,
+                    errorText: userViewModel.getError('address'),
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelCity,
+                    controller: _cityController,
+                    keyboardType: TextInputType.text,
+                    isPassword: false,
+                    enabled: true,
+                    errorText: userViewModel.getError('city'),
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelState,
+                    controller: _stateController,
+                    keyboardType: TextInputType.text,
+                    isPassword: false,
+                    enabled: true,
+                    errorText: userViewModel.getError('state'),
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelPincode,
+                    controller: _pincodeController,
+                    keyboardType: TextInputType.number,
+                    isPassword: false,
+                    enabled: true,
+                    errorText: userViewModel.getError('pincode'),
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelPassword,
+                    controller: _passwordController,
+                    keyboardType: TextInputType.text,
+                    isPassword: true,
+                    enabled: true,
+                    errorText: userViewModel.getError('password'),
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelConfirmPassword,
+                    controller: _confirmPasswordController,
+                    keyboardType: TextInputType.text,
+                    isPassword: true,
+                    enabled: true,
+                    errorText: userViewModel.getError('confirmPassword'),
+                  ),
+                  const SizedBox(height: 16),
+                  CustomDropDown.normalDropDown(
+                    context: context,
+                    label: strings.labelAssignRole,
+                    value: _selectedRole,
+                    items: getAvailableRoles(),
+                    onChanged: (value) => setState(() {
+                      _selectedRole = value;
+                      _selectedPlazaId = null;
+                      _selectedPlazaIds = [];
+                      if (_currentUserRole == 'Plaza Admin' &&
+                          value == 'Plaza Admin' &&
+                          userViewModel.userPlazas.isNotEmpty) {
+                        _selectedPlazaId =
+                            userViewModel.userPlazas.first.plazaId;
+                      }
+                    }),
+                    enabled: true,
+                    errorText: userViewModel.getError('role'),
+                  ),
+                  const SizedBox(height: 16),
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
+                    label: strings.labelEntity,
+                    controller:
+                        TextEditingController(text: _selectedEntityName),
+                    keyboardType: TextInputType.text,
+                    isPassword: false,
+                    enabled: false,
+                    errorText: userViewModel.getError('entity'),
+                  ),
+                  const SizedBox(height: 16),
+                  if (_selectedRole != null && _selectedRole != 'Plaza Owner')
+                    _buildSubEntityField(strings, userViewModel),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            CustomFormFields.normalSizedTextFormField(
-              context: context,
-              label: strings.labelEmail,
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              isPassword: false,
-              enabled: true,
-              errorText: userViewModel.getError('email'),
-            ),
-            const SizedBox(height: 16),
-            _buildMobileNumberField(strings),
-            const SizedBox(height: 16),
-            CustomFormFields.normalSizedTextFormField(
-              context: context,
-              label: strings.labelAddress,
-              controller: _addressController,
-              keyboardType: TextInputType.streetAddress,
-              isPassword: false,
-              enabled: true,
-              errorText: userViewModel.getError('address'),
-            ),
-            const SizedBox(height: 16),
-            CustomFormFields.normalSizedTextFormField(
-              context: context,
-              label: strings.labelCity,
-              controller: _cityController,
-              keyboardType: TextInputType.text,
-              isPassword: false,
-              enabled: true,
-              errorText: userViewModel.getError('city'),
-            ),
-            const SizedBox(height: 16),
-            CustomFormFields.normalSizedTextFormField(
-              context: context,
-              label: strings.labelState,
-              controller: _stateController,
-              keyboardType: TextInputType.text,
-              isPassword: false,
-              enabled: true,
-              errorText: userViewModel.getError('state'),
-            ),
-            const SizedBox(height: 16),
-            CustomFormFields.normalSizedTextFormField(
-              context: context,
-              label: strings.labelPincode,
-              controller: _pincodeController,
-              keyboardType: TextInputType.number,
-              isPassword: false,
-              enabled: true,
-              errorText: userViewModel.getError('pincode'),
-            ),
-            const SizedBox(height: 16),
-            CustomFormFields.normalSizedTextFormField(
-              context: context,
-              label: strings.labelPassword,
-              controller: _passwordController,
-              keyboardType: TextInputType.text,
-              isPassword: true,
-              enabled: true,
-              errorText: userViewModel.getError('password'),
-            ),
-            const SizedBox(height: 16),
-            CustomFormFields.normalSizedTextFormField(
-              context: context,
-              label: strings.labelConfirmPassword,
-              controller: _confirmPasswordController,
-              keyboardType: TextInputType.text,
-              isPassword: true,
-              enabled: true,
-              errorText: userViewModel.getError('confirmPassword'),
-            ),
-            const SizedBox(height: 16),
-            CustomDropDown.normalDropDown(
-              context: context,
-              label: strings.labelAssignRole,
-              value: _selectedRole,
-              items: getAvailableRoles(),
-              onChanged: (value) => setState(() {
-                _selectedRole = value;
-                _selectedPlazaId = null;
-                _selectedPlazaIds = [];
-                if (_currentUserRole == 'Plaza Admin' &&
-                    value == 'Plaza Admin' &&
-                    userViewModel.userPlazas.isNotEmpty) {
-                  _selectedPlazaId =
-                      userViewModel.userPlazas.first.plazaId;
-                }
-              }),
-              enabled: true,
-              errorText: userViewModel.getError('role'),
-            ),
-            const SizedBox(height: 16),
-            CustomFormFields.normalSizedTextFormField(
-              context: context,
-              label: strings.labelEntity,
-              controller: TextEditingController(text: _selectedEntityName),
-              keyboardType: TextInputType.text,
-              isPassword: false,
-              enabled: false,
-              errorText: userViewModel.getError('entity'),
-            ),
-            const SizedBox(height: 16),
-            if (_selectedRole != null && _selectedRole != 'Plaza Owner')
-              _buildSubEntityField(strings, userViewModel),
-            const SizedBox(height: 24),
-            CustomButtons.primaryButton(
-              text: strings.buttonRegister,
-              onPressed: _registerUser,
-              height: 50,
-              width: AppConfig.deviceWidth * 0.9,
-              context: context,
-            ),
-          ],
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: CustomButtons.primaryButton(
+            text: strings.buttonRegister,
+            onPressed: _registerUser,
+            height: 50,
+            width: AppConfig.deviceWidth * 0.9,
+            context: context,
+          ),
         ),
       ),
     );

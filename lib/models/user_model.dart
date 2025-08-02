@@ -10,7 +10,8 @@ class User {
   final String? city;
   final String? pincode;
   final List<String> subEntity; // List of plaza IDs for API requests
-  final List<Map<String, dynamic>>? subEntityData; // Raw subEntity objects for dropdowns
+  final List<Map<String, dynamic>>?
+      subEntityData; // Raw subEntity objects for dropdowns
   final String? entityName;
   final String? entityId;
 
@@ -39,7 +40,10 @@ class User {
     if (json['subEntity'] != null) {
       if (json['subEntity'] is List) {
         final subEntityRaw = json['subEntity'] as List<dynamic>;
-        subEntityDataList = subEntityRaw.where((item) => item is Map<String, dynamic>).cast<Map<String, dynamic>>().toList();
+        subEntityDataList = subEntityRaw
+            .whereType<Map<String, dynamic>>()
+            .cast<Map<String, dynamic>>()
+            .toList();
         subEntityList = subEntityRaw.map((item) {
           if (item is String) {
             return item; // Direct plaza ID (e.g., "3")
@@ -94,4 +98,3 @@ class User {
     return 'User(id: $id, name: $name, email: $email, mobile: $mobileNumber, address: $address, city: $city, state: $state, pincode: $pincode, role: $role, entity: $entityName, subEntity: $subEntity, subEntityData: $subEntityData, entityId: $entityId)';
   }
 }
-

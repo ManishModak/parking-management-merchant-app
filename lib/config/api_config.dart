@@ -1,8 +1,7 @@
 // API Configuration
 class ApiConfig {
-  //static const String baseUrl = 'http://13.201.218.178:3001/'; // Production server
-  static const String baseUrl =
-      'http://192.168.1.101:3001/'; // Device IP for mobile testing
+  static const String baseUrl = 'http://13.201.218.178:3001/'; // Production server
+  //static const String baseUrl = 'http://192.168.1.101:3001/'; // Device IP for mobile testing
 
   // Socket Configuration - Extract base URL without port and path
   static String get socketUrl {

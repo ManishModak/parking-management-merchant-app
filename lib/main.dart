@@ -1,4 +1,4 @@
-  import 'dart:developer' as developer;
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:merchant_app/providers/locale_provider.dart';
@@ -8,7 +8,6 @@ import 'package:merchant_app/viewmodels/dashboard_viewmodel.dart';
 import 'package:merchant_app/viewmodels/dispute/dispute_list_viewmodel.dart';
 import 'package:merchant_app/viewmodels/dispute/process_dispute_viewmodel.dart';
 import 'package:merchant_app/viewmodels/dispute/view_dispute_viewmodel.dart';
-import 'package:merchant_app/viewmodels/plaza/lane_details_viewmodel.dart';
 import 'package:merchant_app/viewmodels/plaza/plaza_list_viewmodel.dart';
 import 'package:merchant_app/viewmodels/plaza/plaza_modification_viewmodel.dart';
 import 'package:merchant_app/viewmodels/settings_viewmodel.dart';
@@ -16,7 +15,6 @@ import 'package:merchant_app/viewmodels/ticket/open_ticket_viewmodel.dart';
 import 'package:merchant_app/viewmodels/ticket/reject_ticket_viewmodel.dart';
 import 'package:merchant_app/viewmodels/ticket/ticket_history_viewmodel.dart';
 import 'package:merchant_app/views/home.dart';
-import 'package:merchant_app/views/tickets/ticket_history/ticket_history_list.dart';
 import 'package:merchant_app/views/welcome.dart';
 import 'package:provider/provider.dart';
 import 'config/app_config.dart';
@@ -37,7 +35,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   await AppConfig.initializeSettings();
-  
+
   // Initialize native push notifications
   await PushNotificationService.initialize();
 
@@ -62,7 +60,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => TicketHistoryViewModel()),
         ChangeNotifierProvider(create: (_) => OpenTicketViewModel()),
-        ChangeNotifierProvider(create: (_) => RejectTicketViewModel ()),
+        ChangeNotifierProvider(create: (_) => RejectTicketViewModel()),
         ChangeNotifierProvider(create: (_) => SettingsViewModel()),
         ChangeNotifierProvider(create: (_) => DashboardViewModel()),
         ChangeNotifierProvider(create: (_) => DisputeListViewModel()),
@@ -173,7 +171,8 @@ class AuthCheckScreen extends StatelessWidget {
         }
 
         if (snapshot.hasError) {
-          developer.log('Auth check failed: ${snapshot.error}', name: 'AuthCheck', error: snapshot.error);
+          developer.log('Auth check failed: ${snapshot.error}',
+              name: 'AuthCheck', error: snapshot.error);
           return Scaffold(
             body: Center(
               child: Column(
@@ -191,8 +190,11 @@ class AuthCheckScreen extends StatelessWidget {
           );
         }
 
-        developer.log('Auth check completed: ${snapshot.data}', name: 'AuthCheck');
-        return snapshot.data == true ? const HomeScreen() : const WelcomeScreen();
+        developer.log('Auth check completed: ${snapshot.data}',
+            name: 'AuthCheck');
+        return snapshot.data == true
+            ? const HomeScreen()
+            : const WelcomeScreen();
       },
     );
   }

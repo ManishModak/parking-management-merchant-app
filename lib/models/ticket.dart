@@ -62,7 +62,7 @@ class TicketPayment {
   });
 
   factory TicketPayment.fromJson(Map<String, dynamic> json) {
-    double? _parseDouble(dynamic value) {
+    double? parseDouble(dynamic value) {
       if (value == null) return null;
       if (value is num) return value.toDouble();
       if (value is String) {
@@ -80,13 +80,15 @@ class TicketPayment {
       ticketRefId: json['ticket_ref_id'] as String?,
       transactionId: json['transaction_id'] as String?,
       transactionStatus: json['transaction_status'] as String?,
-      transactionAmount: _parseDouble(json['transaction_amount']),
-      charges: _parseDouble(json['charges']),
-      gstAmount: _parseDouble(json['gst_amount']),
-      totalTransaction: _parseDouble(json['total_transaction']),
-      fareAmount: _parseDouble(json['fare_amount']),
+      transactionAmount: parseDouble(json['transaction_amount']),
+      charges: parseDouble(json['charges']),
+      gstAmount: parseDouble(json['gst_amount']),
+      totalTransaction: parseDouble(json['total_transaction']),
+      fareAmount: parseDouble(json['fare_amount']),
       paymentId: json['payment_id'] as String?,
-      paymentTime: json['payment_time'] != null ? DateTime.parse(json['payment_time'] as String) : null,
+      paymentTime: json['payment_time'] != null
+          ? DateTime.parse(json['payment_time'] as String)
+          : null,
       paymentMethod: json['payment_method'] as String?,
       paymentStatus: json['payment_status'] as String?,
       paymentRemark: json['payment_remark'] as String?,
@@ -94,8 +96,12 @@ class TicketPayment {
       instrumentType: json['instrument_type'] as String?,
       instrumentSubtype: json['instrument_subtype'] as String?,
       vehicleNumber: json['vehicle_number'] as String?,
-      entryTime: json['entry_time'] != null ? DateTime.parse(json['entry_time'] as String) : null,
-      exitTime: json['exit_time'] != null ? DateTime.parse(json['exit_time'] as String) : null,
+      entryTime: json['entry_time'] != null
+          ? DateTime.parse(json['entry_time'] as String)
+          : null,
+      exitTime: json['exit_time'] != null
+          ? DateTime.parse(json['exit_time'] as String)
+          : null,
       duration: json['duration'] as int?,
       fareType: json['fare_type'] as String?,
       createdBy: json['created_by'] as String?,
@@ -176,7 +182,7 @@ class Ticket {
     TicketPayment? successfulPayment;
     if (paymentsList != null && paymentsList.isNotEmpty) {
       successfulPayment = paymentsList.firstWhere(
-            (p) => p.paymentStatus == 'Paid',
+        (p) => p.paymentStatus == 'Paid',
         orElse: () => paymentsList.first,
       );
     }
@@ -234,12 +240,16 @@ class Ticket {
       modificationTime: parseDateTime(json['modification_time']),
       remarks: json['remarks'] as String?,
       fareType: successfulPayment?.fareType ?? json['fare_type'] as String?,
-      fareAmount: successfulPayment?.fareAmount ?? parseDouble(json['fare_amount']),
-      totalCharges: successfulPayment?.totalTransaction ?? parseDouble(json['total_transaction']),
-      parkingDuration: successfulPayment?.duration ?? parseInt(json['duration']),
+      fareAmount:
+          successfulPayment?.fareAmount ?? parseDouble(json['fare_amount']),
+      totalCharges: successfulPayment?.totalTransaction ??
+          parseDouble(json['total_transaction']),
+      parkingDuration:
+          successfulPayment?.duration ?? parseInt(json['duration']),
       disputeStatus: json['dispute_status'] as String? ?? 'Not Raised',
       disputeId: parseInt(json['disputeId']), // Updated to use parseInt
-      paymentMode: successfulPayment?.paymentMethod ?? json['payment_method'] as String?,
+      paymentMode:
+          successfulPayment?.paymentMethod ?? json['payment_method'] as String?,
       payments: paymentsList,
       geoLatitude: json['geo_latitude'] as String?,
       geoLongitude: json['geo_longitude'] as String?,
@@ -343,34 +353,36 @@ class Ticket {
       'payment_method': paymentMode,
       'geo_latitude': geoLatitude,
       'geo_longitude': geoLongitude,
-      'payments': payments?.map((p) => {
-        'id': p.id,
-        'ticket_id': p.ticketId,
-        'plazaId': p.plazaId,
-        'order_id': p.orderId,
-        'ticket_ref_id': p.ticketRefId,
-        'transaction_id': p.transactionId,
-        'transaction_status': p.transactionStatus,
-        'transaction_amount': p.transactionAmount,
-        'charges': p.charges,
-        'gst_amount': p.gstAmount,
-        'total_transaction': p.totalTransaction,
-        'fare_amount': p.fareAmount,
-        'payment_id': p.paymentId,
-        'payment_time': p.paymentTime?.toIso8601String(),
-        'payment_method': p.paymentMethod,
-        'payment_status': p.paymentStatus,
-        'payment_remark': p.paymentRemark,
-        'instrument_no': p.instrumentNo,
-        'instrument_type': p.instrumentType,
-        'instrument_subtype': p.instrumentSubtype,
-        'vehicle_number': p.vehicleNumber,
-        'entry_time': p.entryTime?.toIso8601String(),
-        'exit_time': p.exitTime?.toIso8601String(),
-        'duration': p.duration,
-        'fare_type': p.fareType,
-        'created_by': p.createdBy,
-      }).toList(),
+      'payments': payments
+          ?.map((p) => {
+                'id': p.id,
+                'ticket_id': p.ticketId,
+                'plazaId': p.plazaId,
+                'order_id': p.orderId,
+                'ticket_ref_id': p.ticketRefId,
+                'transaction_id': p.transactionId,
+                'transaction_status': p.transactionStatus,
+                'transaction_amount': p.transactionAmount,
+                'charges': p.charges,
+                'gst_amount': p.gstAmount,
+                'total_transaction': p.totalTransaction,
+                'fare_amount': p.fareAmount,
+                'payment_id': p.paymentId,
+                'payment_time': p.paymentTime?.toIso8601String(),
+                'payment_method': p.paymentMethod,
+                'payment_status': p.paymentStatus,
+                'payment_remark': p.paymentRemark,
+                'instrument_no': p.instrumentNo,
+                'instrument_type': p.instrumentType,
+                'instrument_subtype': p.instrumentSubtype,
+                'vehicle_number': p.vehicleNumber,
+                'entry_time': p.entryTime?.toIso8601String(),
+                'exit_time': p.exitTime?.toIso8601String(),
+                'duration': p.duration,
+                'fare_type': p.fareType,
+                'created_by': p.createdBy,
+              })
+          .toList(),
     };
     return json;
   }
@@ -380,14 +392,16 @@ class Ticket {
       'plazaId': plazaId,
       'plaza_name': plazaName,
       'entry_lane_id': entryLaneId,
-      'entry_time': entryTime?.toIso8601String() ?? DateTime.now().toIso8601String(),
+      'entry_time':
+          entryTime?.toIso8601String() ?? DateTime.now().toIso8601String(),
       if (vehicleNumber != null) 'vehicle_number': vehicleNumber,
       if (vehicleType != null) 'vehicle_type': vehicleType,
       if (floorId != null) 'floor_id': floorId,
       if (slotId != null) 'slot_id': slotId,
       'status': Status.Open.toString().split('.').last,
       'entry_lane_direction': entryLaneDirection ?? 'Unknown',
-      if (capturedImages != null && capturedImages!.isNotEmpty) 'captured_images': capturedImages,
+      if (capturedImages != null && capturedImages!.isNotEmpty)
+        'captured_images': capturedImages,
       'remarks': remarks ?? '',
       'geo_latitude': geoLatitude,
       'geo_longitude': geoLongitude,
@@ -407,9 +421,11 @@ class Ticket {
       if (slotId != null) 'slot_id': slotId,
       'modified_by': modifiedBy ?? 'System',
       'modification_time': DateTime.now().toIso8601String(),
-      'status': status?.toString().split('.').last ?? Status.Open.toString().split('.').last,
+      'status': status?.toString().split('.').last ??
+          Status.Open.toString().split('.').last,
       'entry_lane_direction': entryLaneDirection ?? 'Unknown',
-      if (capturedImages != null && capturedImages!.isNotEmpty) 'captured_images': capturedImages,
+      if (capturedImages != null && capturedImages!.isNotEmpty)
+        'captured_images': capturedImages,
       'remarks': remarks ?? '',
       if (disputeId != null) 'disputeId': disputeId, // Updated to int?
     };
@@ -432,9 +448,12 @@ class Ticket {
     if (statusStr == null) return Status.Open;
     try {
       return Status.values.firstWhere(
-            (e) => e.toString().split('.').last.toLowerCase() == statusStr.toLowerCase(),
+        (e) =>
+            e.toString().split('.').last.toLowerCase() ==
+            statusStr.toLowerCase(),
         orElse: () {
-          print("Warning: Unknown status string '$statusStr' received. Defaulting to 'Open'.");
+          print(
+              "Warning: Unknown status string '$statusStr' received. Defaulting to 'Open'.");
           return Status.Open;
         },
       );

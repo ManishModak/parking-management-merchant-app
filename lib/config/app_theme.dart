@@ -32,21 +32,66 @@ class AppTheme {
       ),
     ),
     textTheme: const TextTheme(
-      displayLarge: TextStyle(fontSize: 57, fontWeight: FontWeight.w400, color: AppColors.textPrimaryLight),
-      displayMedium: TextStyle(fontSize: 45, fontWeight: FontWeight.w400, color: AppColors.textPrimaryLight),
-      displaySmall: TextStyle(fontSize: 36, fontWeight: FontWeight.w400, color: AppColors.textPrimaryLight),
-      headlineLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.w400, color: AppColors.textPrimaryLight),
-      headlineMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.w400, color: AppColors.textPrimaryLight),
-      headlineSmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w400, color: AppColors.textPrimaryLight),
-      titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w500, color: AppColors.textPrimaryLight),
-      titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.textPrimaryLight),
-      titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimaryLight),
-      bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: AppColors.textPrimaryLight),
-      bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.textPrimaryLight),
-      bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textSecondaryLight),
-      labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimaryLight),
-      labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimaryLight),
-      labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textPrimaryLight),
+      displayLarge: TextStyle(
+          fontSize: 57,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryLight),
+      displayMedium: TextStyle(
+          fontSize: 45,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryLight),
+      displaySmall: TextStyle(
+          fontSize: 36,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryLight),
+      headlineLarge: TextStyle(
+          fontSize: 32,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryLight),
+      headlineMedium: TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryLight),
+      headlineSmall: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryLight),
+      titleLarge: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimaryLight),
+      titleMedium: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimaryLight),
+      titleSmall: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimaryLight),
+      bodyLarge: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryLight),
+      bodyMedium: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryLight),
+      bodySmall: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textSecondaryLight),
+      labelLarge: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimaryLight),
+      labelMedium: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimaryLight),
+      labelSmall: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimaryLight),
     ),
     appBarTheme: AppBarTheme(
       backgroundColor: AppColors.primary,
@@ -260,7 +305,6 @@ class AppTheme {
       secondary: AppColors.secondary,
       secondaryContainer: AppColors.secondaryLight,
       surface: AppColors.surfaceDark,
-      background: AppColors.backgroundDark,
       error: AppColors.error,
       onPrimary: AppColors.textDark,
       onSecondary: AppColors.textDark,
@@ -280,21 +324,66 @@ class AppTheme {
       ),
     ),
     textTheme: const TextTheme(
-      displayLarge: TextStyle(fontSize: 57, fontWeight: FontWeight.w400, color: AppColors.textPrimaryDark),
-      displayMedium: TextStyle(fontSize: 45, fontWeight: FontWeight.w400, color: AppColors.textPrimaryDark),
-      displaySmall: TextStyle(fontSize: 36, fontWeight: FontWeight.w400, color: AppColors.textPrimaryDark),
-      headlineLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.w400, color: AppColors.textPrimaryDark),
-      headlineMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.w400, color: AppColors.textPrimaryDark),
-      headlineSmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w400, color: AppColors.textPrimaryDark),
-      titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w500, color: AppColors.textPrimaryDark),
-      titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.textPrimaryDark),
-      titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimaryDark),
-      bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: AppColors.textPrimaryDark),
-      bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.textPrimaryDark),
-      bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textSecondaryDark),
-      labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimaryDark),
-      labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimaryDark),
-      labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textPrimaryDark),
+      displayLarge: TextStyle(
+          fontSize: 57,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryDark),
+      displayMedium: TextStyle(
+          fontSize: 45,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryDark),
+      displaySmall: TextStyle(
+          fontSize: 36,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryDark),
+      headlineLarge: TextStyle(
+          fontSize: 32,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryDark),
+      headlineMedium: TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryDark),
+      headlineSmall: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryDark),
+      titleLarge: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimaryDark),
+      titleMedium: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimaryDark),
+      titleSmall: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimaryDark),
+      bodyLarge: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryDark),
+      bodyMedium: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textPrimaryDark),
+      bodySmall: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textSecondaryDark),
+      labelLarge: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimaryDark),
+      labelMedium: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimaryDark),
+      labelSmall: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimaryDark),
     ),
     appBarTheme: AppBarTheme(
       backgroundColor: AppColors.backgroundDark,
@@ -502,7 +591,7 @@ class AppTheme {
   static void logThemeApplied(Brightness brightness) {
     developer.log(
       'Theme applied: ${brightness == Brightness.light ? 'Light' : 'Dark'} - '
-          'Primary: ${brightness == Brightness.light ? AppColors.primary : AppColors.secondary}',
+      'Primary: ${brightness == Brightness.light ? AppColors.primary : AppColors.secondary}',
       name: 'AppTheme',
     );
   }
@@ -526,20 +615,25 @@ class AppTheme {
 extension AppColorsExtension on BuildContext {
   Color get backgroundColor => Theme.of(this).scaffoldBackgroundColor;
   Color get surfaceColor => Theme.of(this).colorScheme.surface;
-  Color get formBackgroundColor => Theme.of(this).inputDecorationTheme.fillColor ?? AppColors.formBackgroundLight;
+  Color get formBackgroundColor =>
+      Theme.of(this).inputDecorationTheme.fillColor ??
+      AppColors.formBackgroundLight;
   Color get textPrimaryColor => Theme.of(this).textTheme.bodyLarge!.color!;
   Color get textSecondaryColor => Theme.of(this).textTheme.bodySmall!.color!;
-  Color get primaryButtonTextColor => Theme.of(this).elevatedButtonTheme.style!.foregroundColor!.resolve({})!;
-  Color get secondaryButtonTextColor => Theme.of(this).brightness == Brightness.light
-      ? AppColors.textDark
-      : AppColors.textLight;
+  Color get primaryButtonTextColor =>
+      Theme.of(this).elevatedButtonTheme.style!.foregroundColor!.resolve({})!;
+  Color get secondaryButtonTextColor =>
+      Theme.of(this).brightness == Brightness.light
+          ? AppColors.textDark
+          : AppColors.textLight;
   Color get cardColor => Theme.of(this).cardColor;
   Color get secondaryCardColor => Theme.of(this).brightness == Brightness.light
       ? AppColors.secondaryCardLight
       : AppColors.secondaryCardDark;
-  Color get notificationCardColor => Theme.of(this).brightness == Brightness.light
-      ? AppColors.notificationCardLight
-      : AppColors.notificationCardDark;
+  Color get notificationCardColor =>
+      Theme.of(this).brightness == Brightness.light
+          ? AppColors.notificationCardLight
+          : AppColors.notificationCardDark;
   Color get chartPrimaryColor => Theme.of(this).brightness == Brightness.light
       ? AppColors.chartPrimaryLight
       : AppColors.chartPrimaryDark;
@@ -549,12 +643,17 @@ extension AppColorsExtension on BuildContext {
   Color get chartTertiaryColor => Theme.of(this).brightness == Brightness.light
       ? AppColors.chartTertiaryLight
       : AppColors.chartTertiaryDark;
-  Color get shadowColor => Theme.of(this).cardTheme.shadowColor ?? AppColors.shadowLight;
-  Color get inputBorderColor => Theme.of(this).inputDecorationTheme.enabledBorder?.borderSide.color ??
+  Color get shadowColor =>
+      Theme.of(this).cardTheme.shadowColor ?? AppColors.shadowLight;
+  Color get inputBorderColor =>
+      Theme.of(this).inputDecorationTheme.enabledBorder?.borderSide.color ??
       AppColors.inputBorderLight;
   Color get borderColor => Theme.of(this).dividerTheme.color ?? Colors.grey;
-  Color get inputBorderEnabledColor => Theme.of(this).brightness == Brightness.light
-      ? AppColors.inputBorderEnabledLight
-      : AppColors.inputBorderEnabledDark;
-  Color get successColor => Theme.of(this).brightness == Brightness.light ? AppColors.success : AppColors.successDark;
+  Color get inputBorderEnabledColor =>
+      Theme.of(this).brightness == Brightness.light
+          ? AppColors.inputBorderEnabledLight
+          : AppColors.inputBorderEnabledDark;
+  Color get successColor => Theme.of(this).brightness == Brightness.light
+      ? AppColors.success
+      : AppColors.successDark;
 }

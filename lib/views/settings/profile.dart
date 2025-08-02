@@ -33,7 +33,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _isEditMode = false;
   bool isMobileVerified = false;
   String? _originalMobileNumber;
-  String? _verifiedMobileNumber; // Stores the mobile number that was last verified
+  String?
+      _verifiedMobileNumber; // Stores the mobile number that was last verified
   Map<String, String> _originalValues = {};
   Timer? _debounce;
 
@@ -52,7 +53,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     // like at the start of methods called after initState or in build method.
     // However, S.of(context) in methods called by user interaction (like this one if called later) is fine.
     final strings = S.of(context);
-    final settingsViewModel = Provider.of<SettingsViewModel>(context, listen: false);
+    final settingsViewModel =
+        Provider.of<SettingsViewModel>(context, listen: false);
     settingsViewModel.clearErrors();
     final userId = await SecureStorageService().getUserId();
     if (userId == null) {
@@ -71,10 +73,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     await settingsViewModel.fetchUser(userId: userId, isCurrentAppUser: true);
     if (mounted) {
       _populateControllersFromViewModel();
-      if (settingsViewModel.currentUser == null && settingsViewModel.errors.containsKey('general')) {
+      if (settingsViewModel.currentUser == null &&
+          settingsViewModel.errors.containsKey('general')) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(settingsViewModel.errors['general'] ?? strings.errorLoadProfileFailed,
+            content: Text(
+                settingsViewModel.errors['general'] ??
+                    strings.errorLoadProfileFailed,
                 style: TextStyle(color: context.textPrimaryColor)),
             backgroundColor: AppColors.error,
           ),
@@ -84,7 +89,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void _populateControllersFromViewModel() {
-    final settingsViewModel = Provider.of<SettingsViewModel>(context, listen: false);
+    final settingsViewModel =
+        Provider.of<SettingsViewModel>(context, listen: false);
     final currentUser = settingsViewModel.currentUser;
 
     if (currentUser != null) {
@@ -120,7 +126,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void _restoreOriginalValues() {
-    final settingsViewModel = Provider.of<SettingsViewModel>(context, listen: false);
+    final settingsViewModel =
+        Provider.of<SettingsViewModel>(context, listen: false);
     settingsViewModel.clearErrors();
     setState(() {
       _nameController.text = _originalValues['username'] ?? '';
@@ -155,12 +162,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<void> verifyMobileNumber() async {
     final strings = S.of(context);
-    final settingsViewModel = Provider.of<SettingsViewModel>(context, listen: false);
+    final settingsViewModel =
+        Provider.of<SettingsViewModel>(context, listen: false);
     final mobile = _mobileNumberController.text;
 
     if (mobile.isEmpty || !RegExp(r'^\d{10}$').hasMatch(mobile)) {
       settingsViewModel.setError('mobile', strings.errorInvalidMobile);
-      developer.log('Invalid mobile number format: $mobile', name: 'UserProfileScreen');
+      developer.log('Invalid mobile number format: $mobile',
+          name: 'UserProfileScreen');
       return;
     }
     if (mobile == _originalMobileNumber) {
@@ -171,7 +180,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       settingsViewModel.clearError('mobile');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(strings.successMobileRestored, style: TextStyle(color: context.textPrimaryColor)),
+          content: Text(strings.successMobileRestored,
+              style: TextStyle(color: context.textPrimaryColor)),
           backgroundColor: AppColors.success,
         ));
       }
@@ -183,7 +193,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     try {
       final verificationService = VerificationService();
       await verificationService.sendOtp(mobile);
-      developer.log('OTP sent successfully to $mobile', name: 'UserProfileScreen');
+      developer.log('OTP sent successfully to $mobile',
+          name: 'UserProfileScreen');
 
       if (!mounted) return;
       final result = await Navigator.push<bool>(
@@ -201,9 +212,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           _verifiedMobileNumber = mobile;
         });
         settingsViewModel.clearError('mobile');
-        developer.log('Mobile number verified: $mobile', name: 'UserProfileScreen');
+        developer.log('Mobile number verified: $mobile',
+            name: 'UserProfileScreen');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(strings.successMobileVerification, style: TextStyle(color: context.textPrimaryColor)),
+          content: Text(strings.successMobileVerification,
+              style: TextStyle(color: context.textPrimaryColor)),
           backgroundColor: AppColors.success,
         ));
       } else {
@@ -225,7 +238,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           duration: const Duration(seconds: 6),
         ),
       );
-      developer.log('Mobile number in use by another account: $mobile', name: 'UserProfileScreen', error: e);
+      developer.log('Mobile number in use by another account: $mobile',
+          name: 'UserProfileScreen', error: e);
     } catch (e) {
       if (!mounted) return;
       settingsViewModel.setError('mobile', strings.errorOtpSendFailed);
@@ -239,13 +253,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           duration: const Duration(seconds: 4),
         ),
       );
-      developer.log('Error sending OTP or during verification process: $e', name: 'UserProfileScreen', error: e);
+      developer.log('Error sending OTP or during verification process: $e',
+          name: 'UserProfileScreen', error: e);
     }
   }
 
   Future<void> _confirmUpdate() async {
     final strings = S.of(context);
-    final settingsViewModel = Provider.of<SettingsViewModel>(context, listen: false);
+    final settingsViewModel =
+        Provider.of<SettingsViewModel>(context, listen: false);
     final userId = await SecureStorageService().getUserId();
 
     if (userId == null) {
@@ -275,21 +291,29 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       state: _stateController.text,
       role: null,
       subEntity: null,
-      isMobileVerified: !mobileChanged || (mobileChanged && isMobileVerified && currentMobile == _verifiedMobileNumber),
+      isMobileVerified: !mobileChanged ||
+          (mobileChanged &&
+              isMobileVerified &&
+              currentMobile == _verifiedMobileNumber),
       originalMobile: _originalMobileNumber,
       isProfile: true,
     );
 
     if (validationErrors.isNotEmpty) {
-      validationErrors.forEach((key, value) => settingsViewModel.setError(key, value));
-      if(mounted) {
+      validationErrors
+          .forEach((key, value) => settingsViewModel.setError(key, value));
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: validationErrors.values
-                  .map((e) => Text('• $e', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textPrimaryColor)))
+                  .map((e) => Text('• $e',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: context.textPrimaryColor)))
                   .toList(),
             ),
             backgroundColor: AppColors.error,
@@ -333,14 +357,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
       String displayMessage;
       if (emailError != null && emailError.isNotEmpty) {
-        displayMessage = "${strings.errorEmailInUse} (${emailError})";
+        displayMessage = "${strings.errorEmailInUse} ($emailError)";
       } else if (mobileError != null && mobileError.isNotEmpty) {
         displayMessage = mobileError;
-        if (!mobileError.toLowerCase().contains("mobile")) { // Be more specific if error isn't self-descriptive
+        if (!mobileError.toLowerCase().contains("mobile")) {
+          // Be more specific if error isn't self-descriptive
           displayMessage = "${strings.labelMobileNumber}: $mobileError";
         }
-      }
-      else if (generalError != null && generalError.isNotEmpty) {
+      } else if (generalError != null && generalError.isNotEmpty) {
         displayMessage = generalError;
       } else {
         displayMessage = strings.errorUpdateFailed;
@@ -370,8 +394,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildMobileNumberField(S strings, SettingsViewModel settingsVM) {
-    final bool mobileChangedFromOriginal = _mobileNumberController.text != _originalMobileNumber;
-    final bool effectiveIsMobileVerified = !mobileChangedFromOriginal || (mobileChangedFromOriginal && isMobileVerified && _mobileNumberController.text == _verifiedMobileNumber);
+    final bool mobileChangedFromOriginal =
+        _mobileNumberController.text != _originalMobileNumber;
+    final bool effectiveIsMobileVerified = !mobileChangedFromOriginal ||
+        (mobileChangedFromOriginal &&
+            isMobileVerified &&
+            _mobileNumberController.text == _verifiedMobileNumber);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,20 +421,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 settingsVM.clearError('mobile');
 
                 if (newMobile == oldMobileAtEditStart) {
-                  if (isMobileVerified != true || _verifiedMobileNumber != newMobile) {
+                  if (isMobileVerified != true ||
+                      _verifiedMobileNumber != newMobile) {
                     setState(() {
                       isMobileVerified = true;
                       _verifiedMobileNumber = newMobile;
                     });
                   }
                 } else {
-                  if (newMobile == _verifiedMobileNumber) { // If they re-type an already verified (new) number
+                  if (newMobile == _verifiedMobileNumber) {
+                    // If they re-type an already verified (new) number
                     if (isMobileVerified != true) {
                       setState(() {
                         isMobileVerified = true;
                       });
                     }
-                  } else { // Number is new and not the same as the last OTP-verified one
+                  } else {
+                    // Number is new and not the same as the last OTP-verified one
                     if (isMobileVerified != false) {
                       setState(() {
                         isMobileVerified = false;
@@ -425,7 +456,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               padding: const EdgeInsets.only(top: 8.0),
               child: CustomButtons.secondaryButton(
                 text: strings.buttonVerify,
-                onPressed: verifyMobileNumber, // Assuming verifyMobileNumber is VoidCallback
+                onPressed:
+                    verifyMobileNumber, // Assuming verifyMobileNumber is VoidCallback
                 height: 40,
                 width: 90, // Ensure width is enough
                 context: context,
@@ -434,8 +466,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           else if (effectiveIsMobileVerified)
             Padding(
               padding: const EdgeInsets.only(top: 16.0),
-              child: Icon(Icons.check_circle,
-                  color: AppColors.success, size: 24),
+              child:
+                  Icon(Icons.check_circle, color: AppColors.success, size: 24),
             ),
         ]
       ],
@@ -464,9 +496,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           }
 
           if (settingsVM.currentUser == null) {
-            return Center(child: Padding(
+            return Center(
+                child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Text(settingsVM.errors['general'] ?? strings.errorLoadProfileFailed, textAlign: TextAlign.center),
+              child: Text(
+                  settingsVM.errors['general'] ??
+                      strings.errorLoadProfileFailed,
+                  textAlign: TextAlign.center),
             ));
           }
 
@@ -490,7 +526,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     isPassword: false,
                     enabled: _isEditMode,
                     errorText: settingsVM.errors['username'],
-                    onChanged: _isEditMode ? (_) => settingsVM.clearError('username') : null,
+                    onChanged: _isEditMode
+                        ? (_) => settingsVM.clearError('username')
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   CustomFormFields.normalSizedTextFormField(
@@ -501,7 +539,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     isPassword: false,
                     enabled: _isEditMode,
                     errorText: settingsVM.errors['email'],
-                    onChanged: _isEditMode ? (_) => settingsVM.clearError('email') : null,
+                    onChanged: _isEditMode
+                        ? (_) => settingsVM.clearError('email')
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   _buildMobileNumberField(strings, settingsVM),
@@ -514,7 +554,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     isPassword: false,
                     enabled: _isEditMode,
                     errorText: settingsVM.errors['address'],
-                    onChanged: _isEditMode ? (_) => settingsVM.clearError('address') : null,
+                    onChanged: _isEditMode
+                        ? (_) => settingsVM.clearError('address')
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   CustomFormFields.normalSizedTextFormField(
@@ -525,7 +567,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     isPassword: false,
                     enabled: _isEditMode,
                     errorText: settingsVM.errors['city'],
-                    onChanged: _isEditMode ? (_) => settingsVM.clearError('city') : null,
+                    onChanged: _isEditMode
+                        ? (_) => settingsVM.clearError('city')
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   CustomFormFields.normalSizedTextFormField(
@@ -536,7 +580,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     isPassword: false,
                     enabled: _isEditMode,
                     errorText: settingsVM.errors['state'],
-                    onChanged: _isEditMode ? (_) => settingsVM.clearError('state') : null,
+                    onChanged: _isEditMode
+                        ? (_) => settingsVM.clearError('state')
+                        : null,
                   ),
                   const SizedBox(height: 30),
                   _buildActionButtons(strings, settingsVM.isLoading),
@@ -566,30 +612,30 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: _isEditMode
             ? [
-          CustomButtons.secondaryButton(
-            text: strings.buttonCancel,
-            onPressed: onPressedCancel,
-            height: 50,
-            width: MediaQuery.of(context).size.width * 0.4,
-            context: context,
-          ),
-          CustomButtons.primaryButton(
-            text: strings.buttonSave,
-            onPressed: onPressedSave,
-            height: 50,
-            width: MediaQuery.of(context).size.width * 0.4,
-            context: context,
-          ),
-        ]
+                CustomButtons.secondaryButton(
+                  text: strings.buttonCancel,
+                  onPressed: onPressedCancel,
+                  height: 50,
+                  width: MediaQuery.of(context).size.width * 0.4,
+                  context: context,
+                ),
+                CustomButtons.primaryButton(
+                  text: strings.buttonSave,
+                  onPressed: onPressedSave,
+                  height: 50,
+                  width: MediaQuery.of(context).size.width * 0.4,
+                  context: context,
+                ),
+              ]
             : [
-          CustomButtons.primaryButton(
-            text: strings.buttonEdit,
-            onPressed: onPressedEdit,
-            height: 50,
-            width: MediaQuery.of(context).size.width * 0.9,
-            context: context,
-          ),
-        ],
+                CustomButtons.primaryButton(
+                  text: strings.buttonEdit,
+                  onPressed: onPressedEdit,
+                  height: 50,
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  context: context,
+                ),
+              ],
       ),
     );
   }

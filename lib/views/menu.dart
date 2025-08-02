@@ -32,7 +32,7 @@ class MenuScreen extends StatefulWidget {
 
 class _MenuScreenState extends State<MenuScreen> {
   final ScrollController _scrollController = ScrollController();
-  Future<String?> _userRoleFuture = SecureStorageService().getUserRole();
+  final Future<String?> _userRoleFuture = SecureStorageService().getUserRole();
 
   // Updated access rules for ticket-related actions based on provided permissions
   static const Map<String, List<String>> _accessRules = {
@@ -40,12 +40,27 @@ class _MenuScreenState extends State<MenuScreen> {
     'modifyViewPlaza': ['Plaza Owner'],
     'registerUser': ['Plaza Owner', 'Plaza Admin'],
     'modifyViewUser': ['Plaza Owner', 'Plaza Admin'],
-    'openTickets': ['Plaza Owner', 'Centralized Controller', 'Plaza Admin', 'Plaza Operator'],
+    'openTickets': [
+      'Plaza Owner',
+      'Centralized Controller',
+      'Plaza Admin',
+      'Plaza Operator'
+    ],
     'newTicket': ['Plaza Owner', 'Plaza Admin', 'Plaza Operator'],
     //'rejectTicket': ['Plaza Owner', 'Plaza Admin', 'Plaza Operator'],
-    'ticketHistory': ['Plaza Owner', 'Centralized Controller', 'Plaza Admin', 'Plaza Operator'],
+    'ticketHistory': [
+      'Plaza Owner',
+      'Centralized Controller',
+      'Plaza Admin',
+      'Plaza Operator'
+    ],
     'raiseDispute': ['Plaza Owner', 'Plaza Admin'],
-    'viewDispute': ['Plaza Owner', 'Centralized Controller', 'Plaza Admin', 'Plaza Operator'],
+    'viewDispute': [
+      'Plaza Owner',
+      'Centralized Controller',
+      'Plaza Admin',
+      'Plaza Operator'
+    ],
     'processDispute': ['Plaza Owner', 'Centralized Controller', 'Plaza Admin'],
     'addPlazaFare': ['Plaza Owner'],
     'modifyViewPlazaFare': ['Plaza Owner'],
@@ -56,7 +71,8 @@ class _MenuScreenState extends State<MenuScreen> {
     super.initState();
     developer.log('initState called for MenuScreen', name: 'Lifecycle');
     _scrollController.addListener(() {
-      developer.log('Scroll position: ${_scrollController.offset}', name: 'MenuScreen');
+      developer.log('Scroll position: ${_scrollController.offset}',
+          name: 'MenuScreen');
     });
   }
 
@@ -82,7 +98,8 @@ class _MenuScreenState extends State<MenuScreen> {
         }
 
         if (snapshot.hasError) {
-          developer.log('Error in FutureBuilder: ${snapshot.error}', name: 'MenuScreen', error: snapshot.error);
+          developer.log('Error in FutureBuilder: ${snapshot.error}',
+              name: 'MenuScreen', error: snapshot.error);
           return Scaffold(
             body: Center(child: Text(strings.errorLoadingRole)),
           );
@@ -109,6 +126,36 @@ class _MenuScreenState extends State<MenuScreen> {
                     const SizedBox(height: 12),
                     _buildDropDown(
                       context: context,
+                      title: strings.menuUsers,
+                      icon: Icons.people,
+                      items: [
+                        MenuCardItem(
+                          title: strings.menuRegisterUser,
+                          icon: Icons.person_add,
+                          allowedRoles: _accessRules['registerUser']!,
+                          onTap: () => _handleNavigation(
+                            context,
+                            AppRoutes.userRegistration,
+                            userRole,
+                            'registerUser',
+                          ),
+                        ),
+                        MenuCardItem(
+                          title: strings.menuModifyViewUser,
+                          icon: Icons.manage_accounts,
+                          allowedRoles: _accessRules['modifyViewUser']!,
+                          onTap: () => _handleNavigation(
+                            context,
+                            AppRoutes.userList,
+                            userRole,
+                            'modifyViewUser',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _buildDropDown(
+                      context: context,
                       title: strings.menuPlazas,
                       icon: Icons.business,
                       items: [
@@ -133,36 +180,6 @@ class _MenuScreenState extends State<MenuScreen> {
                             userRole,
                             'modifyViewPlaza',
                             arguments: {'modifyPlazaInfo': true},
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    _buildDropDown(
-                      context: context,
-                      title: strings.menuUsers,
-                      icon: Icons.people,
-                      items: [
-                        MenuCardItem(
-                          title: strings.menuRegisterUser,
-                          icon: Icons.person_add,
-                          allowedRoles: _accessRules['registerUser']!,
-                          onTap: () => _handleNavigation(
-                            context,
-                            AppRoutes.userRegistration,
-                            userRole,
-                            'registerUser',
-                          ),
-                        ),
-                        MenuCardItem(
-                          title: strings.menuModifyViewUser,
-                          icon: Icons.manage_accounts,
-                          allowedRoles: _accessRules['modifyViewUser']!,
-                          onTap: () => _handleNavigation(
-                            context,
-                            AppRoutes.userList,
-                            userRole,
-                            'modifyViewUser',
                           ),
                         ),
                       ],
@@ -230,7 +247,9 @@ class _MenuScreenState extends State<MenuScreen> {
                           icon: Icons.report,
                           allowedRoles: _accessRules['raiseDispute']!,
                           onTap: () {
-                            developer.log('Raise Dispute tapped, navigating to ticketHistory with filters', name: 'MenuScreen');
+                            developer.log(
+                                'Raise Dispute tapped, navigating to ticketHistory with filters',
+                                name: 'MenuScreen');
                             _handleNavigation(
                               context,
                               AppRoutes.ticketHistory,
@@ -303,7 +322,8 @@ class _MenuScreenState extends State<MenuScreen> {
                   ],
                 );
               } catch (e, stackTrace) {
-                developer.log('Error building ListView: $e', name: 'MenuScreen', error: e, stackTrace: stackTrace);
+                developer.log('Error building ListView: $e',
+                    name: 'MenuScreen', error: e, stackTrace: stackTrace);
                 return Center(child: Text(strings.errorRenderingMenu));
               }
             },
@@ -331,21 +351,23 @@ class _MenuScreenState extends State<MenuScreen> {
         ),
       );
     } catch (e, stackTrace) {
-      developer.log('Error building dropdown: $e', name: 'MenuScreen', error: e, stackTrace: stackTrace);
+      developer.log('Error building dropdown: $e',
+          name: 'MenuScreen', error: e, stackTrace: stackTrace);
       return const SizedBox.shrink();
     }
   }
 
   void _handleNavigation(
-      BuildContext context,
-      String routeName,
-      String userRole,
-      String action, {
-        Object? arguments,
-      }) {
+    BuildContext context,
+    String routeName,
+    String userRole,
+    String action, {
+    Object? arguments,
+  }) {
     final strings = S.of(context);
     if (!_accessRules[action]!.contains(userRole)) {
-      developer.log('Access denied for $action by role: $userRole', name: 'MenuScreen');
+      developer.log('Access denied for $action by role: $userRole',
+          name: 'MenuScreen');
       HapticFeedback.vibrate();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -356,10 +378,13 @@ class _MenuScreenState extends State<MenuScreen> {
       return;
     }
 
-    developer.log('Navigating to $routeName with arguments: $arguments', name: 'MenuScreen');
+    developer.log('Navigating to $routeName with arguments: $arguments',
+        name: 'MenuScreen');
     HapticFeedback.selectionClick();
-    Navigator.pushNamed(context, routeName, arguments: arguments).catchError((e) {
-      developer.log('Navigation error to $routeName: $e', name: 'MenuScreen', level: 1000);
+    Navigator.pushNamed(context, routeName, arguments: arguments)
+        .catchError((e) {
+      developer.log('Navigation error to $routeName: $e',
+          name: 'MenuScreen', level: 1000);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

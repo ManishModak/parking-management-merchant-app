@@ -114,28 +114,64 @@ class _BasicDetailsModificationScreenState
     super.dispose();
   }
 
+  // --- NEW ---
+  // Helper method to display a SnackBar with validation error messages.
+  void _showValidationSnackBar(Map<String, String> errors) {
+    if (!mounted) return; // Ensure the widget is still in the tree
+
+    final strings = S.of(context);
+    final theme = Theme.of(context);
+
+    // Combine all error messages into a single string with newlines.
+    // Example from your log: 'Plaza ID must be at least 6 characters\nTotal parking slots (200) must equal the sum of capacities (0)'
+    final String errorMessages = errors.values.join('\n');
+
+    final snackBar = SnackBar(
+      content: Text(
+        // Assuming you have 'validationFailed' in your S file. If not, replace with 'Validation Failed:'
+        '${strings.validationFailedTitle}\n$errorMessages',
+        style: TextStyle(color: theme.colorScheme.onError),
+        maxLines: 5, // Allow for multiple lines of error text
+        overflow: TextOverflow.ellipsis,
+      ),
+      backgroundColor: theme.colorScheme.error, // Use theme color for error
+      duration: const Duration(seconds: 5), // Longer duration for readability
+      action: SnackBarAction(
+        // Assuming you have 'ok' in your S file. If not, replace with 'OK'
+        label: strings.ok,
+        textColor: theme.colorScheme.onError,
+        onPressed: () {
+          // Allow user to dismiss the snackbar manually.
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        },
+      ),
+    );
+
+    // Use ScaffoldMessenger to show the SnackBar, which is the recommended approach.
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
   @override
   Widget build(BuildContext context) {
     developer.log('build called', name: _logName);
     final viewModel = context.watch<PlazaModificationViewModel>();
     final strings = S.of(context);
-    final theme = Theme.of(context); // Get theme for colors
+    final theme = Theme.of(context);
 
     developer.log(
         'Current State - isInitialLoading: $_isInitialLoading, VMisLoading: ${viewModel.isLoading}, error: ${viewModel.error}, isEditable: ${viewModel.isBasicDetailsEditable}',
         name: _logName);
 
     final showContent = _isInitialized && !_isInitialLoading;
-    final bool isEnabled =
-        viewModel.isBasicDetailsEditable; // Alias for readability
+    final bool isEnabled = viewModel.isBasicDetailsEditable;
     final Color iconColor = isEnabled
         ? theme.iconTheme.color ?? theme.primaryColor
-        : theme.disabledColor; // Dynamic icon color
+        : theme.disabledColor;
     final Color disabledIconColor = theme.disabledColor;
 
     return Scaffold(
       appBar: CustomAppBar.appBarWithNavigation(
-        screenTitle: strings.basicDetails, // Use appropriate title
+        screenTitle: strings.basicDetails,
         onPressed: () {
           developer.log(
               'AppBar back button pressed. isEditable: ${viewModel.isBasicDetailsEditable}',
@@ -160,7 +196,6 @@ class _BasicDetailsModificationScreenState
               ? _buildErrorState(viewModel, _plazaId, strings)
               : _buildContent(
                   viewModel, strings, isEnabled, iconColor, disabledIconColor),
-      // Pass state down
       floatingActionButton: showContent && viewModel.error == null
           ? _buildFloatingActionButtons(viewModel, strings)
           : null,
@@ -171,8 +206,10 @@ class _BasicDetailsModificationScreenState
       bool isEnabled, Color iconColor, Color disabledIconColor) {
     developer.log('Building content form. isEditable: $isEnabled',
         name: _logName);
-    final theme = Theme.of(context); // Get theme for text styles
+    final theme = Theme.of(context);
 
+    // --- The entire _buildContent widget tree remains unchanged ---
+    // ...(your existing form fields code)...
     return AbsorbPointer(
       // Absorb clicks when not editable
       absorbing: !isEnabled,
@@ -190,13 +227,24 @@ class _BasicDetailsModificationScreenState
               CustomFormFields.normalSizedTextFormField(
                 context: context,
                 label: "${strings.plazaName} *",
-                // Assuming labelPlazaName
                 controller: viewModel.plazaNameController,
                 enabled: isEnabled,
                 errorText:
                     isEnabled ? viewModel.formState.errors['plazaName'] : null,
                 prefixIcon: Icon(Icons.business_outlined, color: iconColor),
                 textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 16),
+
+              //Plaza Id Here
+              CustomFormFields.normalSizedTextFormField(
+                context: context,
+                label: "${strings.plazaId} *",
+                controller: viewModel.plazaIdController,
+                enabled: false,
+                errorText: null,
+                prefixIcon:
+                    Icon(Icons.vpn_key_outlined, color: disabledIconColor),
               ),
               const SizedBox(height: 16),
 
@@ -269,25 +317,13 @@ class _BasicDetailsModificationScreenState
               const SizedBox(height: 16),
               // --- END ADDED COMPANY DETAILS ---
 
-              // REMOVED Operator Name Field
-              // CustomFormFields.normalSizedTextFormField(
-              //   context: context,
-              //   label: strings.plazaOperatorName,
-              //   controller: viewModel.operatorNameController, // REMOVED Controller
-              //   enabled: isEnabled,
-              //   errorText: isEnabled ? viewModel.formState.errors['plazaOperatorName'] : null,
-              // ),
-              // const SizedBox(height: 16),
-
               // Plaza Owner (Read-only usually, but schema requires it)
-              // Keep it simple, maybe disable permanently if ID is the key driver
               CustomFormFields.normalSizedTextFormField(
                 context: context,
                 label: "${strings.plazaOwner} *",
                 // Assuming labelPlazaOwner
                 controller: viewModel.plazaOwnerController,
                 enabled: isEnabled,
-                // Keep editable as per schema? Or disable?
                 errorText:
                     isEnabled ? viewModel.formState.errors['plazaOwner'] : null,
                 prefixIcon: Icon(Icons.person_outline, color: iconColor),
@@ -316,9 +352,7 @@ class _BasicDetailsModificationScreenState
                 label: "${strings.mobileNumber} *",
                 // Assuming labelMobileNumber
                 maxLength: 15,
-                // UPDATED
                 height: 80,
-                // Keep height for counter
                 controller: viewModel.mobileController,
                 keyboardType: TextInputType.phone,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -876,7 +910,7 @@ class _BasicDetailsModificationScreenState
   // Helper for capacity fields to reduce repetition
   Widget _buildCapacityField(PlazaModificationViewModel viewModel, String label,
       String mapKey, Color iconColor, IconData icon, bool isEnabled) {
-    // Determine which controller to use based on the mapKey
+    // ... (This helper method remains unchanged) ...
     TextEditingController getControllerForKey() {
       switch (mapKey) {
         case 'capacityBike':
@@ -915,6 +949,7 @@ class _BasicDetailsModificationScreenState
       TextEditingController controller,
       String mapKey,
       PlazaModificationViewModel viewModel) async {
+    // ... (This helper method remains unchanged) ...
     developer.log(
         '[_showCustomTimePicker] Showing time picker for key: $mapKey',
         name: _logName);
@@ -972,7 +1007,7 @@ class _BasicDetailsModificationScreenState
     }
   }
 
-  // --- FABs and Error State Widgets (Remain Unchanged) ---
+  // --- MODIFIED ---
   Widget _buildFloatingActionButtons(
       PlazaModificationViewModel viewModel, S strings) {
     developer.log(
@@ -1004,33 +1039,38 @@ class _BasicDetailsModificationScreenState
               FocusScope.of(context).unfocus(); // Hide keyboard
               developer.log('Attempting to save basic details.',
                   name: _logName);
-              final isValid = viewModel.formState.validateBasicDetails(
-                  context); // validation call will trigger error snackbar if needed
+              // The validation method populates the errors map in the view model
+              final isValid = viewModel.formState.validateBasicDetails(context);
               developer.log(
                   'Validation result: $isValid. Errors: ${viewModel.formState.errors}',
                   name: _logName);
+
               if (isValid) {
+                // If validation passes, proceed with saving the data
                 try {
                   developer.log(
                       'Validation passed. Calling updateBasicDetails.',
                       name: _logName);
                   await viewModel.updateBasicDetails(context);
                   developer.log('updateBasicDetails completed.',
-                      name: _logName); // Success dialog shown by VM
+                      name: _logName); // Success is handled by VM
                 } catch (e, stackTrace) {
-                  // Catching here might be redundant if VM handles errors and shows snackbars
                   developer.log('Error updating basic details (caught in UI)',
                       name: _logName, error: e, stackTrace: stackTrace);
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(
-                              strings.updatePlazaFailed)), // Generic message
+                      SnackBar(content: Text(strings.updatePlazaFailed)),
                     );
                   }
                 }
+              } else {
+                // --- NEW ---
+                // If validation fails, call our new method to show the SnackBar.
+                // The errors are already in the view model's state.
+                developer.log('Validation failed. Displaying error snackbar.',
+                    name: _logName);
+                _showValidationSnackBar(viewModel.formState.errors);
               }
-              // No need for else block showing snackbar, validateBasicDetails already does it
             } else {
               developer.log('Toggling basic details to editable mode.',
                   name: _logName);
@@ -1040,7 +1080,6 @@ class _BasicDetailsModificationScreenState
           heroTag: "save_or_edit_basic_details",
           backgroundColor: Theme.of(context).colorScheme.primary,
           foregroundColor: Theme.of(context).colorScheme.onPrimary,
-          // Show loading indicator on FAB if saving
           label: viewModel.isLoading && viewModel.isBasicDetailsEditable
               ? SizedBox(
                   width: 24,
@@ -1060,6 +1099,7 @@ class _BasicDetailsModificationScreenState
 
   Widget _buildErrorState(
       PlazaModificationViewModel viewModel, String plazaId, S strings) {
+    // ... (This helper method remains unchanged) ...
     Exception? error = viewModel.error;
     developer.log('Building error state for plazaId: $plazaId',
         name: _logName, error: error);
@@ -1067,7 +1107,6 @@ class _BasicDetailsModificationScreenState
     String errorMessage = strings.errorMessageDefault;
     String? errorDetails;
 
-    // Determine error message based on type (same logic as before)
     if (error is HttpException) {
       final statusCode = error.statusCode;
       errorTitle = statusCode != null
@@ -1125,7 +1164,6 @@ class _BasicDetailsModificationScreenState
             if (errorDetails != null &&
                 errorDetails.isNotEmpty &&
                 errorDetails != errorMessage) ...[
-              // Avoid showing details if same as message
               const SizedBox(height: 8),
               Text(
                 errorDetails,

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/config/app_theme.dart';
 import 'package:merchant_app/utils/components/button.dart';
-import '../../generated/l10n.dart'; // Import localization
+// Import localization
 
 class CustomAppBar {
   static AppBar appBarWithNavigation({
@@ -18,7 +18,8 @@ class CustomAppBar {
       leadingWidth: 80,
       leading: CustomButtons.backIconButton(
         onPressed: () {
-          developer.log('Back button pressed on $screenTitle', name: 'CustomAppBar');
+          developer.log('Back button pressed on $screenTitle',
+              name: 'CustomAppBar');
           onPressed();
         },
         darkBackground: darkBackground,
@@ -26,7 +27,9 @@ class CustomAppBar {
       ),
       elevation: 0,
       scrolledUnderElevation: 0,
-      backgroundColor: darkBackground ? AppColors.primary : context.backgroundColor, // Use theme-aware background
+      backgroundColor: darkBackground
+          ? AppColors.primary
+          : context.backgroundColor, // Use theme-aware background
       toolbarHeight: 70,
       centerTitle: centreTitle ?? true,
       title: Text(
@@ -36,7 +39,11 @@ class CustomAppBar {
           fontSize: fontSize ?? 20,
           color: context.textPrimaryColor, // Theme-aware text color
         ),
-        textAlign: centreTitle == null ? TextAlign.center : centreTitle ? TextAlign.center : TextAlign.left,
+        textAlign: centreTitle == null
+            ? TextAlign.center
+            : centreTitle
+                ? TextAlign.center
+                : TextAlign.left,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
@@ -54,7 +61,8 @@ class CustomAppBar {
       leadingWidth: 80,
       leading: CustomButtons.backIconButton(
         onPressed: () {
-          developer.log('Back button pressed on $screenTitle', name: 'CustomAppBar');
+          developer.log('Back button pressed on $screenTitle',
+              name: 'CustomAppBar');
           onPressed();
         },
         darkBackground: darkBackground,
@@ -63,7 +71,9 @@ class CustomAppBar {
       elevation: 0,
       scrolledUnderElevation: 0,
       actions: actions,
-      backgroundColor: darkBackground ? AppColors.primary : context.backgroundColor, // Use theme-aware background
+      backgroundColor: darkBackground
+          ? AppColors.primary
+          : context.backgroundColor, // Use theme-aware background
       toolbarHeight: 70,
       centerTitle: true,
       title: Text(
@@ -89,7 +99,9 @@ class CustomAppBar {
     return AppBar(
       automaticallyImplyLeading: false,
       actions: actions,
-      backgroundColor: darkBackground ? AppColors.primary : context.backgroundColor, // Use theme-aware background
+      backgroundColor: darkBackground
+          ? AppColors.primary
+          : context.backgroundColor, // Use theme-aware background
       toolbarHeight: 70,
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -117,7 +129,9 @@ class CustomAppBar {
   }) {
     return AppBar(
       automaticallyImplyLeading: false,
-      backgroundColor: darkBackground ? AppColors.primary : context.backgroundColor, // Use theme-aware background
+      backgroundColor: darkBackground
+          ? AppColors.primary
+          : context.backgroundColor, // Use theme-aware background
       toolbarHeight: 70,
       centerTitle: true,
       elevation: 0,

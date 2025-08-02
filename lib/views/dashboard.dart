@@ -16,8 +16,8 @@ import '../viewmodels/dashboard_viewmodel.dart';
 
 String formatNumber(dynamic number,
     {String locale = 'en_IN',
-      bool showCurrency = false,
-      String currencySymbol = '₹'}) {
+    bool showCurrency = false,
+    String currencySymbol = '₹'}) {
   if (number == null) return showCurrency ? '${currencySymbol}0.00' : '0';
   if (number is int || number is double) {
     String formattedNumber;
@@ -136,7 +136,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (userRole != 'Plaza Owner' &&
           userRole != 'Plaza Admin' &&
           userRole != 'Plaza Operator') {
-        developer.log('Unauthorized user role: $userRole', name: 'DashboardScreen');
+        developer.log('Unauthorized user role: $userRole',
+            name: 'DashboardScreen');
         if (mounted) {
           setState(() {
             _hasAccessOrConfigError = true;
@@ -161,19 +162,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
               });
               _plazaOptions.addAll(plazas
                   .map((plaza) => {
-                'id': plaza.plazaId.toString(),
-                'name': plaza.plazaName ?? strings.labelUnknown,
-              })
+                        'id': plaza.plazaId.toString(),
+                        'name': plaza.plazaName ?? strings.labelUnknown,
+                      })
                   .toList());
               _selectedPlazaId = _plazaOptions.first['id'];
             });
           }
         } else {
-          developer.log('Entity ID not found for Plaza Owner', name: 'DashboardScreen');
+          developer.log('Entity ID not found for Plaza Owner',
+              name: 'DashboardScreen');
           if (mounted) {
             setState(() {
               _hasAccessOrConfigError = true;
-              _accessOrConfigErrorMessage = strings.errorPlazaOwnerEntityIdMissing;
+              _accessOrConfigErrorMessage =
+                  strings.errorPlazaOwnerEntityIdMissing;
               _isInitialLoading = false;
             });
           }
@@ -188,42 +191,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
               setState(() {
                 _plazaOptions.addAll(subEntities
                     .map((subEntity) => {
-                  'id': subEntity['plazaId'].toString(),
-                  'name': subEntity['plazaName'] ?? strings.labelUnknown,
-                })
+                          'id': subEntity['plazaId'].toString(),
+                          'name':
+                              subEntity['plazaName'] ?? strings.labelUnknown,
+                        })
                     .toList());
                 _selectedPlazaId =
-                _plazaOptions.isNotEmpty ? _plazaOptions.first['id'] : null;
+                    _plazaOptions.isNotEmpty ? _plazaOptions.first['id'] : null;
               });
             }
             if (_plazaOptions.isEmpty) {
-              developer.log('Plaza options became empty unexpectedly for $userRole', name: 'DashboardScreen');
+              developer.log(
+                  'Plaza options became empty unexpectedly for $userRole',
+                  name: 'DashboardScreen');
               if (mounted) {
                 setState(() {
                   _hasAccessOrConfigError = true;
-                  _accessOrConfigErrorMessage = strings.errorAdminOperatorNoPlazasConfigured;
+                  _accessOrConfigErrorMessage =
+                      strings.errorAdminOperatorNoPlazasConfigured;
                   _isInitialLoading = false;
                 });
               }
               return false;
             }
           } else {
-            developer.log('No subEntity (empty list) found for $userRole', name: 'DashboardScreen');
+            developer.log('No subEntity (empty list) found for $userRole',
+                name: 'DashboardScreen');
             if (mounted) {
               setState(() {
                 _hasAccessOrConfigError = true;
-                _accessOrConfigErrorMessage = strings.errorAdminOperatorNoPlazasAssigned;
+                _accessOrConfigErrorMessage =
+                    strings.errorAdminOperatorNoPlazasAssigned;
                 _isInitialLoading = false;
               });
             }
             return false;
           }
         } else {
-          developer.log('No subEntity data (null) for $userRole', name: 'DashboardScreen');
+          developer.log('No subEntity data (null) for $userRole',
+              name: 'DashboardScreen');
           if (mounted) {
             setState(() {
               _hasAccessOrConfigError = true;
-              _accessOrConfigErrorMessage = strings.errorAdminOperatorNoPlazasConfigured;
+              _accessOrConfigErrorMessage =
+                  strings.errorAdminOperatorNoPlazasConfigured;
               _isInitialLoading = false;
             });
           }
@@ -237,11 +248,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
       return true;
     } catch (e, stackTrace) {
-      developer.log('Error loading plaza options or validating access: $e', name: 'DashboardScreen', error: e, stackTrace: stackTrace);
+      developer.log('Error loading plaza options or validating access: $e',
+          name: 'DashboardScreen', error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() {
           _hasAccessOrConfigError = true;
-          _accessOrConfigErrorMessage = '${strings.errorLoadingDashboardConfig}: ${e.toString()}';
+          _accessOrConfigErrorMessage =
+              '${strings.errorLoadingDashboardConfig}: ${e.toString()}';
           _isInitialLoading = false;
         });
       }
@@ -314,7 +327,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  Widget _buildFullScreenErrorWidget(String message, S strings, {required bool showRetryButton}) {
+  Widget _buildFullScreenErrorWidget(String message, S strings,
+      {required bool showRetryButton}) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -327,8 +341,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Text(
               message,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: context.textPrimaryColor,
-              ),
+                    color: context.textPrimaryColor,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -338,8 +352,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 label: Text(
                   strings.retry,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Colors.white,
-                  ),
+                        color: Colors.white,
+                      ),
                 ),
                 onPressed: () {
                   HapticFeedback.lightImpact();
@@ -348,7 +362,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -364,7 +378,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final strings = S.of(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    developer.log('Building DashboardScreen, isInitialLoading: $_isInitialLoading, hasError: $_hasAccessOrConfigError, canView: $_canViewDashboard, errorMessage: $_accessOrConfigErrorMessage',
+    developer.log(
+        'Building DashboardScreen, isInitialLoading: $_isInitialLoading, hasError: $_hasAccessOrConfigError, canView: $_canViewDashboard, errorMessage: $_accessOrConfigErrorMessage',
         name: 'DashboardScreen');
 
     Widget bodyContent;
@@ -372,7 +387,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (_isInitialLoading) {
       bodyContent = const Center(child: CircularProgressIndicator());
     } else if (_hasAccessOrConfigError) {
-      final bool isRoleAccessError = _accessOrConfigErrorMessage == strings.errorNoAccessToDashboard;
+      final bool isRoleAccessError =
+          _accessOrConfigErrorMessage == strings.errorNoAccessToDashboard;
       bodyContent = _buildFullScreenErrorWidget(
         _accessOrConfigErrorMessage,
         strings,
@@ -405,23 +421,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 12),
               _buildTicketOverviewRow(strings), // This will now be a Column
               const SizedBox(height: 12), // Adjusted spacing
-              _buildPlazaSummaryRow(strings),   // This will now be a Column
+              _buildPlazaSummaryRow(strings), // This will now be a Column
               const SizedBox(height: 16),
               Padding(
                 padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 4.0),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4.0),
                 child: _buildBookingAnalysisCard(strings),
               ),
               const SizedBox(height: 16),
               Padding(
                 padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 4.0),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4.0),
                 child: _buildDisputeSummaryCard(strings),
               ),
               const SizedBox(height: 16),
               Padding(
                 padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 4.0),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4.0),
                 child: _buildPaymentMethodAnalysisCard(strings),
               ),
               const SizedBox(height: 16),
@@ -453,7 +469,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       height: height,
       margin: margin,
       decoration: BoxDecoration(
-        color: Colors.white, // Base color for shimmer, will be overridden by Shimmer.fromColors
+        color: Colors
+            .white, // Base color for shimmer, will be overridden by Shimmer.fromColors
         borderRadius: BorderRadius.circular(borderRadius),
       ),
     );
@@ -534,7 +551,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Row(
           children: [
             Expanded(
-              child: _buildShimmerSummaryCardContainer( // Uses new height: 80
+              child: _buildShimmerSummaryCardContainer(
+                // Uses new height: 80
                 child: Stack(
                   children: [
                     Column(
@@ -545,21 +563,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             width: 80, // smaller
                             height: 10, // smaller
                             margin: const EdgeInsets.only(bottom: 5)),
-                        _buildShimmerPlaceholder(width: 30, height: 16), // smaller
+                        _buildShimmerPlaceholder(
+                            width: 30, height: 16), // smaller
                       ],
                     ),
                     Positioned(
                         top: 0,
                         right: 0,
                         child: _buildShimmerPlaceholder(
-                            width: 24, height: 24, borderRadius: 12)), // smaller icon
+                            width: 24,
+                            height: 24,
+                            borderRadius: 12)), // smaller icon
                   ],
                 ),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: _buildShimmerSummaryCardContainer( // Uses new height: 80
+              child: _buildShimmerSummaryCardContainer(
+                // Uses new height: 80
                 child: Stack(
                   children: [
                     Column(
@@ -570,14 +592,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             width: 100, // smaller
                             height: 10, // smaller
                             margin: const EdgeInsets.only(bottom: 5)),
-                        _buildShimmerPlaceholder(width: 60, height: 16), // smaller
+                        _buildShimmerPlaceholder(
+                            width: 60, height: 16), // smaller
                       ],
                     ),
                     Positioned(
                         top: 0,
                         right: 0,
                         child: _buildShimmerPlaceholder(
-                            width: 24, height: 24, borderRadius: 14)), // smaller icon
+                            width: 24,
+                            height: 24,
+                            borderRadius: 14)), // smaller icon
                   ],
                 ),
               ),
@@ -600,7 +625,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           children: List.generate(rowCount, (index) {
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4.0),
               child: Row(
                 children: [
                   Expanded(
@@ -612,7 +638,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               _buildShimmerPlaceholder(
-                                  width: 80, height: 10, margin: const EdgeInsets.only(bottom: 5)),
+                                  width: 80,
+                                  height: 10,
+                                  margin: const EdgeInsets.only(bottom: 5)),
                               _buildShimmerPlaceholder(width: 30, height: 16),
                             ],
                           ),
@@ -635,7 +663,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               _buildShimmerPlaceholder(
-                                  width: 80, height: 10, margin: const EdgeInsets.only(bottom: 5)),
+                                  width: 80,
+                                  height: 10,
+                                  margin: const EdgeInsets.only(bottom: 5)),
                               _buildShimmerPlaceholder(width: 30, height: 16),
                             ],
                           ),
@@ -654,7 +684,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }),
         ));
   }
-
 
   Widget _buildFilterDropdown() {
     if (_filterOptions.isEmpty) {
@@ -675,7 +704,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     : (_filterOptions.isNotEmpty ? _filterOptions.first : null),
                 decoration: InputDecoration(
                   contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: context.inputBorderColor),
@@ -697,10 +726,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     value: filter,
                     child: Text(
                       filter,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w500),
                     ),
                   );
                 }).toList(),
@@ -726,7 +754,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildPlazaSection() {
     if (_plazaOptions.isEmpty) {
-      developer.log("Warning: _buildPlazaSection called with empty _plazaOptions when dashboard is visible.", name: "DashboardScreen");
+      developer.log(
+          "Warning: _buildPlazaSection called with empty _plazaOptions when dashboard is visible.",
+          name: "DashboardScreen");
       return const SizedBox.shrink();
     }
     return _buildPlazaDropdownWidget();
@@ -745,7 +775,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 value: _selectedPlazaId,
                 decoration: InputDecoration(
                   contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: context.inputBorderColor),
@@ -767,10 +797,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     value: plaza['id'],
                     child: Text(
                       plaza['name'],
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w500),
                       overflow: TextOverflow.ellipsis,
                     ),
                   );
@@ -824,10 +853,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               padding: const EdgeInsets.only(bottom: 12.0),
               child: Text(
                 title,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w500),
               ),
             ),
           Expanded(child: child),
@@ -839,10 +867,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildSummaryItem(String value, Color color) {
     return Text(
       value,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith( // Reduced from headlineSmall
-        color: color,
-        fontWeight: FontWeight.bold,
-      ),
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            // Reduced from headlineSmall
+            color: color,
+            fontWeight: FontWeight.bold,
+          ),
       overflow: TextOverflow.ellipsis,
     );
   }
@@ -881,7 +910,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall // Reduced from labelMedium
-                        ?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500),
+                        ?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w500),
                     softWrap: true,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -929,7 +960,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
 
         if (viewModel.ticketStats == null) {
-          return SizedBox(height: 80, child: _buildSectionErrorWidget(strings, viewModel)); // Adjusted height
+          return SizedBox(
+              height: 80,
+              child: _buildSectionErrorWidget(
+                  strings, viewModel)); // Adjusted height
         }
 
         return Padding(
@@ -946,7 +980,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ],
                   iconWidget: Icon(Icons.receipt_long,
-                      color: context.textPrimaryColor, size: 24), // Reduced icon size
+                      color: context.textPrimaryColor,
+                      size: 24), // Reduced icon size
                 ),
               ),
               const SizedBox(width: 8),
@@ -961,7 +996,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ],
                   iconWidget: Icon(Icons.account_balance_wallet,
-                      color: context.textPrimaryColor, size: 24), // Reduced icon size
+                      color: context.textPrimaryColor,
+                      size: 24), // Reduced icon size
                 ),
               ),
             ],
@@ -975,13 +1011,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Consumer<DashboardViewModel>(
       builder: (context, viewModel, child) {
         if (viewModel.isLoading && viewModel.ticketOverview == null) {
-          return _buildStackedSummaryShimmer(rowCount: 2); // Shimmer for 2 rows of cards
+          return _buildStackedSummaryShimmer(
+              rowCount: 2); // Shimmer for 2 rows of cards
         }
 
         if (viewModel.ticketOverview == null) {
-          return Padding( // Wrap error in padding consistent with content
+          return Padding(
+            // Wrap error in padding consistent with content
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            child: SizedBox(height: 80, child: _buildSectionErrorWidget(strings, viewModel)),
+            child: SizedBox(
+                height: 80,
+                child: _buildSectionErrorWidget(strings, viewModel)),
           );
         }
 
@@ -1027,8 +1067,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 AppColors.error,
               ),
             ],
-            iconWidget:
-            Icon(Icons.cancel_outlined, color: AppColors.error, size: 24), // Reduced icon size
+            iconWidget: Icon(Icons.cancel_outlined,
+                color: AppColors.error, size: 24), // Reduced icon size
           ),
         ];
 
@@ -1037,14 +1077,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (i + 1 < cards.length) {
             cardPairs.add([cards[i], cards[i + 1]]);
           } else {
-            cardPairs.add([cards[i], Expanded(child: Container())]); // Handle odd number of cards
+            cardPairs.add([
+              cards[i],
+              Expanded(child: Container())
+            ]); // Handle odd number of cards
           }
         }
 
         return Column(
           children: cardPairs.map((pair) {
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0), // Add vertical padding between rows
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12.0,
+                  vertical: 4.0), // Add vertical padding between rows
               child: Row(
                 children: [
                   Expanded(child: pair[0]),
@@ -1063,13 +1108,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Consumer<DashboardViewModel>(
       builder: (context, viewModel, child) {
         if (viewModel.isLoading && viewModel.plazaSummary == null) {
-          return _buildStackedSummaryShimmer(rowCount: 2); // Shimmer for 2 rows of cards
+          return _buildStackedSummaryShimmer(
+              rowCount: 2); // Shimmer for 2 rows of cards
         }
 
         if (viewModel.plazaSummary == null) {
-          return Padding( // Wrap error in padding consistent with content
+          return Padding(
+            // Wrap error in padding consistent with content
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            child: SizedBox(height: 80, child: _buildSectionErrorWidget(strings, viewModel)),
+            child: SizedBox(
+                height: 80,
+                child: _buildSectionErrorWidget(strings, viewModel)),
           );
         }
 
@@ -1129,14 +1178,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (i + 1 < cards.length) {
             cardPairs.add([cards[i], cards[i + 1]]);
           } else {
-            cardPairs.add([cards[i], Expanded(child: Container())]); // Handle odd number of cards
+            cardPairs.add([
+              cards[i],
+              Expanded(child: Container())
+            ]); // Handle odd number of cards
           }
         }
 
         return Column(
           children: cardPairs.map((pair) {
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0), // Add vertical padding between rows
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12.0,
+                  vertical: 4.0), // Add vertical padding between rows
               child: Row(
                 children: [
                   Expanded(child: pair[0]),
@@ -1151,7 +1205,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-
   Widget _buildBookingAnalysisCard(S strings) {
     return Consumer<DashboardViewModel>(
       builder: (context, viewModel, child) {
@@ -1163,7 +1216,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final isDarkMode = Theme.of(context).brightness == Brightness.dark;
           final baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
           final highlightColor =
-          isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+              isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
           return Shimmer.fromColors(
             baseColor: baseColor,
             highlightColor: highlightColor,
@@ -1272,9 +1325,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Text(
                 strings.labelTotalBookings.toUpperCase(),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: context.textSecondaryColor,
-                  fontWeight: FontWeight.bold,
-                ),
+                      color: context.textSecondaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const SizedBox(height: 2),
               Row(
@@ -1284,21 +1337,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Text(
                     formatNumber(totalBookings),
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: context.textPrimaryColor,
-                      fontWeight: FontWeight.bold,
-                    ),
+                          color: context.textPrimaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(width: 8),
-                  if (bookingStats.percentageChange != null)
-                    Text(
-                      "${bookingStats.percentageChange! >= 0 ? '+' : ''}${formatNumber(bookingStats.percentageChange)}% ${strings.labelVsPreviousPeriod}",
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: bookingStats.percentageChange! >= 0
-                            ? AppColors.success
-                            : AppColors.error,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                  Text(
+                    "${bookingStats.percentageChange >= 0 ? '+' : ''}${formatNumber(bookingStats.percentageChange)}% ${strings.labelVsPreviousPeriod}",
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: bookingStats.percentageChange >= 0
+                              ? AppColors.success
+                              : AppColors.error,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -1325,7 +1377,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     final category = categories[index];
                     final value = category['value'] as double;
                     final percentageOfTotal =
-                    totalBookings > 0 ? (value / totalBookings * 100) : 0.0;
+                        totalBookings > 0 ? (value / totalBookings * 100) : 0.0;
                     final categoryChange = category['change'] as double?;
 
                     return Padding(
@@ -1347,9 +1399,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                              color: category['color'] as Color,
-                              fontWeight: FontWeight.w500,
-                            ),
+                                  color: category['color'] as Color,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                           const Spacer(),
                           Text(
@@ -1358,9 +1410,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                              color: context.textPrimaryColor,
-                              fontWeight: FontWeight.w500,
-                            ),
+                                  color: context.textPrimaryColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                           const SizedBox(width: 8),
                           if (categoryChange != null)
@@ -1382,11 +1434,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       .textTheme
                                       .bodySmall
                                       ?.copyWith(
-                                    color: categoryChange >= 0
-                                        ? AppColors.success
-                                        : AppColors.error,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                        color: categoryChange >= 0
+                                            ? AppColors.success
+                                            : AppColors.error,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                 ),
                               ],
                             ),
@@ -1410,10 +1462,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         Text(
           title,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w500),
         ),
       ],
     );
@@ -1440,7 +1491,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final maxWidth = constraints.maxWidth;
         List<Widget> segments = [];
 
-        final visibleCategories = categories.where((cat) => (cat['value'] as double) > 0).toList();
+        final visibleCategories =
+            categories.where((cat) => (cat['value'] as double) > 0).toList();
 
         if (visibleCategories.isEmpty) {
           return Container(
@@ -1459,7 +1511,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           segments.add(
             Flexible(
-              flex: (value * 1000).toInt(), // Use a large enough multiplier for flex
+              flex: (value * 1000)
+                  .toInt(), // Use a large enough multiplier for flex
               child: Container(
                 height: height,
                 color: category['color'] as Color,
@@ -1484,7 +1537,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final isDarkMode = Theme.of(context).brightness == Brightness.dark;
           final baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
           final highlightColor =
-          isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+              isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
           return Shimmer.fromColors(
             baseColor: baseColor,
             highlightColor: highlightColor,
@@ -1549,7 +1602,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ];
 
         final activeCategories =
-        categoriesData.where((cat) => cat['count'] as int > 0).toList();
+            categoriesData.where((cat) => cat['count'] as int > 0).toList();
 
         final pieChartSections = activeCategories.map((cat) {
           final value = (cat['count'] as int).toDouble();
@@ -1590,9 +1643,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               .textTheme
                               .headlineSmall
                               ?.copyWith(
-                            color: context.textPrimaryColor,
-                            fontWeight: FontWeight.bold,
-                          ),
+                                color: context.textPrimaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                         Text(
                           strings.labelTotalDisputes,
@@ -1635,9 +1688,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                              color: category['color'] as Color,
-                              fontWeight: FontWeight.w500,
-                            ),
+                                  color: category['color'] as Color,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                           Text(
                             '${formatNumber(category['count'])} ${strings.labelDisputesLowerCase} (${formatNumber(category['amount'], showCurrency: true)})',
@@ -1645,9 +1698,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                              color: context.textPrimaryColor,
-                              fontWeight: FontWeight.w500,
-                            ),
+                                  color: context.textPrimaryColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                         ],
                       ),
@@ -1670,7 +1723,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final isDarkMode = Theme.of(context).brightness == Brightness.dark;
           final baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
           final highlightColor =
-          isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+              isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
           return Shimmer.fromColors(
             baseColor: baseColor,
             highlightColor: highlightColor,
@@ -1720,7 +1773,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final chartData = paymentAnalysis.chartData ?? [];
 
         final activeCategories =
-        chartData.where((method) => (method.count ?? 0) > 0).toList();
+            chartData.where((method) => (method.count ?? 0) > 0).toList();
 
         final pieChartSections = activeCategories.map((method) {
           return PieChartSectionData(
@@ -1778,9 +1831,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               .textTheme
                               .headlineSmall
                               ?.copyWith(
-                            color: context.textPrimaryColor,
-                            fontWeight: FontWeight.bold,
-                          ),
+                                color: context.textPrimaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                         Text(
                           strings.labelTotalTransactions,
@@ -1831,9 +1884,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                              color: _getPaymentMethodColor(method.method),
-                              fontWeight: FontWeight.w500,
-                            ),
+                                  color: _getPaymentMethodColor(method.method),
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                           Text(
                             '${formatNumber(method.count)} ${strings.labelTransactionsLowerCase} (${formatNumber(method.amount, showCurrency: true)})',
@@ -1841,9 +1894,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                              color: context.textPrimaryColor,
-                              fontWeight: FontWeight.w500,
-                            ),
+                                  color: context.textPrimaryColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                         ],
                       ),

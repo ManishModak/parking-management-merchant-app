@@ -28,7 +28,8 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
   // bool _isImagesExpanded = false; // Not used, can be removed if not needed
   bool _isNfcSupported = false;
   bool _isNfcEnabled = false;
-  final PaymentService _paymentService = PaymentService(); // Instantiate PaymentService
+  final PaymentService _paymentService =
+      PaymentService(); // Instantiate PaymentService
 
   @override
   void initState() {
@@ -40,7 +41,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
       // Ensure ApiConfig.baseUrl does not end with a slash if socket URL needs specific format
       String socketBaseUrl = ApiConfig.baseUrl;
       if (socketBaseUrl.endsWith('/')) {
-        socketBaseUrl = socketBaseUrl.substring(0, socketBaseUrl.length -1);
+        socketBaseUrl = socketBaseUrl.substring(0, socketBaseUrl.length - 1);
       }
       viewModel.initializeSocket('user-${widget.ticketId}', socketBaseUrl);
     });
@@ -52,11 +53,14 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
       if (mounted) {
         setState(() {
           _isNfcSupported = isAvailable;
-          _isNfcEnabled = isAvailable; // Assuming if available, it's enabled initially
+          _isNfcEnabled =
+              isAvailable; // Assuming if available, it's enabled initially
         });
       }
       developer.log(
-          isAvailable ? 'NFC is supported' : 'NFC not supported', // Simplified log
+          isAvailable
+              ? 'NFC is supported'
+              : 'NFC not supported', // Simplified log
           name: 'NFC Check');
     } catch (e) {
       developer.log('NFC check error: $e', name: 'NFC Check');
@@ -69,22 +73,30 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     }
   }
 
-
   Future<void> _markTicketAsExited() async {
     final viewModel = Provider.of<MarkExitViewModel>(context, listen: false);
     final strings = S.of(context);
     try {
       await viewModel.markTicketAsExited(widget.ticketId);
-      if (viewModel.error != null && mounted) { // Check for error after marking
+      if (viewModel.error != null && mounted) {
+        // Check for error after marking
+        String errorMessage;
+        if (viewModel.apiError == 'errorFareNotConfigured') {
+          errorMessage = strings.errorFareNotConfigured;
+        } else {
+          errorMessage = '${strings.errorMarkExitFailed}: ${viewModel.apiError ?? viewModel.error.toString()}';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${strings.errorMarkExitFailed}: ${viewModel.apiError ?? viewModel.error.toString()}'),
+            content: Text(errorMessage),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
-    } catch (e) { // This catch might be redundant if viewModel handles and sets its error state
+    } catch (e) {
+      // This catch might be redundant if viewModel handles and sets its error state
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -100,6 +112,7 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
   @override
   void dispose() {
     // ViewModel's dispose handles socket disconnection
+    // Let the Provider handle the disposal of the ViewModel
     super.dispose();
   }
 
@@ -122,7 +135,8 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                 child: CachedNetworkImage(
                   imageUrl: imageUrl,
                   fit: BoxFit.contain,
-                  placeholder: (context, url) => _buildShimmerPlaceholder(height: 300),
+                  placeholder: (context, url) =>
+                      _buildShimmerPlaceholder(height: 300),
                   errorWidget: (context, url, error) => Center(
                     child: Icon(Icons.broken_image_outlined,
                         size: 48, color: Theme.of(context).colorScheme.error),
@@ -133,7 +147,10 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                 top: 10,
                 right: 10,
                 child: IconButton(
-                  icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onPrimaryContainer), // Adjusted for visibility
+                  icon: Icon(Icons.close,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onPrimaryContainer), // Adjusted for visibility
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
@@ -144,15 +161,21 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
-  Widget _buildShimmerPlaceholder({double width = double.infinity, double height = 20}) {
+  Widget _buildShimmerPlaceholder(
+      {double width = double.infinity, double height = 20}) {
     return Shimmer.fromColors(
-      baseColor: Theme.of(context).brightness == Brightness.light ? AppColors.shimmerBaseLight : AppColors.shimmerBaseDark,
-      highlightColor: Theme.of(context).brightness == Brightness.light ? AppColors.shimmerHighlightLight : AppColors.shimmerHighlightDark,
+      baseColor: Theme.of(context).brightness == Brightness.light
+          ? AppColors.shimmerBaseLight
+          : AppColors.shimmerBaseDark,
+      highlightColor: Theme.of(context).brightness == Brightness.light
+          ? AppColors.shimmerHighlightLight
+          : AppColors.shimmerHighlightDark,
       child: Container(
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor, // Use cardColor for shimmer bg consistency
+          color: Theme.of(context)
+              .cardColor, // Use cardColor for shimmer bg consistency
           borderRadius: BorderRadius.circular(8),
         ),
       ),
@@ -160,7 +183,6 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
   }
 
   Widget _buildLoadingState(S strings) {
-    // ... (loading state remains the same, ensure labels match S.of(context))
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
@@ -185,57 +207,77 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Expanded(child: _buildShimmerFieldPair(strings.ticketIdLabel)),
+                      Expanded(
+                          child: _buildShimmerFieldPair(strings.ticketIdLabel)),
                       const SizedBox(width: 24),
-                      Expanded(child: _buildShimmerFieldPair(strings.labelFloorId)),
+                      Expanded(
+                          child: _buildShimmerFieldPair(strings.labelFloorId)),
                     ],
                   ),
                   const SizedBox(height: 18),
                   Row(
                     children: [
-                      Expanded(child: _buildShimmerFieldPair(strings.labelSlotId)),
+                      Expanded(
+                          child: _buildShimmerFieldPair(strings.labelSlotId)),
                       const SizedBox(width: 24),
-                      Expanded(child: _buildShimmerFieldPair(strings.labelVehicleNumber)),
+                      Expanded(
+                          child: _buildShimmerFieldPair(
+                              strings.labelVehicleNumber)),
                     ],
                   ),
                   const SizedBox(height: 18),
                   Row(
                     children: [
-                      Expanded(child: _buildShimmerFieldPair(strings.labelVehicleType)),
+                      Expanded(
+                          child:
+                              _buildShimmerFieldPair(strings.labelVehicleType)),
                       const SizedBox(width: 24),
-                      Expanded(child: _buildShimmerFieldPair(strings.labelEntryLane)),
+                      Expanded(
+                          child:
+                              _buildShimmerFieldPair(strings.labelEntryLane)),
                     ],
                   ),
                   const SizedBox(height: 18),
                   Row(
                     children: [
-                      Expanded(child: _buildShimmerFieldPair(strings.labelExitLane)),
+                      Expanded(
+                          child: _buildShimmerFieldPair(strings.labelExitLane)),
                       const SizedBox(width: 24),
-                      Expanded(child: _buildShimmerFieldPair(strings.labelEntryTime)),
+                      Expanded(
+                          child:
+                              _buildShimmerFieldPair(strings.labelEntryTime)),
                     ],
                   ),
                   const SizedBox(height: 18),
                   Row(
                     children: [
-                      Expanded(child: _buildShimmerFieldPair(strings.labelExitTime)),
+                      Expanded(
+                          child: _buildShimmerFieldPair(strings.labelExitTime)),
                       const SizedBox(width: 24),
-                      Expanded(child: _buildShimmerFieldPair(strings.labelDuration)),
+                      Expanded(
+                          child: _buildShimmerFieldPair(strings.labelDuration)),
                     ],
                   ),
                   const SizedBox(height: 18),
                   Row(
                     children: [
-                      Expanded(child: _buildShimmerFieldPair(strings.labelFareType)),
+                      Expanded(
+                          child: _buildShimmerFieldPair(strings.labelFareType)),
                       const SizedBox(width: 24),
-                      Expanded(child: _buildShimmerFieldPair(strings.labelFareRate)),
+                      Expanded(
+                          child: _buildShimmerFieldPair(strings.labelFareRate)),
                     ],
                   ),
                   const SizedBox(height: 18),
                   Row(
                     children: [
-                      Expanded(child: _buildShimmerFieldPair(strings.labelTotalCharges)),
+                      Expanded(
+                          child: _buildShimmerFieldPair(
+                              strings.labelTotalCharges)),
                       const SizedBox(width: 24),
-                      Expanded(child: _buildShimmerFieldPair(strings.labelPaymentStatus)),
+                      Expanded(
+                          child: _buildShimmerFieldPair(
+                              strings.labelPaymentStatus)),
                     ],
                   ),
                 ],
@@ -266,10 +308,11 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                       scrollDirection: Axis.horizontal,
                       children: List.generate(
                         3,
-                            (index) => Padding(
-                          padding: EdgeInsets.only(right: 8.0),
+                        (index) => Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
                           child: _buildShimmerPlaceholder(
-                            width: (AppConfig.deviceWidth - 64) / 3, // Use context for AppConfig
+                            width: (AppConfig.deviceWidth - 64) /
+                                3, // Use context for AppConfig
                             height: 150,
                           ),
                         ),
@@ -302,7 +345,6 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
   }
 
   Widget _buildShimmerFieldPair(String label) {
-    // ... (shimmer field pair remains the same)
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
@@ -317,7 +359,6 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
   }
 
   Widget _buildShimmerOptionRow() {
-    // ... (shimmer option row remains the same)
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -337,8 +378,8 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
   }
 
   Widget _buildImageSection(MarkExitViewModel viewModel, S strings) {
-    final capturedImageUrls = viewModel.ticketDetails?['captured_images'] as List<String>? ?? [];
-    // ... (image section logic remains largely the same, ensure AppConfig.deviceWidth(context) is used)
+    final capturedImageUrls =
+        viewModel.ticketDetails?['captured_images'] as List<String>? ?? [];
     return Card(
       elevation: Theme.of(context).cardTheme.elevation,
       margin: Theme.of(context).cardTheme.margin,
@@ -350,7 +391,10 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
           children: [
             Text(
               strings.labelUploadedDocuments,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             if (capturedImageUrls.isNotEmpty)
               Container(
@@ -362,21 +406,24 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                 child: Text(
                   '${capturedImageUrls.length}',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w500,
-                  ),
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
                 ),
               ),
           ],
         ),
         initiallyExpanded: false, // Default to collapsed
-        onExpansionChanged: (expanded) => setState(() { /* _isImagesExpanded = expanded; */ }), // Not used, can remove state var
+        onExpansionChanged: (expanded) => setState(() {
+          /* _isImagesExpanded = expanded; */
+        }), // Not used, can remove state var
         shape: const RoundedRectangleBorder(side: BorderSide.none),
         collapsedShape: const RoundedRectangleBorder(side: BorderSide.none),
         tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+            padding:
+                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -388,13 +435,23 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.image_not_supported_outlined,
-                              size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6)),
+                              size: 48,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withOpacity(0.6)),
                           const SizedBox(height: 8),
                           Text(
                             strings.messageNoImagesAvailable,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
+                                      .withOpacity(0.6),
+                                ),
                           ),
                         ],
                       ),
@@ -407,14 +464,20 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                       scrollDirection: Axis.horizontal,
                       itemCount: _getCurrentImages(capturedImageUrls).length,
                       itemBuilder: (context, index) {
-                        final imageUrl = _getCurrentImages(capturedImageUrls)[index];
-                        final imageWidth = (AppConfig.deviceWidth - 64) / 3; // Use context
+                        final imageUrl =
+                            _getCurrentImages(capturedImageUrls)[index];
+                        final imageWidth =
+                            (AppConfig.deviceWidth - 64) / 3; // Use context
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0),
                           child: Container(
                             width: imageWidth,
                             decoration: BoxDecoration(
-                              border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.5)),
+                              border: Border.all(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outline
+                                      .withOpacity(0.5)),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: ClipRRect(
@@ -426,23 +489,35 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                                   fit: BoxFit.cover,
                                   memCacheWidth: 300,
                                   placeholder: (context, url) =>
-                                      _buildShimmerPlaceholder(width: imageWidth, height: 150),
+                                      _buildShimmerPlaceholder(
+                                          width: imageWidth, height: 150),
                                   errorWidget: (context, url, error) => Center(
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Icon(Icons.broken_image_outlined,
                                             size: 32,
-                                            color: Theme.of(context).colorScheme.error),
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .error),
                                         const SizedBox(height: 4),
                                         Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 4.0),
                                           child: Text(
                                             strings.errorImageLoadFailed,
-                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              color: Theme.of(context).colorScheme.error,
-                                            ),
-                                            textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .error,
+                                                ),
+                                            textAlign: TextAlign.center,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                       ],
@@ -465,31 +540,46 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                         icon: const Icon(Icons.arrow_back_ios, size: 18),
                         color: _currentImagePage > 0
                             ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                            : Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.5),
                         onPressed: _currentImagePage > 0
                             ? () => setState(() => _currentImagePage--)
                             : null,
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           '${strings.labelPage} ${_currentImagePage + 1} ${strings.labelOf} ${_getTotalPages(capturedImageUrls)}',
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelMedium
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
                         ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.arrow_forward_ios, size: 18),
-                        color: _currentImagePage < _getTotalPages(capturedImageUrls) - 1
+                        color: _currentImagePage <
+                                _getTotalPages(capturedImageUrls) - 1
                             ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                        onPressed: _currentImagePage < _getTotalPages(capturedImageUrls) - 1
+                            : Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.5),
+                        onPressed: _currentImagePage <
+                                _getTotalPages(capturedImageUrls) - 1
                             ? () => setState(() => _currentImagePage++)
                             : null,
                       ),
@@ -505,7 +595,6 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
   }
 
   List<String> _getCurrentImages(List<String> capturedImageUrls) {
-    // ... (remains the same)
     if (capturedImageUrls.isEmpty) return [];
     final startIndex = _currentImagePage * 3;
     final endIndex = (startIndex + 3).clamp(0, capturedImageUrls.length);
@@ -513,44 +602,87 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
   }
 
   int _getTotalPages(List<String> capturedImageUrls) {
-    // ... (remains the same)
     if (capturedImageUrls.isEmpty) return 0;
     return (capturedImageUrls.length / 3).ceil();
   }
 
   Widget _buildErrorState(MarkExitViewModel viewModel, S strings) {
-    // ... (error state remains the same)
+    final isFareNotConfigured = viewModel.apiError == 'errorFareNotConfigured';
+    
     return Center(
-      child: SingleChildScrollView( // Added SingleChildScrollView for smaller screens
+      child: SingleChildScrollView(
+        // Added SingleChildScrollView for smaller screens
         padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.error),
+            Icon(Icons.error_outline,
+                size: 48, color: Theme.of(context).colorScheme.error),
             const SizedBox(height: 16),
             Text(
               strings.errorFailedToMarkExit, // More specific error title
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              viewModel.apiError ?? viewModel.error?.toString() ?? strings.errorUnknown,
+              isFareNotConfigured
+                  ? strings.errorFareNotConfigured
+                  : (viewModel.apiError ??
+                      viewModel.error?.toString() ??
+                      strings.errorUnknown),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6),
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            CustomButtons.primaryButton(
-              width: 150,
-              height: 40,
-              text: strings.buttonRetry,
-              onPressed: _markTicketAsExited,
-              context: context,
-            ),
+            if (isFareNotConfigured) ...[
+              // For fare configuration errors, show both retry and configure options
+              CustomButtons.primaryButton(
+                width: 200,
+                height: 40,
+                text: strings.buttonRetry,
+                onPressed: _markTicketAsExited,
+                context: context,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                strings.labelOr,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.5),
+                    ),
+              ),
+              const SizedBox(height: 12),
+              CustomButtons.secondaryButton(
+                width: 200,
+                height: 40,
+                text: strings.buttonConfigureFare,
+                onPressed: () {
+                  // Navigate to fare configuration screen
+                  Navigator.pop(context); // Go back to previous screen
+                  // You can add navigation to fare configuration here if needed
+                },
+                context: context,
+              ),
+            ] else ...[
+              // For other errors, just show retry button
+              CustomButtons.primaryButton(
+                width: 150,
+                height: 40,
+                text: strings.buttonRetry,
+                onPressed: _markTicketAsExited,
+                context: context,
+              ),
+            ],
           ],
         ),
       ),
@@ -564,7 +696,6 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     bool isBadge = false,
     required S strings,
   }) {
-    // ... (detail item remains the same)
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
@@ -573,41 +704,58 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
           Text(
             title,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.8), // Adjusted for better contrast
-              fontWeight: FontWeight.w500,
-            ),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withOpacity(0.8), // Adjusted for better contrast
+                  fontWeight: FontWeight.w500,
+                ),
           ),
           const SizedBox(height: 4),
           isBadge
               ? Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: value.toLowerCase() == 'open' // Example badge logic
-                  ? Colors.green.withOpacity(0.1)
-                  : Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: value.toLowerCase() == 'open' ? Colors.green : Colors.orange,
-                width: 1,
-              ),
-            ),
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: value.toLowerCase() == 'open' ? Colors.green : Colors.orange,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          )
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: value.toLowerCase() == 'open' // Example badge logic
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: value.toLowerCase() == 'open'
+                          ? Colors.green
+                          : Colors.orange,
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    value,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: value.toLowerCase() == 'open'
+                              ? Colors.green
+                              : Colors.orange,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                )
               : Text(
-            value.isEmpty ? strings.labelNA : value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
-              color: highlight
-                  ? (value.toLowerCase() == 'success' ? Colors.green.shade700 : (value.toLowerCase() == 'pending' ? Colors.orange.shade700 : Colors.red.shade700)) // Adjusted highlight colors
-                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
-            ),
-          ),
+                  value.isEmpty ? strings.labelNA : value,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight:
+                            highlight ? FontWeight.bold : FontWeight.normal,
+                        color: highlight
+                            ? (value.toLowerCase() == 'success'
+                                ? Colors.green.shade700
+                                : (value.toLowerCase() == 'pending'
+                                    ? Colors.orange.shade700
+                                    : Colors.red
+                                        .shade700)) // Adjusted highlight colors
+                            : Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.9),
+                      ),
+                ),
         ],
       ),
     );
@@ -618,7 +766,6 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     required List<Widget> children,
     Widget? trailing,
   }) {
-    // ... (compact section remains the same)
     return Card(
       elevation: Theme.of(context).cardTheme.elevation,
       margin: Theme.of(context).cardTheme.margin,
@@ -633,7 +780,8 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(child: title), // Ensure title can expand
-                if (trailing != null) Flexible(child: trailing), // Allow trailing to take space
+                if (trailing != null)
+                  Flexible(child: trailing), // Allow trailing to take space
               ],
             ),
             const SizedBox(height: 8),
@@ -654,33 +802,36 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
             title: Text(
               strings.labelTicketInformation,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
             ),
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: (ticketData['status']?.toString().toLowerCase() == 'open' // Defensive toString
-                    ? AppColors.successLight // Use AppColors
-                    : AppColors.warningLight)
+                color: (ticketData['status']?.toString().toLowerCase() ==
+                            'open' // Defensive toString
+                        ? AppColors.successLight // Use AppColors
+                        : AppColors.warningLight)
                     .withOpacity(0.2),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: ticketData['status']?.toString().toLowerCase() == 'open'
-                      ? AppColors.successDark
-                      : AppColors.warningDark,
+                  color:
+                      ticketData['status']?.toString().toLowerCase() == 'open'
+                          ? AppColors.successDark
+                          : AppColors.warningDark,
                   width: 1.5,
                 ),
               ),
               child: Text(
                 ticketData['status']?.toString() ?? strings.labelNA,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: ticketData['status']?.toString().toLowerCase() == 'open'
-                      ? AppColors.successDark
-                      : AppColors.warningDark,
-                  fontWeight: FontWeight.bold,
-                ),
+                      color: ticketData['status']?.toString().toLowerCase() ==
+                              'open'
+                          ? AppColors.successDark
+                          : AppColors.warningDark,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
             ),
             children: [
@@ -689,14 +840,16 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                   Expanded(
                     child: _buildDetailItem(
                       title: strings.ticketIdLabel,
-                      value: ticketData['ticket_ref_id']?.toString() ?? strings.labelNA,
+                      value: ticketData['ticket_ref_id']?.toString() ??
+                          strings.labelNA,
                       strings: strings,
                     ),
                   ),
                   Expanded(
                     child: _buildDetailItem(
                       title: strings.labelFloorId,
-                      value: ticketData['floor_id']?.toString() ?? strings.labelNA,
+                      value:
+                          ticketData['floor_id']?.toString() ?? strings.labelNA,
                       strings: strings,
                     ),
                   ),
@@ -707,14 +860,16 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                   Expanded(
                     child: _buildDetailItem(
                       title: strings.labelSlotId,
-                      value: ticketData['slot_id']?.toString() ?? strings.labelNA,
+                      value:
+                          ticketData['slot_id']?.toString() ?? strings.labelNA,
                       strings: strings,
                     ),
                   ),
                   Expanded(
                     child: _buildDetailItem(
                       title: strings.labelVehicleNumber,
-                      value: ticketData['vehicle_number']?.toString() ?? strings.labelNA,
+                      value: ticketData['vehicle_number']?.toString() ??
+                          strings.labelNA,
                       strings: strings,
                     ),
                   ),
@@ -725,14 +880,16 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                   Expanded(
                     child: _buildDetailItem(
                       title: strings.labelVehicleType,
-                      value: ticketData['vehicle_type']?.toString() ?? strings.labelNA,
+                      value: ticketData['vehicle_type']?.toString() ??
+                          strings.labelNA,
                       strings: strings,
                     ),
                   ),
                   Expanded(
                     child: _buildDetailItem(
                       title: strings.labelEntryLane,
-                      value: ticketData['entry_lane_id']?.toString() ?? strings.labelNA,
+                      value: ticketData['entry_lane_id']?.toString() ??
+                          strings.labelNA,
                       strings: strings,
                     ),
                   ),
@@ -743,7 +900,8 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                   Expanded(
                     child: _buildDetailItem(
                       title: strings.labelExitLane,
-                      value: ticketData['exit_lane_id']?.toString() ?? strings.labelNotFilled,
+                      value: ticketData['exit_lane_id']?.toString() ??
+                          strings.labelNotFilled,
                       strings: strings,
                     ),
                   ),
@@ -770,7 +928,8 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                   Expanded(
                     child: _buildDetailItem(
                       title: strings.labelDuration,
-                      value: ticketData['parking_duration']?.toString() ?? strings.labelCalculating,
+                      value: ticketData['parking_duration']?.toString() ??
+                          strings.labelCalculating,
                       strings: strings,
                     ),
                   ),
@@ -781,14 +940,16 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                   Expanded(
                     child: _buildDetailItem(
                       title: strings.labelFareType,
-                      value: ticketData['fare_type']?.toString() ?? strings.labelPending,
+                      value: ticketData['fare_type']?.toString() ??
+                          strings.labelPending,
                       strings: strings,
                     ),
                   ),
                   Expanded(
                     child: _buildDetailItem(
                       title: strings.labelFareRate,
-                      value: ticketData['fare_amount']?.toString() ?? strings.labelPending,
+                      value: ticketData['fare_amount']?.toString() ??
+                          strings.labelPending,
                       strings: strings,
                     ),
                   ),
@@ -799,14 +960,16 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                   Expanded(
                     child: _buildDetailItem(
                       title: strings.labelTotalCharges,
-                      value: ticketData['total_charges']?.toString() ?? strings.labelPending,
+                      value: ticketData['total_charges']?.toString() ??
+                          strings.labelPending,
                       strings: strings,
                     ),
                   ),
                   Expanded(
                     child: _buildDetailItem(
                       title: strings.labelPaymentStatus,
-                      value: viewModel.paymentStatus?.toString() ?? strings.labelPending,
+                      value: viewModel.paymentStatus?.toString() ??
+                          strings.labelPending,
                       highlight: true,
                       strings: strings,
                     ),
@@ -821,6 +984,60 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
       ),
     );
   }
+
+  /// START: NEW DIALOG WIDGET
+  Future<bool?> _showCashPaymentDialog(
+      BuildContext context, String totalCharges, S strings) {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false, // User must interact with the dialog
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          icon: Icon(Icons.money_outlined,
+              color: Theme.of(context).colorScheme.primary, size: 48),
+          title: Text(strings.buttonPayCash,
+              style: Theme.of(context).textTheme.titleLarge),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                strings.messageCollectCashConfirmation,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '₹ $totalCharges', // Assuming INR currency symbol
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ],
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          actions: <Widget>[
+            SizedBox(
+              width: double.infinity,
+              child: CustomButtons.primaryButton(
+                text: strings.buttonDone,
+                onPressed: () {
+                  Navigator.of(dialogContext).pop(true);
+                  //Navigator.pushReplacement(context, newRoute)
+                },
+                context: context,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// END: NEW DIALOG WIDGET
 
   Widget _buildActionButton(MarkExitViewModel viewModel, S strings) {
     final ticketData = viewModel.ticketDetails ?? {};
@@ -842,8 +1059,10 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
       try {
         developer.log('Generating QR code for ticket: ${widget.ticketId}',
             name: 'MarkExitDetailsScreen');
-        final qrCodeResponse = await _paymentService.createOrderQrCode(widget.ticketId);
-        developer.log('QR Code Response: $qrCodeResponse', name: 'MarkExitDetailsScreen');
+        final qrCodeResponse =
+            await _paymentService.createOrderQrCode(widget.ticketId);
+        developer.log('QR Code Response: $qrCodeResponse',
+            name: 'MarkExitDetailsScreen');
         final qrCodeUrl = qrCodeResponse['qrUrl']?.toString() ?? '';
 
         if (qrCodeUrl.isEmpty) {
@@ -859,7 +1078,8 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
         if (!mounted) return;
         _showZoomableImageDialog(qrCodeUrl);
       } catch (e) {
-        developer.log('Error generating QR code: $e', name: 'MarkExitDetailsScreen');
+        developer.log('Error generating QR code: $e',
+            name: 'MarkExitDetailsScreen');
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -889,18 +1109,22 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
             NfcPollingOption.iso14443, // For EMV cards (NFC-A and NFC-B)
             NfcPollingOption.iso15693, // Optional: For NFC-V tags, if needed
           },
-          alertMessageIos: strings.messageNfcScanPrompt, // iOS: Prompt user to scan
+          alertMessageIos:
+              strings.messageNfcScanPrompt, // iOS: Prompt user to scan
           noPlatformSoundsAndroid: true, // Android: Disable platform sounds
           invalidateAfterFirstReadIos: true, // iOS: Stop after first tag read
           onDiscovered: (NfcTag tag) async {
             isSessionOpen = true;
-            developer.log('NFC Tag Discovered: ${tag.data}', name: 'MarkExitDetailsScreen');
+            developer.log('NFC Tag Discovered: ${tag.data}',
+                name: 'MarkExitDetailsScreen');
 
             // Cast tag.data to Map<String, dynamic> for type safety
             final tagData = tag.data as Map<String, dynamic>;
 
             // Check for supported tag types (e.g., isodep for EMV cards)
-            if (tagData.containsKey('isodep') || tagData.containsKey('mifareclassic') || tagData.containsKey('nfca')) {
+            if (tagData.containsKey('isodep') ||
+                tagData.containsKey('mifareclassic') ||
+                tagData.containsKey('nfca')) {
               // Placeholder for EMV card processing
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -926,14 +1150,17 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
             try {
               await NfcManager.instance.stopSession();
               isSessionOpen = false;
-              developer.log('NFC Session stopped after discovery.', name: 'MarkExitDetailsScreen');
+              developer.log('NFC Session stopped after discovery.',
+                  name: 'MarkExitDetailsScreen');
             } catch (e) {
-              developer.log('Error stopping NFC session after discovery: $e', name: 'MarkExitDetailsScreen');
+              developer.log('Error stopping NFC session after discovery: $e',
+                  name: 'MarkExitDetailsScreen');
             }
           },
           onSessionErrorIos: (error) async {
             isSessionOpen = true;
-            developer.log('iOS NFC Session Error: $error', name: 'MarkExitDetailsScreen');
+            developer.log('iOS NFC Session Error: $error',
+                name: 'MarkExitDetailsScreen');
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -946,13 +1173,16 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
             try {
               await NfcManager.instance.stopSession();
               isSessionOpen = false;
-              developer.log('NFC Session stopped after iOS error.', name: 'MarkExitDetailsScreen');
+              developer.log('NFC Session stopped after iOS error.',
+                  name: 'MarkExitDetailsScreen');
             } catch (e) {
-              developer.log('Error stopping NFC session after iOS error: $e', name: 'MarkExitDetailsScreen');
+              developer.log('Error stopping NFC session after iOS error: $e',
+                  name: 'MarkExitDetailsScreen');
             }
           },
         );
-        developer.log('NFC session started, waiting for tag...', name: 'MarkExitDetailsScreen');
+        developer.log('NFC session started, waiting for tag...',
+            name: 'MarkExitDetailsScreen');
 
         // Timeout to stop session if no tag is detected
         Future.delayed(const Duration(seconds: 15), () async {
@@ -960,7 +1190,8 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
             try {
               await NfcManager.instance.stopSession();
               isSessionOpen = false;
-              developer.log('NFC Session stopped due to timeout.', name: 'MarkExitDetailsScreen');
+              developer.log('NFC Session stopped due to timeout.',
+                  name: 'MarkExitDetailsScreen');
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -970,12 +1201,14 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
                 );
               }
             } catch (e) {
-              developer.log('Error stopping NFC session on timeout: $e', name: 'MarkExitDetailsScreen');
+              developer.log('Error stopping NFC session on timeout: $e',
+                  name: 'MarkExitDetailsScreen');
             }
           }
         });
       } catch (e) {
-        developer.log('Error starting NFC session: $e', name: 'MarkExitDetailsScreen');
+        developer.log('Error starting NFC session: $e',
+            name: 'MarkExitDetailsScreen');
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -986,44 +1219,72 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
       }
     }
 
+    /// START: UPDATED CASH PAYMENT FUNCTION
     void initiateCashPayment() async {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(strings.messageProcessingPayment),
-          backgroundColor: Colors.blue,
-        ),
-      );
+      // Show the confirmation dialog first
+      final bool? confirmed =
+          await _showCashPaymentDialog(context, totalChargesStr, strings);
+
+      // Only proceed if the user clicked "Done" (confirmed == true)
+      if (confirmed != true) {
+        developer.log('Cash payment cancelled by user.',
+            name: 'MarkExitDetailsScreen.initiateCashPayment');
+        return;
+      }
+
+      // If confirmed, show processing message and call the service
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(strings.messageProcessingPayment),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
 
       try {
-        developer.log('Initiating cash payment for ticket: ${widget.ticketId}', name: 'MarkExitDetailsScreen.initiateCashPayment');
-        final response = await _paymentService.recordCashPayment(widget.ticketId);
-        developer.log('Cash payment response: $response', name: 'MarkExitDetailsScreen.initiateCashPayment');
+        developer.log('Initiating cash payment for ticket: ${widget.ticketId}',
+            name: 'MarkExitDetailsScreen.initiateCashPayment');
+        final response =
+            await _paymentService.recordCashPayment(widget.ticketId);
+        developer.log('Cash payment response: $response',
+            name: 'MarkExitDetailsScreen.initiateCashPayment');
 
         if (mounted) {
           ScaffoldMessenger.of(context).removeCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(response['message']?.toString() ?? strings.messageCashPaymentSuccess),
+              content: Text(response['message']?.toString() ??
+                  strings.messageCashPaymentSuccess),
               backgroundColor: AppColors.successDark,
             ),
           );
-          Navigator.pop(context, true);
+          // Wait a moment before popping to let user see the success message
+          Future.delayed(const Duration(seconds: 1), () {
+            if (mounted) {
+              Navigator.pop(context, true);
+            }
+          });
         }
       } catch (e) {
-        developer.log('Error recording cash payment: $e', name: 'MarkExitDetailsScreen.initiateCashPayment');
+        developer.log('Error recording cash payment: $e',
+            name: 'MarkExitDetailsScreen.initiateCashPayment');
         if (mounted) {
           ScaffoldMessenger.of(context).removeCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${strings.errorCashPaymentFailed}: ${e.toString()}'),
+              content:
+                  Text('${strings.errorCashPaymentFailed}: ${e.toString()}'),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }
       }
     }
+
+    /// END: UPDATED CASH PAYMENT FUNCTION
 
     return Card(
       elevation: Theme.of(context).cardTheme.elevation,
@@ -1037,18 +1298,21 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
             InkWell(
               onTap: viewModel.isLoading ? null : initiateUpiPayment,
               borderRadius: BorderRadius.circular(12),
-              child: _buildOptionRow(strings.buttonPayUpi, Icons.qr_code_2_outlined),
+              child: _buildOptionRow(
+                  strings.buttonPayUpi, Icons.qr_code_2_outlined),
             ),
             if (_isNfcSupported)
               InkWell(
                 onTap: viewModel.isLoading ? null : initiateNfcCardPayment,
                 borderRadius: BorderRadius.circular(12),
-                child: _buildOptionRow(strings.buttonPayNfc, Icons.nfc_outlined),
+                child:
+                    _buildOptionRow(strings.buttonPayNfc, Icons.nfc_outlined),
               ),
             InkWell(
               onTap: viewModel.isLoading ? null : initiateCashPayment,
               borderRadius: BorderRadius.circular(12),
-              child: _buildOptionRow(strings.buttonPayCash, Icons.payments_outlined),
+              child: _buildOptionRow(
+                  strings.buttonPayCash, Icons.payments_outlined),
             ),
           ],
         ),
@@ -1057,38 +1321,45 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
   }
 
   Widget _buildOptionRow(String text, IconData icon) {
-    // ... (option row remains the same)
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0), // Increased vertical padding
+      padding: const EdgeInsets.symmetric(
+          vertical: 12.0), // Increased vertical padding
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
-              Icon(icon, color: Theme.of(context).colorScheme.primary, size: 28), // Slightly larger icon
+              Icon(icon,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 28), // Slightly larger icon
               const SizedBox(width: 16), // Increased spacing
               Text(
                 text,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
             ],
           ),
           Icon(Icons.chevron_right,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.7), size: 28), // Adjusted opacity
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+              size: 28), // Adjusted opacity
         ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildCustomAppBar(MarkExitViewModel viewModel, S strings) {
-    // ... (custom app bar remains the same)
-    final ticketRefId = viewModel.ticketDetails?['ticket_ref_id']?.toString() ?? strings.labelNA;
+  PreferredSizeWidget _buildCustomAppBar(
+      MarkExitViewModel viewModel, S strings) {
+    final ticketRefId = viewModel.ticketDetails?['ticket_ref_id']?.toString() ??
+        strings.labelNA;
     return CustomAppBar.appBarWithNavigation(
       screenTitle: "${strings.markExitLabel} #$ticketRefId",
-      onPressed: () => Navigator.pop(context, viewModel.paymentStatus?.toLowerCase() == 'success'), // Pass back success status
+      onPressed: () => Navigator.pop(
+          context,
+          viewModel.paymentStatus?.toLowerCase() ==
+              'success'), // Pass back success status
       darkBackground: Theme.of(context).brightness == Brightness.dark,
       fontSize: 16, // Adjusted font size
       centreTitle: false,
@@ -1096,54 +1367,48 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
     );
   }
 
-  // REMOVE _formatDateTime as it's now handled by ViewModel
-  // String _formatDateTime(String? dateTimeStr) { ... }
-
   @override
   Widget build(BuildContext context) {
     final strings = S.of(context);
     return Consumer<MarkExitViewModel>(
       builder: (context, viewModel, child) {
-        // Handle payment status snackbar display more reliably
-        // This was causing issues by being in the build method directly.
-        // It's better to trigger side effects like snackbars from event handlers or init/dispose.
-        // For now, will keep the WidgetsBinding approach but be mindful of its placement.
-
-        // This specific block for showing snackbar on paymentStatus change
-        // should ideally be triggered ONLY when the paymentStatus actually changes
-        // and not on every build. Using a StatefulWidget and didUpdateWidget or
-        // a more sophisticated state management pattern would be better.
-        // However, for now, the existing WidgetsBinding.instance.addPostFrameCallback
-        // tries to mitigate multiple snackbars.
-        if (viewModel.paymentStatus != null && viewModel.paymentStatus != "processing_payment_notification") { // Avoid showing initial "processing"
+        if (viewModel.paymentStatus != null &&
+            viewModel.paymentStatus != "processing_payment_notification") {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) { // Ensure widget is still mounted
-              // Only show snackbar if the status is one that needs user attention (e.g. success/failure)
-              // And potentially not if it's just "pending" from an API call that already showed a message.
-              // The current logic might show multiple snackbars if not careful.
-              // Consider having a flag in ViewModel 'hasShownPaymentStatusSnackbar'
-              if (viewModel.paymentStatus?.toLowerCase() == 'success' || viewModel.paymentStatus?.toLowerCase() == 'failed' || viewModel.paymentStatus?.toLowerCase() == 'paid_cash') {
-                ScaffoldMessenger.of(context).removeCurrentSnackBar(); // Remove previous if any
+            if (mounted) {
+              if (viewModel.paymentStatus?.toLowerCase() == 'success' ||
+                  viewModel.paymentStatus?.toLowerCase() == 'failed' ||
+                  viewModel.paymentStatus?.toLowerCase() == 'paid_cash') {
+                ScaffoldMessenger.of(context)
+                    .removeCurrentSnackBar(); // Remove previous if any
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('${strings.labelPaymentStatus}: ${viewModel.paymentStatus?.capitalize() ?? strings.labelUnknown.capitalize()}'),
-                    backgroundColor: viewModel.paymentStatus?.toLowerCase() == 'success' || viewModel.paymentStatus?.toLowerCase() == 'paid_cash'
-                        ? AppColors.successDark // Use AppColors
-                        : AppColors.errorDark,
+                    content: Text(
+                        '${strings.labelPaymentStatus}: ${viewModel.paymentStatus?.capitalize() ?? strings.labelUnknown.capitalize()}'),
+                    backgroundColor:
+                        viewModel.paymentStatus?.toLowerCase() == 'success' ||
+                                viewModel.paymentStatus?.toLowerCase() ==
+                                    'paid_cash'
+                            ? AppColors.successDark // Use AppColors
+                            : AppColors.errorDark,
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
-                if (viewModel.paymentStatus?.toLowerCase() == 'success' || viewModel.paymentStatus?.toLowerCase() == 'paid_cash') {
+                if (viewModel.paymentStatus?.toLowerCase() == 'success' ||
+                    viewModel.paymentStatus?.toLowerCase() == 'paid_cash') {
                   // Optionally pop the screen on success after a delay
                   Future.delayed(const Duration(seconds: 2), () {
-                    if (mounted) Navigator.pop(context, true); // Pop with success
+                    if (mounted) {
+                      Navigator.pop(context, true);
+                    } // Pop with success
                   });
                 }
               }
             }
           });
         }
-        return PopScope( // Use PopScope for more control over back navigation
+        return PopScope(
+          // Use PopScope for more control over back navigation
           canPop: !(viewModel.isLoading), // Prevent pop if loading
           onPopInvoked: (didPop) {
             if (didPop) return;
@@ -1153,14 +1418,22 @@ class _MarkExitDetailsScreenState extends State<MarkExitDetailsScreen> {
             appBar: _buildCustomAppBar(viewModel, strings),
             body: RefreshIndicator(
               onRefresh: _markTicketAsExited,
-              color: Theme.of(context).colorScheme.primary, // Set refresh indicator color
-              child: viewModel.isLoading && viewModel.ticketDetails == null // Show loading only if no details yet
+              color: Theme.of(context)
+                  .colorScheme
+                  .primary, // Set refresh indicator color
+              child: viewModel.isLoading &&
+                      viewModel.ticketDetails ==
+                          null // Show loading only if no details yet
                   ? _buildLoadingState(strings)
-                  : viewModel.error != null && viewModel.ticketDetails == null // Show error only if no details yet
-                  ? _buildErrorState(viewModel, strings)
-                  : viewModel.ticketDetails == null // Fallback for unexpected null details
-                  ? _buildErrorState(viewModel, strings) // Or a specific "No details" message
-                  : _buildTicketDetails(viewModel, strings),
+                  : viewModel.error != null &&
+                          viewModel.ticketDetails ==
+                              null // Show error only if no details yet
+                      ? _buildErrorState(viewModel, strings)
+                      : viewModel.ticketDetails ==
+                              null // Fallback for unexpected null details
+                          ? _buildErrorState(viewModel,
+                              strings) // Or a specific "No details" message
+                          : _buildTicketDetails(viewModel, strings),
             ),
           ),
         );

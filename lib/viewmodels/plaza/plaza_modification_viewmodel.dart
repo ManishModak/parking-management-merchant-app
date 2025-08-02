@@ -18,7 +18,7 @@ import 'package:merchant_app/viewmodels/plaza/restoration_helper.dart';
 // PlazaModificationFormState remains the same as it uses dynamic maps
 class PlazaModificationFormState {
   final PlazaFormValidation formValidation = PlazaFormValidation();
-  final Map<String, String?> errors = {};
+  final Map<String, String> errors = {};
   Map<String, dynamic> basicDetails = {};
   Map<String, dynamic> bankDetails = {};
   List<String> fetchedImages = [];
@@ -86,6 +86,7 @@ class PlazaModificationViewModel extends ChangeNotifier {
   final TextEditingController plazaOwnerController = TextEditingController();
   final TextEditingController plazaOwnerIdController = TextEditingController();
 
+  final TextEditingController plazaIdController = TextEditingController();
   // final TextEditingController operatorNameController = TextEditingController(); // REMOVED
   final TextEditingController mobileController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
@@ -408,7 +409,9 @@ class PlazaModificationViewModel extends ChangeNotifier {
           name: 'PlazaModifyVM._fetchBankDetails', error: e);
       if (e is ServiceException ||
           e is TimeoutException ||
-          e is ServerConnectionException) rethrow;
+          e is ServerConnectionException) {
+        rethrow;
+      }
       throw ServiceException(
           'Unexpected error occurred while fetching bank details: $e');
     }
@@ -419,6 +422,8 @@ class PlazaModificationViewModel extends ChangeNotifier {
     developer.log('Populating basic details controllers.',
         name: 'PlazaModifyVM');
     // Existing
+    plazaIdController.text =
+        formState.basicDetails['plazaId']?.toString() ?? '';
     plazaNameController.text =
         formState.basicDetails['plazaName']?.toString() ?? '';
     plazaOwnerController.text =
@@ -633,7 +638,9 @@ class PlazaModificationViewModel extends ChangeNotifier {
         formState.basicDetails['plazaClosingTime'] = closeTime;
         _populateBasicDetailsControllers();
         await _showSuccessDialog(context,
-            message: strings.basicDetailsUpdateSuccess, onConfirmed: () {Navigator.pop(context);});
+            message: strings.basicDetailsUpdateSuccess, onConfirmed: () {
+          Navigator.pop(context);
+        });
       } else {
         developer.log('Plaza update failed (service returned false).',
             name: 'PlazaModifyVM', level: 900);
@@ -712,7 +719,9 @@ class PlazaModificationViewModel extends ChangeNotifier {
         _isBankEditable = false;
         _populateBankDetailsControllers();
         await _showSuccessDialog(context,
-            message: strings.bankDetailsSuccess(operation), onConfirmed: () {Navigator.pop(context);});
+            message: strings.bankDetailsSuccess(operation), onConfirmed: () {
+          Navigator.pop(context);
+        });
       } else {
         developer.log(
             'Bank details $operation failed (service returned false).',
@@ -1036,6 +1045,7 @@ class PlazaModificationViewModel extends ChangeNotifier {
   void dispose() {
     developer.log('[PlazaModifyVM] ViewModel disposing.', name: 'PlazaModify');
     // Dispose all controllers
+    plazaIdController.dispose();
     plazaNameController.dispose();
     plazaOwnerController.dispose();
     plazaOwnerIdController.dispose();

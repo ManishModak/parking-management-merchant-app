@@ -1,5 +1,4 @@
 import 'dart:developer' as developer;
-import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -96,17 +95,17 @@ class RaiseDisputeViewModel extends ChangeNotifier {
         isValid = false;
       }
     }
-    if (remark.trim().isEmpty) {
-      remarkError = 'Please enter a remark';
-      isValid = false;
-    } else if (remark.trim().length < 3 || remark.trim().length > 255) {
-      remarkError = 'Remark must be between 3 and 255 characters';
-      isValid = false;
-    }
-    if (filePaths.isEmpty) {
-      fileError = 'Please upload at least one file';
-      isValid = false;
-    }
+    // if (remark.trim().isEmpty) {
+    //   remarkError = 'Please enter a remark';
+    //   isValid = false;
+    // } else if (remark.trim().length < 3 || remark.trim().length > 255) {
+    //   remarkError = 'Remark must be between 3 and 255 characters';
+    //   isValid = false;
+    // }
+    // if (filePaths.isEmpty) {
+    //   fileError = 'Please upload at least one file';
+    //   isValid = false;
+    // }
     notifyListeners();
     return isValid;
   }

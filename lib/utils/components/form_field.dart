@@ -244,9 +244,7 @@ class _PasswordTextField extends StatefulWidget {
     this.prefixIcon,
     this.inputFormatters,
     this.maxLength,
-    this.textCapitalization = TextCapitalization.none, // Default capitalization
-    // --- End New Parameters ---
-    super.key, // Add Key
+    this.textCapitalization = TextCapitalization.none, // Add Key
   });
 
   @override

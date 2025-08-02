@@ -1,4 +1,4 @@
-import 'dart:developer' as developer;
+  import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Import intl
 import '../../services/core/ticket_service.dart';
@@ -23,13 +23,17 @@ class MarkExitViewModel extends ChangeNotifier {
         _socketService = socketService ?? SocketService();
 
   // Helper function for IST formatting
-  String _formatUtcToIstString(DateTime? utcTime, {String format = 'dd MMM yyyy, hh:mm a'}) {
+  String _formatUtcToIstString(DateTime? utcTime,
+      {String format = 'dd MMM yyyy, hh:mm a'}) {
     if (utcTime == null) {
-      developer.log('[MarkExitViewModel] No time provided for IST conversion and formatting', name: 'MarkExitViewModel');
+      developer.log(
+          '[MarkExitViewModel] No time provided for IST conversion and formatting',
+          name: 'MarkExitViewModel');
       return 'N/A';
     }
     final DateTime ensuredUtcTime = utcTime.isUtc ? utcTime : utcTime.toUtc();
-    final DateTime istEquivalentTime = ensuredUtcTime.add(const Duration(hours: 5, minutes: 30));
+    final DateTime istEquivalentTime =
+    ensuredUtcTime.add(const Duration(hours: 5, minutes: 30));
 
     final DateTime localRepresentationOfIst = DateTime(
       istEquivalentTime.year,
@@ -41,8 +45,11 @@ class MarkExitViewModel extends ChangeNotifier {
       istEquivalentTime.millisecond,
       istEquivalentTime.microsecond,
     );
-    final String formatted = DateFormat(format).format(localRepresentationOfIst);
-    developer.log('[MarkExitViewModel] Formatted UTC to IST string: $formatted (format: $format), original UTC: $utcTime', name: 'MarkExitViewModel');
+    final String formatted =
+    DateFormat(format).format(localRepresentationOfIst);
+    developer.log(
+        '[MarkExitViewModel] Formatted UTC to IST string: $formatted (format: $format), original UTC: $utcTime',
+        name: 'MarkExitViewModel');
     return formatted;
   }
 
@@ -53,11 +60,12 @@ class MarkExitViewModel extends ChangeNotifier {
       DateTime parsed = DateTime.parse(dateTimeString);
       return parsed.isUtc ? parsed : parsed.toUtc(); // Ensure it's UTC
     } catch (e) {
-      developer.log('[MarkExitViewModel] Error parsing date string "$dateTimeString": $e', name: 'MarkExitViewModel');
+      developer.log(
+          '[MarkExitViewModel] Error parsing date string "$dateTimeString": $e',
+          name: 'MarkExitViewModel');
       return null; // Or handle error appropriately
     }
   }
-
 
   void initializeSocket(String userId, String socketUrl) {
     _socketService.initialize(userId, socketUrl);
@@ -69,10 +77,13 @@ class MarkExitViewModel extends ChangeNotifier {
       try {
         final paymentData = data as Map<String, dynamic>;
         paymentStatus = paymentData['status']?.toString() ?? 'unknown';
-        developer.log('[MarkExitViewModel] Payment result received: $paymentStatus', name: 'MarkExitViewModel');
+        developer.log(
+            '[MarkExitViewModel] Payment result received: $paymentStatus',
+            name: 'MarkExitViewModel');
         notifyListeners();
       } catch (e) {
-        developer.log('[MarkExitViewModel] Error processing payment result: $e', name: 'MarkExitViewModel');
+        developer.log('[MarkExitViewModel] Error processing payment result: $e',
+            name: 'MarkExitViewModel');
       }
     });
   }
@@ -84,31 +95,40 @@ class MarkExitViewModel extends ChangeNotifier {
       apiError = null; // Reset apiError
       notifyListeners();
 
-      final List<Ticket> fetchedTicketsModels = await _ticketService.getOpenTickets();
-      tickets = fetchedTicketsModels.map((ticket) => {
+      final List<Ticket> fetchedTicketsModels =
+      await _ticketService.getOpenTickets();
+      tickets = fetchedTicketsModels
+          .map((ticket) => {
         'ticketID': ticket.ticketId,
         'ticketRefID': ticket.ticketRefId,
         'plazaID': ticket.plazaId,
         'vehicleNumber': ticket.vehicleNumber,
         'vehicleType': ticket.vehicleType,
-        'plazaName': ticket.plazaName ?? 'Plaza ${ticket.plazaId}', // Use plazaName if available
+        'plazaName':
+        ticket.plazaName ?? 'Plaza ${ticket.plazaId}', // Use plazaName if available
         'entryTime': ticket.entryTime, // Store as DateTime (UTC)
         'entryLaneId': ticket.entryLaneId,
         'entryLaneDirection': ticket.entryLaneDirection,
-        'ticketCreationTime': ticket.createdTime, // Store as DateTime (UTC)
+        'ticketCreationTime':
+        ticket.createdTime, // Store as DateTime (UTC)
         'floorId': ticket.floorId ?? 'N/A',
         'slotId': ticket.slotId ?? 'N/A',
         'ticketStatus': ticket.status.toString().split('.').last,
-        'modificationTime': ticket.modificationTime, // Store as DateTime (UTC)
-      }).toList();
+        'modificationTime':
+        ticket.modificationTime, // Store as DateTime (UTC)
+      })
+          .toList();
 
       if (tickets.isEmpty) {
-        developer.log('[MarkExitViewModel] No open tickets found to mark as exited.', name: 'MarkExitViewModel');
+        developer.log(
+            '[MarkExitViewModel] No open tickets found to mark as exited.',
+            name: 'MarkExitViewModel');
       }
     } catch (e) {
       error = e as Exception;
       apiError = e.toString(); // Set apiError
-      developer.log('[MarkExitViewModel] Error fetching tickets: $error', name: 'MarkExitViewModel');
+      developer.log('[MarkExitViewModel] Error fetching tickets: $error',
+          name: 'MarkExitViewModel');
     } finally {
       isLoading = false;
       notifyListeners();
@@ -124,38 +144,58 @@ class MarkExitViewModel extends ChangeNotifier {
 
       // Assuming _ticketService.markTicketExit returns a Map<String, dynamic>
       // where date fields are ISO8601 UTC strings
-      final Map<String, dynamic> responseData = await _ticketService.markTicketExit(ticketId);
+      final Map<String, dynamic> responseData =
+      await _ticketService.markTicketExit(ticketId);
 
       // Parse date strings from responseData into DateTime objects (UTC)
-      DateTime? entryTimeUtc = _parseUtcDateTime(responseData['entry_time'] as String?);
-      DateTime? exitTimeUtc = _parseUtcDateTime(responseData['exit_time'] as String?);
+      DateTime? entryTimeUtc =
+      _parseUtcDateTime(responseData['entry_time'] as String?);
+      DateTime? exitTimeUtc =
+      _parseUtcDateTime(responseData['exit_time'] as String?);
       // If exit_time is not in response, default to DateTime.now().toUtc()
       exitTimeUtc ??= DateTime.now().toUtc();
-
 
       ticketDetails = {
         'ticket_ref_id': responseData['ticket_ref_id'] ?? '',
         'status': responseData['status'] ?? 'complete',
         'entry_lane_id': responseData['entry_lane_id'] ?? '',
         'exit_lane_id': responseData['exit_lane_id'] ?? 'Not filled',
-        'floor_id': responseData['floor_id']?.isEmpty ?? true ? 'N/A' : responseData['floor_id'],
-        'slot_id': responseData['slot_id']?.isEmpty ?? true ? 'N/A' : responseData['slot_id'],
+        'floor_id': responseData['floor_id']?.isEmpty ?? true
+            ? 'N/A'
+            : responseData['floor_id'],
+        'slot_id': responseData['slot_id']?.isEmpty ?? true
+            ? 'N/A'
+            : responseData['slot_id'],
         'vehicle_number': responseData['vehicle_number'] ?? '',
         'vehicle_type': responseData['vehicle_type'] ?? '',
         'entry_time_utc': entryTimeUtc, // Store as DateTime UTC
-        'exit_time_utc': exitTimeUtc,   // Store as DateTime UTC
+        'exit_time_utc': exitTimeUtc, // Store as DateTime UTC
         'parking_duration': responseData['duration']?.toString() ?? '',
         'fare_type': responseData['fare_type'] ?? '',
         'fare_amount': responseData['fare_amount']?.toString() ?? '',
         'total_charges': responseData['total_transaction']?.toString() ?? '',
-        'captured_images': (responseData['captured_images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [], // Ensure list of strings
+        'captured_images':
+        (responseData['captured_images'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+            [], // Ensure list of strings
       };
-      developer.log('[MarkExitViewModel] Ticket marked as exited (raw details): $ticketDetails', name: 'MarkExitViewModel');
+      developer.log(
+          '[MarkExitViewModel] Ticket marked as exited (raw details): $ticketDetails',
+          name: 'MarkExitViewModel');
       return true;
     } catch (e) {
       error = e as Exception;
-      apiError = 'Failed to mark ticket as exited: ${e.toString()}';
-      developer.log('[MarkExitViewModel] Error marking ticket as exited: $error', name: 'MarkExitViewModel');
+      
+      // Handle specific fare configuration error
+      if (e.toString().contains('No applicable fare details found for this vehicle type')) {
+        apiError = 'errorFareNotConfigured'; // Use localized key instead of hardcoded message
+      } else {
+        apiError = 'Failed to mark ticket as exited: ${e.toString()}';
+      }
+      
+      developer.log('[MarkExitViewModel] Error marking ticket as exited: $error',
+          name: 'MarkExitViewModel');
       return false;
     } finally {
       isLoading = false;
@@ -172,15 +212,18 @@ class MarkExitViewModel extends ChangeNotifier {
     return _formatUtcToIstString(ticketDetails?['exit_time_utc'] as DateTime?);
   }
 
-
   Future<void> markTicketAsCashPending(String ticketId) async {
     try {
       // Potentially update local state or call a service
       paymentStatus = 'Cash Pending'; // Example local update
-      developer.log('[MarkExitViewModel] Ticket $ticketId marked as Cash Pending locally.', name: 'MarkExitViewModel');
+      developer.log(
+          '[MarkExitViewModel] Ticket $ticketId marked as Cash Pending locally.',
+          name: 'MarkExitViewModel');
       notifyListeners();
     } catch (e) {
-      developer.log('[MarkExitViewModel] Error marking ticket as cash pending: $e', name: 'MarkExitViewModel');
+      developer.log(
+          '[MarkExitViewModel] Error marking ticket as cash pending: $e',
+          name: 'MarkExitViewModel');
     }
   }
 

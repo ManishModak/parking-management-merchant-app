@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:merchant_app/config/app_theme.dart';
 import 'package:merchant_app/views/settings.dart';
-import 'package:merchant_app/views/transaction.dart';
 import 'package:provider/provider.dart';
 import '../../generated/l10n.dart';
 import '../services/storage/secure_storage_service.dart';

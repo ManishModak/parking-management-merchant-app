@@ -129,7 +129,7 @@ class NotificationsViewModel extends ChangeNotifier {
 
       _socket = IO.io(ApiConfig.socketUrl, socketOptions);
       developer.log(
-          'Socket instance created with URL: ${ApiConfig.socketUrl}, options: ${socketOptions}',
+          'Socket instance created with URL: ${ApiConfig.socketUrl}, options: $socketOptions',
           name: 'NotificationsViewModel');
 
       _socket!.onConnect((_) {
@@ -304,7 +304,8 @@ class NotificationsViewModel extends ChangeNotifier {
     try {
       // Show native push notification
       PushNotificationService.showNotification(notification);
-      developer.log('✅ Native notification displayed successfully: ${notification.title}',
+      developer.log(
+          '✅ Native notification displayed successfully: ${notification.title}',
           name: 'NotificationsViewModel');
     } catch (e) {
       // Fallback to simple logging if notification fails

@@ -185,11 +185,13 @@ class BasicDetailsViewModel extends ChangeNotifier {
 
   void updateTimeValue(String key, String value) {
     if (key == 'plazaOpenTimings') {
-      if (plazaOpenTimingsController.text != value)
+      if (plazaOpenTimingsController.text != value) {
         plazaOpenTimingsController.text = value;
+      }
     } else if (key == 'plazaClosingTime') {
-      if (plazaClosingTimeController.text != value)
+      if (plazaClosingTimeController.text != value) {
         plazaClosingTimeController.text = value;
+      }
     }
     if (basicDetails[key] != value) {
       basicDetails[key] = value;
@@ -594,8 +596,9 @@ class BasicDetailsViewModel extends ChangeNotifier {
       // ... (Permission checks remain the same) ...
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        if (currentContext.mounted)
+        if (currentContext.mounted) {
           _showLocationServiceDisabledDialog(currentContext);
+        }
         _setLoading(false);
         return;
       }
@@ -610,8 +613,9 @@ class BasicDetailsViewModel extends ChangeNotifier {
         }
       }
       if (permission == LocationPermission.deniedForever) {
-        if (currentContext.mounted)
+        if (currentContext.mounted) {
           _showPermissionDeniedForeverDialog(currentContext);
+        }
         _setLoading(false);
         return;
       }
@@ -638,9 +642,10 @@ class BasicDetailsViewModel extends ChangeNotifier {
           stackTrace: stackTrace,
           name: 'BasicDetailsViewModel.getCurrentLocation',
           level: 1000);
-      if (context.mounted)
+      if (context.mounted) {
         _showPermissionDeniedSnackbar(
             scaffoldMessenger, strings.errorFetchingLocation);
+      }
     } finally {
       _setLoading(false);
     }
@@ -686,9 +691,10 @@ class BasicDetailsViewModel extends ChangeNotifier {
           stackTrace: stackTrace,
           name: 'BasicDetailsViewModel._getAddressFromLatLng',
           level: 1000);
-      if (context.mounted)
+      if (context.mounted) {
         _showPermissionDeniedSnackbar(
             scaffoldMessenger, strings.errorFetchingAddress);
+      }
     }
   }
 

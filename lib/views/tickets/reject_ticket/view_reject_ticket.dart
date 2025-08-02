@@ -10,7 +10,6 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../generated/l10n.dart';
 import '../../../viewmodels/ticket/reject_ticket_viewmodel.dart';
-import 'dart:developer' as developer;
 
 class ViewRejectTicketScreen extends StatefulWidget {
   final String ticketId;
@@ -34,7 +33,8 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
   }
 
   Future<void> _fetchTicketDetails() async {
-    final viewModel = Provider.of<RejectTicketViewModel>(context, listen: false);
+    final viewModel =
+        Provider.of<RejectTicketViewModel>(context, listen: false);
     final strings = S.of(context);
     try {
       await viewModel.fetchTicketDetails(widget.ticketId);
@@ -45,12 +45,11 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
     }
   }
 
-
-
   void _showErrorSnackBar(String message, String error) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$message: $error', style: Theme.of(context).snackBarTheme.contentTextStyle),
+        content: Text('$message: $error',
+            style: Theme.of(context).snackBarTheme.contentTextStyle),
         behavior: SnackBarBehavior.floating,
         backgroundColor: Theme.of(context).snackBarTheme.backgroundColor,
         action: SnackBarAction(
@@ -79,7 +78,8 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
                 child: CachedNetworkImage(
                   imageUrl: imageUrl,
                   fit: BoxFit.contain,
-                  placeholder: (context, url) => _buildShimmerPlaceholder(height: 300),
+                  placeholder: (context, url) =>
+                      _buildShimmerPlaceholder(height: 300),
                   errorWidget: (context, url, error) => Center(
                     child: Icon(Icons.broken_image_outlined,
                         size: 48, color: Theme.of(context).colorScheme.error),
@@ -90,7 +90,8 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
                 top: 10,
                 right: 10,
                 child: IconButton(
-                  icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onPrimary),
+                  icon: Icon(Icons.close,
+                      color: Theme.of(context).colorScheme.onPrimary),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
@@ -107,9 +108,8 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-
           child: SizedBox(
-            width: AppConfig.deviceWidth*0.9,
+            width: AppConfig.deviceWidth * 0.9,
             height: 300,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -122,7 +122,9 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
                     enabled: true,
                     context: context,
                   ),
-                  SizedBox(height: 12,),
+                  SizedBox(
+                    height: 12,
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -163,7 +165,8 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
       );
       Navigator.pop(context);
     } else if (mounted) {
-      String errorMessage = viewModel.apiError ?? strings.errorFailedToRejectTicket;
+      String errorMessage =
+          viewModel.apiError ?? strings.errorFailedToRejectTicket;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
@@ -174,7 +177,8 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
     }
   }
 
-  Widget _buildShimmerPlaceholder({double width = double.infinity, double height = 20}) {
+  Widget _buildShimmerPlaceholder(
+      {double width = double.infinity, double height = 20}) {
     return Shimmer.fromColors(
       baseColor: AppColors.shimmerBaseLight,
       highlightColor: AppColors.shimmerHighlightLight,
@@ -214,25 +218,36 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
                   const SizedBox(height: 22),
                   Row(
                     children: [
-                      Expanded(child: _buildShimmerFieldPair(strings.labelVehicleNumber)),
+                      Expanded(
+                          child: _buildShimmerFieldPair(
+                              strings.labelVehicleNumber)),
                       const SizedBox(width: 20),
-                      Expanded(child: _buildShimmerFieldPair(strings.labelVehicleType)),
+                      Expanded(
+                          child:
+                              _buildShimmerFieldPair(strings.labelVehicleType)),
                     ],
                   ),
                   const SizedBox(height: 18),
                   Row(
                     children: [
-                      Expanded(child: _buildShimmerFieldPair(strings.labelPlazaId)),
+                      Expanded(
+                          child:
+                              _buildShimmerFieldPair(strings.labelPlazaName)),
                       const SizedBox(width: 20),
-                      Expanded(child: _buildShimmerFieldPair(strings.labelEntryLaneId)),
+                      Expanded(
+                          child:
+                              _buildShimmerFieldPair(strings.labelEntryLaneId)),
                     ],
                   ),
                   const SizedBox(height: 18),
                   Row(
                     children: [
-                      Expanded(child: _buildShimmerFieldPair(strings.labelEntryTime)),
+                      Expanded(
+                          child:
+                              _buildShimmerFieldPair(strings.labelEntryTime)),
                       const SizedBox(width: 20),
-                      Expanded(child: _buildShimmerFieldPair(strings.labelFloorId)),
+                      Expanded(
+                          child: _buildShimmerFieldPair(strings.labelFloorId)),
                     ],
                   ),
                 ],
@@ -263,7 +278,7 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
                       scrollDirection: Axis.horizontal,
                       children: List.generate(
                         3,
-                            (index) => Padding(
+                        (index) => Padding(
                           padding: const EdgeInsets.only(right: 8.0),
                           child: _buildShimmerPlaceholder(
                             width: (AppConfig.deviceWidth - 70) / 3,
@@ -306,10 +321,11 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
             Text(
               strings.labelUploadedDocuments,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
-            if (viewModel.capturedImageUrls != null && viewModel.capturedImageUrls!.isNotEmpty)
+            if (viewModel.capturedImageUrls != null &&
+                viewModel.capturedImageUrls!.isNotEmpty)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
@@ -319,25 +335,28 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
                 child: Text(
                   '${viewModel.capturedImageUrls!.length}',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w500,
-                  ),
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
                 ),
               ),
           ],
         ),
         initiallyExpanded: true,
-        onExpansionChanged: (expanded) => setState(() => _isImagesExpanded = expanded),
+        onExpansionChanged: (expanded) =>
+            setState(() => _isImagesExpanded = expanded),
         shape: const RoundedRectangleBorder(side: BorderSide.none),
         collapsedShape: const RoundedRectangleBorder(side: BorderSide.none),
         tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+            padding:
+                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (viewModel.capturedImageUrls == null || viewModel.capturedImageUrls!.isEmpty)
+                if (viewModel.capturedImageUrls == null ||
+                    viewModel.capturedImageUrls!.isEmpty)
                   SizedBox(
                     height: 150,
                     child: Center(
@@ -345,13 +364,20 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.image_not_supported,
-                              size: 48, color: Theme.of(context).colorScheme.primary),
+                              size: 48,
+                              color: Theme.of(context).colorScheme.primary),
                           const SizedBox(height: 8),
                           Text(
                             strings.messageNoImagesAvailable,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.6),
+                                ),
                           ),
                         ],
                       ),
@@ -371,7 +397,8 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
                           child: Container(
                             width: imageWidth,
                             decoration: BoxDecoration(
-                              border: Border.all(color: Theme.of(context).colorScheme.primary),
+                              border: Border.all(
+                                  color: Theme.of(context).colorScheme.primary),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: ClipRRect(
@@ -382,22 +409,30 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
                                   imageUrl: imageUrl,
                                   fit: BoxFit.cover,
                                   placeholder: (context, url) =>
-                                      _buildShimmerPlaceholder(width: imageWidth, height: 150),
+                                      _buildShimmerPlaceholder(
+                                          width: imageWidth, height: 150),
                                   errorWidget: (context, url, error) => Center(
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Icon(Icons.broken_image_outlined,
                                             size: 32,
-                                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withOpacity(0.6)),
                                         const SizedBox(height: 8),
                                         Text(strings.errorImageLoadFailed,
-                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withOpacity(0.6),
-                                            )),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withOpacity(0.6),
+                                                )),
                                       ],
                                     ),
                                   ),
@@ -418,33 +453,48 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
                           icon: const Icon(Icons.arrow_back_ios, size: 18),
                           color: _currentImagePage > 0
                               ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.5),
                           onPressed: _currentImagePage > 0
                               ? () => setState(() => _currentImagePage--)
                               : null,
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             '${strings.labelPage} ${_currentImagePage + 1} ${strings.labelOf} ${_getTotalPages(viewModel)}',
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelMedium
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.arrow_forward_ios, size: 18),
-                          color: _currentImagePage < _getTotalPages(viewModel) - 1
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                          onPressed: _currentImagePage < _getTotalPages(viewModel) - 1
-                              ? () => setState(() => _currentImagePage++)
-                              : null,
+                          color:
+                              _currentImagePage < _getTotalPages(viewModel) - 1
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.5),
+                          onPressed:
+                              _currentImagePage < _getTotalPages(viewModel) - 1
+                                  ? () => setState(() => _currentImagePage++)
+                                  : null,
                         ),
                       ],
                     ),
@@ -459,14 +509,21 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
   }
 
   List<String> _getCurrentImages(RejectTicketViewModel viewModel) {
-    if (viewModel.capturedImageUrls == null || viewModel.capturedImageUrls!.isEmpty) return [];
+    if (viewModel.capturedImageUrls == null ||
+        viewModel.capturedImageUrls!.isEmpty) {
+      return [];
+    }
     final startIndex = _currentImagePage * 3;
-    final endIndex = (startIndex + 3).clamp(0, viewModel.capturedImageUrls!.length);
+    final endIndex =
+        (startIndex + 3).clamp(0, viewModel.capturedImageUrls!.length);
     return viewModel.capturedImageUrls!.sublist(startIndex, endIndex);
   }
 
   int _getTotalPages(RejectTicketViewModel viewModel) {
-    if (viewModel.capturedImageUrls == null || viewModel.capturedImageUrls!.isEmpty) return 0;
+    if (viewModel.capturedImageUrls == null ||
+        viewModel.capturedImageUrls!.isEmpty) {
+      return 0;
+    }
     return (viewModel.capturedImageUrls!.length / 3).ceil();
   }
 
@@ -482,9 +539,9 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
         onTap: viewModel.isLoading
             ? null
             : () {
-          viewModel.resetRemarks();
-          _showRemarksDialog(viewModel);
-        },
+                viewModel.resetRemarks();
+                _showRemarksDialog(viewModel);
+              },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -493,18 +550,20 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.cancel, color: Theme.of(context).colorScheme.error),
+                  Icon(Icons.cancel,
+                      color: Theme.of(context).colorScheme.error),
                   const SizedBox(width: 12),
                   Text(
                     strings.buttonRejectTicket,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                      fontWeight: FontWeight.w600,
-                    ),
+                          color: Theme.of(context).colorScheme.error,
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                 ],
               ),
-              Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.error),
+              Icon(Icons.chevron_right,
+                  color: Theme.of(context).colorScheme.error),
             ],
           ),
         ),
@@ -527,41 +586,52 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
           Text(
             title,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.w600,
-            ),
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
           const SizedBox(height: 4),
           isBadge
               ? Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: value.toLowerCase() == 'open'
-                  ? Colors.green.withOpacity(0.1)
-                  : Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: value.toLowerCase() == 'open' ? Colors.green : Colors.orange,
-                width: 1,
-              ),
-            ),
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: value.toLowerCase() == 'open' ? Colors.green : Colors.orange,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          )
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: value.toLowerCase() == 'open'
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: value.toLowerCase() == 'open'
+                          ? Colors.green
+                          : Colors.orange,
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    value,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: value.toLowerCase() == 'open'
+                              ? Colors.green
+                              : Colors.orange,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                )
               : Text(
-            value.isEmpty ? strings.labelNA : value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
-              color: highlight
-                  ? (value.toLowerCase() == 'open' ? Colors.green : Colors.orange)
-                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
-            ),
-          ),
+                  value.isEmpty ? strings.labelNA : value,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight:
+                            highlight ? FontWeight.bold : FontWeight.normal,
+                        color: highlight
+                            ? (value.toLowerCase() == 'open'
+                                ? Colors.green
+                                : Colors.orange)
+                            : Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.9),
+                      ),
+                ),
         ],
       ),
     );
@@ -592,8 +662,8 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   if (trailing != null) trailing,
                 ],
@@ -607,7 +677,8 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
     );
   }
 
-  PreferredSizeWidget _buildCustomAppBar(RejectTicketViewModel viewModel, S strings) {
+  PreferredSizeWidget _buildCustomAppBar(
+      RejectTicketViewModel viewModel, S strings) {
     return CustomAppBar.appBarWithNavigation(
       screenTitle: viewModel.ticket == null
           ? "${strings.titleModifyViewTicketDetails}\n${strings.labelLoading}"
@@ -632,16 +703,19 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
             Text(
               strings.errorGeneric,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               viewModel.apiError ?? strings.errorFailedToRejectTicket,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6),
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -676,9 +750,9 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
                     ? strings.labelNA
                     : viewModel.ticketStatusController.text,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Colors.orange,
-                  fontWeight: FontWeight.bold,
-                ),
+                      color: Colors.orange,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
             ),
             children: [
@@ -704,8 +778,8 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
                 children: [
                   Expanded(
                     child: _buildDetailItem(
-                      title: strings.labelPlazaId,
-                      value: viewModel.plazaIdController.text,
+                      title: strings.labelPlazaName,
+                      value: viewModel.plazaNameController.text,
                       strings: strings,
                     ),
                   ),
@@ -793,8 +867,8 @@ class _ViewRejectTicketScreenState extends State<ViewRejectTicketScreen> {
             child: viewModel.isLoading
                 ? _buildLoadingState(strings)
                 : viewModel.apiError != null
-                ? _buildErrorContent(viewModel, strings)
-                : _buildTicketDetails(viewModel, strings),
+                    ? _buildErrorContent(viewModel, strings)
+                    : _buildTicketDetails(viewModel, strings),
           ),
         );
       },

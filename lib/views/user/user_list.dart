@@ -18,7 +18,7 @@ import '../../services/utils/pdf_export_service.dart';
 import '../../utils/components/pagination_mixin.dart';
 import '../../utils/exceptions.dart';
 import 'user_info.dart';
-import 'user_registration.dart'; // Added for navigation to UserRegistrationScreen
+// Added for navigation to UserRegistrationScreen
 
 class UserListScreen extends StatefulWidget {
   const UserListScreen({super.key});
@@ -206,7 +206,7 @@ class _UserListScreenState extends State<UserListScreen>
                   },
                   child: Container(
                     padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: context.secondaryCardColor,
                       borderRadius: BorderRadius.circular(12),
@@ -226,21 +226,21 @@ class _UserListScreenState extends State<UserListScreen>
               if (selectedFilters.isNotEmpty) ...[
                 const SizedBox(width: 8),
                 ...selectedFilters.map((filter) => Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  child: Chip(
-                    label: Text(filter),
-                    onDeleted: () {
-                      setState(() {
-                        _selectedRoles
-                            .remove(filter.split(': ')[1].toLowerCase());
-                      });
-                    },
-                    deleteIcon: const Icon(Icons.close, size: 16),
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
-                    labelStyle: TextStyle(color: textColor),
-                    deleteIconColor: textColor,
-                  ),
-                )),
+                      margin: const EdgeInsets.only(right: 8),
+                      child: Chip(
+                        label: Text(filter),
+                        onDeleted: () {
+                          setState(() {
+                            _selectedRoles
+                                .remove(filter.split(': ')[1].toLowerCase());
+                          });
+                        },
+                        deleteIcon: const Icon(Icons.close, size: 16),
+                        backgroundColor: AppColors.primary.withOpacity(0.1),
+                        labelStyle: TextStyle(color: textColor),
+                        deleteIconColor: textColor,
+                      ),
+                    )),
               ],
             ],
           ),
@@ -277,7 +277,7 @@ class _UserListScreenState extends State<UserListScreen>
               style: TextStyle(
                 color: textColor,
                 fontWeight:
-                hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
+                    hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ],
@@ -340,7 +340,7 @@ class _UserListScreenState extends State<UserListScreen>
                           title: strings.labelRole,
                           options: roles
                               .map((role) =>
-                          {'key': role, 'label': role.capitalize()})
+                                  {'key': role, 'label': role.capitalize()})
                               .toList(),
                           selectedItems: _selectedRoles,
                           onChanged: (value, isSelected) {
@@ -458,7 +458,7 @@ class _UserListScreenState extends State<UserListScreen>
         title: Text(user.name),
         subtitle: Text('${user.email}\n${user.mobileNumber}'),
         trailing:
-        Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color),
+            Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color),
         onTap: () {
           developer.log('User card tapped: ${user.id}', name: 'UserList');
           Navigator.push(
@@ -599,110 +599,112 @@ class _UserListScreenState extends State<UserListScreen>
         final paginatedUsers = getPaginatedItems(filteredUsers, _currentPage);
 
         return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: CustomAppBar.appBarWithNavigationAndActions(
-            screenTitle: strings.titleUsers,
-            onPressed: () => Navigator.pop(context),
-            darkBackground: Theme.of(context).brightness == Brightness.dark,
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: CustomButtons.downloadIconButton(
-                  onPressed: () async {
-                    developer.log('Download button pressed', name: 'UserList');
-                    try {
-                      await PdfExportService.exportUserList(viewModel.users);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(strings.messagePdfSuccess),
-                            backgroundColor: AppColors.success,
-                          ),
-                        );
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            appBar: CustomAppBar.appBarWithNavigationAndActions(
+              screenTitle: strings.titleUsers,
+              onPressed: () => Navigator.pop(context),
+              darkBackground: Theme.of(context).brightness == Brightness.dark,
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: CustomButtons.downloadIconButton(
+                    onPressed: () async {
+                      developer.log('Download button pressed',
+                          name: 'UserList');
+                      try {
+                        await PdfExportService.exportUserList(viewModel.users);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(strings.messagePdfSuccess),
+                              backgroundColor: AppColors.success,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        developer.log('PDF export failed: $e',
+                            name: 'UserList', error: e);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${strings.messagePdfFailed}: $e'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
                       }
-                    } catch (e) {
-                      developer.log('PDF export failed: $e',
-                          name: 'UserList', error: e);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${strings.messagePdfFailed}: $e'),
-                            backgroundColor: AppColors.error,
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  darkBackground:
-                  Theme.of(context).brightness == Brightness.dark,
-                  context: context,
-                ),
-              ),
-            ],
-            context: context,
-          ),
-          body: Column(
-            children: [
-              const SizedBox(height: 4),
-              _buildFilterChipsRow(strings),
-              _buildSearchField(strings),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _refreshData,
-                  child: Stack(
-                    children: [
-                      ListView(
-                        controller: _scrollController,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          const SizedBox(height: 8),
-                          if (viewModel.error != null && !viewModel.isLoading)
-                            SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.6,
-                              child: _buildErrorState(viewModel, strings),
-                            )
-                          else if (filteredUsers.isEmpty &&
-                              !viewModel.isLoading)
-                            SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.6,
-                              child: Center(
-                                child: Text(
-                                  strings.messageNoUsersFound,
-                                  style: TextStyle(
-                                      color: context.textPrimaryColor),
-                                ),
-                              ),
-                            )
-                          else if (!viewModel.isLoading)
-                              ...paginatedUsers
-                                  .map((user) => _buildUserCard(user)),
-                        ],
-                      ),
-                      if (viewModel.isLoading)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: _buildShimmerList(),
-                        ),
-                    ],
+                    },
+                    darkBackground:
+                        Theme.of(context).brightness == Brightness.dark,
+                    context: context,
                   ),
                 ),
-              ),
-            ],
-          ),
-          bottomNavigationBar: !viewModel.isLoading
-              ? Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            padding: const EdgeInsets.all(4.0),
-            child: SafeArea(
-              child: PaginationControls(
-                currentPage: _currentPage,
-                totalPages: totalPages,
-                onPageChange: _updatePage,
-              ),
+              ],
+              context: context,
             ),
-          )
-              : null
-        );
+            body: Column(
+              children: [
+                const SizedBox(height: 4),
+                _buildFilterChipsRow(strings),
+                _buildSearchField(strings),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _refreshData,
+                    child: Stack(
+                      children: [
+                        ListView(
+                          controller: _scrollController,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            const SizedBox(height: 8),
+                            if (viewModel.error != null && !viewModel.isLoading)
+                              SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.6,
+                                child: _buildErrorState(viewModel, strings),
+                              )
+                            else if (filteredUsers.isEmpty &&
+                                !viewModel.isLoading)
+                              SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.6,
+                                child: Center(
+                                  child: Text(
+                                    strings.messageNoUsersFound,
+                                    style: TextStyle(
+                                        color: context.textPrimaryColor),
+                                  ),
+                                ),
+                              )
+                            else if (!viewModel.isLoading)
+                              ...paginatedUsers
+                                  .map((user) => _buildUserCard(user)),
+                          ],
+                        ),
+                        if (viewModel.isLoading)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: _buildShimmerList(),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            bottomNavigationBar: !viewModel.isLoading
+                ? Container(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    padding: const EdgeInsets.all(4.0),
+                    child: SafeArea(
+                      child: PaginationControls(
+                        currentPage: _currentPage,
+                        totalPages: totalPages,
+                        onPageChange: _updatePage,
+                      ),
+                    ),
+                  )
+                : null);
       },
     );
   }

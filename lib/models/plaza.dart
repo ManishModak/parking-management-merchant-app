@@ -1,7 +1,5 @@
 import 'dart:developer' as developer;
 
-import 'package:merchant_app/utils/exceptions.dart';
-
 class ValidationException implements Exception {
   final String message;
   ValidationException(this.message);
@@ -10,11 +8,25 @@ class ValidationException implements Exception {
 class Plaza {
   // Existing valid options
   static const List<String> validPlazaCategories = ['Public', 'Private'];
-  static const List<String> validPlazaSubCategories = ['Apartment', 'Society', 'OPEN', 'CLOSE'];
-  static const List<String> validStructureTypes = ['Open', 'Multistory', 'Underground'];
+  static const List<String> validPlazaSubCategories = [
+    'Apartment',
+    'Society',
+    'OPEN',
+    'CLOSE'
+  ];
+  static const List<String> validStructureTypes = [
+    'Open',
+    'Multistory',
+    'Underground'
+  ];
   static const List<String> validPlazaStatuses = ['Active', 'Inactive'];
   static const List<String> validPriceCategories = ['Premium', 'Standard'];
-  static const List<String> validCompanyTypes = ["Individual", "LLP", "Private Limited", "Public Limited"];
+  static const List<String> validCompanyTypes = [
+    "Individual",
+    "LLP",
+    "Private Limited",
+    "Public Limited"
+  ];
 
   // Properties (all required fields made nullable)
   String? plazaId;
@@ -148,7 +160,8 @@ class Plaza {
       capacity4Wheeler: capacity4Wheeler ?? this.capacity4Wheeler,
       capacityBus: capacityBus ?? this.capacityBus,
       capacityTruck: capacityTruck ?? this.capacityTruck,
-      capacityHeavyMachinaryVehicle: capacityHeavyMachinaryVehicle ?? this.capacityHeavyMachinaryVehicle,
+      capacityHeavyMachinaryVehicle:
+          capacityHeavyMachinaryVehicle ?? this.capacityHeavyMachinaryVehicle,
       plazaOpenTimings: plazaOpenTimings ?? this.plazaOpenTimings,
       plazaClosingTime: plazaClosingTime ?? this.plazaClosingTime,
       isDeleted: isDeleted ?? this.isDeleted,
@@ -186,21 +199,28 @@ class Plaza {
       pincode: json['pincode']?.toString(),
       geoLatitude: _parseDouble(json['geoLatitude']),
       geoLongitude: _parseDouble(json['geoLongitude']),
-      plazaCategory: json['plazaCategory'] as String? ?? validPlazaCategories.first,
-      plazaSubCategory: json['plazaSubCategory'] as String? ?? validPlazaSubCategories.first,
-      structureType: json['structureType'] as String? ?? validStructureTypes.first,
+      plazaCategory:
+          json['plazaCategory'] as String? ?? validPlazaCategories.first,
+      plazaSubCategory:
+          json['plazaSubCategory'] as String? ?? validPlazaSubCategories.first,
+      structureType:
+          json['structureType'] as String? ?? validStructureTypes.first,
       plazaStatus: json['plazaStatus'] as String? ?? validPlazaStatuses.first,
       noOfParkingSlots: _parseInt(json['noOfParkingSlots']),
       freeParking: json['freeParking'] as bool?,
-      priceCategory: json['priceCategory'] as String? ?? validPriceCategories.first,
+      priceCategory:
+          json['priceCategory'] as String? ?? validPriceCategories.first,
       capacityBike: _parseInt(json['capacityBike']),
       capacity3Wheeler: _parseInt(json['capacity3Wheeler']),
       capacity4Wheeler: _parseInt(json['capacity4Wheeler']),
       capacityBus: _parseInt(json['capacityBus']),
       capacityTruck: _parseInt(json['capacityTruck']),
-      capacityHeavyMachinaryVehicle: _parseInt(json['capacityHeavyMachinaryVehicle']),
-      plazaOpenTimings: transformTime(json['plazaOpenTimings'] as String?) ?? '00:00',
-      plazaClosingTime: transformTime(json['plazaClosingTime'] as String?) ?? '23:59',
+      capacityHeavyMachinaryVehicle:
+          _parseInt(json['capacityHeavyMachinaryVehicle']),
+      plazaOpenTimings:
+          transformTime(json['plazaOpenTimings'] as String?) ?? '00:00',
+      plazaClosingTime:
+          transformTime(json['plazaClosingTime'] as String?) ?? '23:59',
       isDeleted: json['isDeleted'] as bool? ?? false,
     );
   }
@@ -249,7 +269,8 @@ class Plaza {
       errors['companyName'] = 'Company name is required';
     }
     if (companyType == null || !validCompanyTypes.contains(companyType)) {
-      errors['companyType'] = 'Valid company type is required (${validCompanyTypes.join(', ')})';
+      errors['companyType'] =
+          'Valid company type is required (${validCompanyTypes.join(', ')})';
     }
     if (plazaOrgId == null || plazaOrgId!.isEmpty) {
       errors['plazaOrgId'] = 'Plaza organization ID is required';
@@ -287,17 +308,23 @@ class Plaza {
     if (geoLongitude == null) {
       errors['geoLongitude'] = 'Geo longitude is required';
     }
-    if (plazaCategory == null || !validPlazaCategories.contains(plazaCategory)) {
-      errors['plazaCategory'] = 'Valid plaza category is required (${validPlazaCategories.join(', ')})';
+    if (plazaCategory == null ||
+        !validPlazaCategories.contains(plazaCategory)) {
+      errors['plazaCategory'] =
+          'Valid plaza category is required (${validPlazaCategories.join(', ')})';
     }
-    if (plazaSubCategory == null || !validPlazaSubCategories.contains(plazaSubCategory)) {
-      errors['plazaSubCategory'] = 'Valid plaza sub-category is required (${validPlazaSubCategories.join(', ')})';
+    if (plazaSubCategory == null ||
+        !validPlazaSubCategories.contains(plazaSubCategory)) {
+      errors['plazaSubCategory'] =
+          'Valid plaza sub-category is required (${validPlazaSubCategories.join(', ')})';
     }
     if (structureType == null || !validStructureTypes.contains(structureType)) {
-      errors['structureType'] = 'Valid structure type is required (${validStructureTypes.join(', ')})';
+      errors['structureType'] =
+          'Valid structure type is required (${validStructureTypes.join(', ')})';
     }
     if (plazaStatus == null || !validPlazaStatuses.contains(plazaStatus)) {
-      errors['plazaStatus'] = 'Valid plaza status is required (${validPlazaStatuses.join(', ')})';
+      errors['plazaStatus'] =
+          'Valid plaza status is required (${validPlazaStatuses.join(', ')})';
     }
     if (noOfParkingSlots == null) {
       errors['noOfParkingSlots'] = 'Number of parking slots is required';
@@ -307,8 +334,10 @@ class Plaza {
     if (freeParking == null) {
       errors['freeParking'] = 'Free parking status is required';
     }
-    if (priceCategory == null || !validPriceCategories.contains(priceCategory)) {
-      errors['priceCategory'] = 'Valid price category is required (${validPriceCategories.join(', ')})';
+    if (priceCategory == null ||
+        !validPriceCategories.contains(priceCategory)) {
+      errors['priceCategory'] =
+          'Valid price category is required (${validPriceCategories.join(', ')})';
     }
     if (capacityBike == null) {
       errors['capacityBike'] = 'Bike capacity is required';
@@ -336,9 +365,11 @@ class Plaza {
       errors['capacityTruck'] = 'Truck capacity cannot be negative';
     }
     if (capacityHeavyMachinaryVehicle == null) {
-      errors['capacityHeavyMachinaryVehicle'] = 'Heavy machinery vehicle capacity is required';
+      errors['capacityHeavyMachinaryVehicle'] =
+          'Heavy machinery vehicle capacity is required';
     } else if (capacityHeavyMachinaryVehicle! < 0) {
-      errors['capacityHeavyMachinaryVehicle'] = 'Heavy machinery vehicle capacity cannot be negative';
+      errors['capacityHeavyMachinaryVehicle'] =
+          'Heavy machinery vehicle capacity cannot be negative';
     }
     if (plazaOpenTimings == null || plazaOpenTimings!.isEmpty) {
       errors['plazaOpenTimings'] = 'Plaza open timings are required';
@@ -381,7 +412,8 @@ class Plaza {
   Map<String, dynamic> toJson() {
     final validationErrors = validate();
     if (validationErrors.isNotEmpty) {
-      final errorMessage = 'Validation failed: ${validationErrors.entries.map((e) => '${e.key}: ${e.value}').join(', ')}';
+      final errorMessage =
+          'Validation failed: ${validationErrors.entries.map((e) => '${e.key}: ${e.value}').join(', ')}';
       developer.log(errorMessage, name: 'Plaza');
       throw ValidationException(errorMessage);
     }

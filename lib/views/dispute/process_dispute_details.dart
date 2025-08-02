@@ -36,7 +36,7 @@ class _ProcessDisputeDetailsScreenState
 
   Future<void> _fetchDisputeDetails() async {
     final viewModel =
-    Provider.of<ProcessDisputeViewModel>(context, listen: false);
+        Provider.of<ProcessDisputeViewModel>(context, listen: false);
     final strings = S.of(context);
     try {
       await viewModel.fetchDisputeDetails(widget.ticketId);
@@ -179,7 +179,8 @@ class _ProcessDisputeDetailsScreenState
                   Row(
                     children: [
                       Expanded(
-                        child: _buildShimmerFieldPair(strings.labelVehicleNumber),
+                        child:
+                            _buildShimmerFieldPair(strings.labelVehicleNumber),
                       ),
                       const SizedBox(width: 24),
                       Expanded(
@@ -207,7 +208,8 @@ class _ProcessDisputeDetailsScreenState
                       ),
                       const SizedBox(width: 24),
                       Expanded(
-                        child: _buildShimmerFieldPair(strings.labelPaymentAmount),
+                        child:
+                            _buildShimmerFieldPair(strings.labelPaymentAmount),
                       ),
                     ],
                   ),
@@ -231,7 +233,8 @@ class _ProcessDisputeDetailsScreenState
                       ),
                       const SizedBox(width: 24),
                       Expanded(
-                        child: _buildShimmerFieldPair(strings.labelDisputeExpiryDate),
+                        child: _buildShimmerFieldPair(
+                            strings.labelDisputeExpiryDate),
                       ),
                     ],
                   ),
@@ -239,11 +242,13 @@ class _ProcessDisputeDetailsScreenState
                   Row(
                     children: [
                       Expanded(
-                        child: _buildShimmerFieldPair(strings.labelDisputeReason),
+                        child:
+                            _buildShimmerFieldPair(strings.labelDisputeReason),
                       ),
                       const SizedBox(width: 24),
                       Expanded(
-                        child: _buildShimmerFieldPair(strings.labelDisputeAmount),
+                        child:
+                            _buildShimmerFieldPair(strings.labelDisputeAmount),
                       ),
                     ],
                   ),
@@ -277,7 +282,7 @@ class _ProcessDisputeDetailsScreenState
                       scrollDirection: Axis.horizontal,
                       children: List.generate(
                         3,
-                            (index) => Padding(
+                        (index) => Padding(
                           padding: const EdgeInsets.only(right: 8.0),
                           child: _buildShimmerPlaceholder(
                             width: (AppConfig.deviceWidth - 64) / 3,
@@ -324,8 +329,8 @@ class _ProcessDisputeDetailsScreenState
             Text(
               strings.labelUploadedDocuments,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             if (viewModel.capturedImageUrls != null &&
                 viewModel.capturedImageUrls!.isNotEmpty)
@@ -338,9 +343,9 @@ class _ProcessDisputeDetailsScreenState
                 child: Text(
                   '${viewModel.capturedImageUrls!.length}',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w500,
-                  ),
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
                 ),
               ),
           ],
@@ -370,12 +375,15 @@ class _ProcessDisputeDetailsScreenState
                           const SizedBox(height: 8),
                           Text(
                             strings.messageNoImagesAvailable,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withOpacity(0.6),
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.6),
+                                ),
                           ),
                         ],
                       ),
@@ -412,7 +420,7 @@ class _ProcessDisputeDetailsScreenState
                                   errorWidget: (context, url, error) => Center(
                                     child: Column(
                                       mainAxisAlignment:
-                                      MainAxisAlignment.center,
+                                          MainAxisAlignment.center,
                                       children: [
                                         Icon(Icons.broken_image_outlined,
                                             size: 32,
@@ -427,11 +435,11 @@ class _ProcessDisputeDetailsScreenState
                                               .textTheme
                                               .bodySmall
                                               ?.copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withOpacity(0.6),
-                                          ),
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withOpacity(0.6),
+                                              ),
                                         ),
                                       ],
                                     ),
@@ -454,9 +462,9 @@ class _ProcessDisputeDetailsScreenState
                           color: _currentImagePage > 0
                               ? Theme.of(context).colorScheme.primary
                               : Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.5),
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.5),
                           onPressed: _currentImagePage > 0
                               ? () => setState(() => _currentImagePage--)
                               : null,
@@ -477,24 +485,24 @@ class _ProcessDisputeDetailsScreenState
                                 .textTheme
                                 .labelMedium
                                 ?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.arrow_forward_ios, size: 18),
-                          color: _currentImagePage <
-                              _getTotalPages(viewModel) - 1
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.5),
-                          onPressed: _currentImagePage <
-                              _getTotalPages(viewModel) - 1
-                              ? () => setState(() => _currentImagePage++)
-                              : null,
+                          color:
+                              _currentImagePage < _getTotalPages(viewModel) - 1
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.5),
+                          onPressed:
+                              _currentImagePage < _getTotalPages(viewModel) - 1
+                                  ? () => setState(() => _currentImagePage++)
+                                  : null,
                         ),
                       ],
                     ),
@@ -514,7 +522,8 @@ class _ProcessDisputeDetailsScreenState
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Container(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -527,9 +536,9 @@ class _ProcessDisputeDetailsScreenState
                     Text(
                       strings.labelAuditDetails,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                     ),
                     IconButton(
                       icon: Icon(Icons.close,
@@ -576,25 +585,25 @@ class _ProcessDisputeDetailsScreenState
   Widget _buildDisputeDetailWithAuditLink(Map<String, dynamic> displayData) {
     final strings = S.of(context);
     return Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           strings.labelDisputeInformation,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
         ),
         GestureDetector(
           onTap: () => _showAuditDetailsDialog(displayData),
           child: Text(
             strings.labelAuditDetails,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.primary,
-              decoration: TextDecoration.underline,
-            ),
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.primary,
+                  decoration: TextDecoration.underline,
+                ),
           ),
         ),
       ],
@@ -608,7 +617,8 @@ class _ProcessDisputeDetailsScreenState
     }
     final totalImages = viewModel.capturedImageUrls!.length;
     final startIndex = _currentImagePage * 3;
-    final endIndex = (startIndex + 3) > totalImages ? totalImages : startIndex + 3;
+    final endIndex =
+        (startIndex + 3) > totalImages ? totalImages : startIndex + 3;
     return viewModel.capturedImageUrls!.sublist(startIndex, endIndex);
   }
 
@@ -635,51 +645,52 @@ class _ProcessDisputeDetailsScreenState
           Text(
             title,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.w600,
-            ),
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
           const SizedBox(height: 4),
           isBadge
               ? Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: value.toLowerCase() == 'open'
-                  ? Colors.green.withOpacity(0.1)
-                  : Theme.of(context).colorScheme.error.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: value.toLowerCase() == 'open'
-                    ? Colors.green
-                    : Theme.of(context).colorScheme.error,
-                width: 1,
-              ),
-            ),
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: value.toLowerCase() == 'open'
-                    ? Colors.green
-                    : Theme.of(context).colorScheme.error,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          )
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: value.toLowerCase() == 'open'
+                        ? Colors.green.withOpacity(0.1)
+                        : Theme.of(context).colorScheme.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: value.toLowerCase() == 'open'
+                          ? Colors.green
+                          : Theme.of(context).colorScheme.error,
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    value,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: value.toLowerCase() == 'open'
+                              ? Colors.green
+                              : Theme.of(context).colorScheme.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                )
               : Text(
-            value.isEmpty ? strings.labelNA : value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight:
-              highlight ? FontWeight.bold : FontWeight.normal,
-              color: highlight
-                  ? (value.toLowerCase() == 'open'
-                  ? Colors.green
-                  : Colors.red)
-                  : Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withOpacity(0.9),
-            ),
-          ),
+                  value.isEmpty ? strings.labelNA : value,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight:
+                            highlight ? FontWeight.bold : FontWeight.normal,
+                        color: highlight
+                            ? (value.toLowerCase() == 'open'
+                                ? Colors.green
+                                : Colors.red)
+                            : Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.9),
+                      ),
+                ),
         ],
       ),
     );
@@ -721,7 +732,7 @@ class _ProcessDisputeDetailsScreenState
       return const SizedBox.shrink();
     }
 
-    final bool canProcess = viewModel.dispute!.status?.toLowerCase() == 'open';
+    final bool canProcess = viewModel.dispute!.status.toLowerCase() == 'open';
 
     return Card(
       elevation: Theme.of(context).cardTheme.elevation,
@@ -742,21 +753,24 @@ class _ProcessDisputeDetailsScreenState
                     Icons.fact_check_outlined,
                     color: canProcess
                         ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.5),
                     size: Theme.of(context).iconTheme.size,
                   ),
                   const SizedBox(width: 12),
                   Text(
                     strings.buttonProcessDispute,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: canProcess
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.5),
-                      fontWeight: FontWeight.w600,
-                    ),
+                          color: canProcess
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.5),
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                 ],
               ),
@@ -813,17 +827,19 @@ class _ProcessDisputeDetailsScreenState
             Text(
               strings.errorGeneric,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               viewModel.error.toString(),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color:
-                Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6),
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -843,11 +859,11 @@ class _ProcessDisputeDetailsScreenState
     if (viewModel.dispute == null) {
       return Center(
           child: Text(
-            strings.messageNoDisputeData,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        strings.messageNoDisputeData,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             ),
-          ));
+      ));
     }
 
     final displayData = viewModel.getDisputeDisplayData();
@@ -873,9 +889,9 @@ class _ProcessDisputeDetailsScreenState
               child: Text(
                 displayData['disputeStatus'],
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: _getStatusColor(displayData['disputeStatus']),
-                  fontWeight: FontWeight.bold,
-                ),
+                      color: _getStatusColor(displayData['disputeStatus']),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
             ),
             children: [
@@ -970,7 +986,8 @@ class _ProcessDisputeDetailsScreenState
                   Expanded(
                     child: _buildDetailItem(
                       title: strings.labelDisputeExpiryDate,
-                      value: displayData['disputeExpiryDate'] ?? strings.labelNA,
+                      value:
+                          displayData['disputeExpiryDate'] ?? strings.labelNA,
                     ),
                   ),
                 ],
@@ -1029,8 +1046,8 @@ class _ProcessDisputeDetailsScreenState
             child: viewModel.isLoading
                 ? _buildLoadingState()
                 : viewModel.error != null
-                ? _buildErrorContent(viewModel)
-                : _buildDisputeDetails(viewModel),
+                    ? _buildErrorContent(viewModel)
+                    : _buildDisputeDetails(viewModel),
           ),
         );
       },

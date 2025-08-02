@@ -188,12 +188,11 @@ class NewTicketViewmodel extends ChangeNotifier {
       developer.log('[NewTicketViewmodel] Location fetch timeout: $e',
           name: 'NewTicketViewmodel', error: e);
     } on PositionUpdateException catch (e) {
-      locationError =
-          S.current.locationFetchError('Position update failed: ${e.message}');
+      locationError = S.current.locationFetchError;
       developer.log('[NewTicketViewmodel] Position update error: $e',
           name: 'NewTicketViewmodel', error: e);
     } catch (e) {
-      locationError = S.current.locationFetchError(e.toString());
+      locationError = S.current.locationFetchError;
       developer.log('[NewTicketViewmodel] Unexpected location fetch error: $e',
           name: 'NewTicketViewmodel', error: e);
     }
@@ -459,7 +458,7 @@ class NewTicketViewmodel extends ChangeNotifier {
           '[NewTicketViewmodel] Error picking/processing camera image: $e\n$stackTrace',
           name: 'NewTicketViewmodel',
           error: e);
-      imageCaptureError = S.current.imageCaptureError(e.toString());
+      imageCaptureError = S.current.imageCaptureError;
       isLoading = false;
       notifyListeners();
     }
@@ -514,8 +513,7 @@ class NewTicketViewmodel extends ChangeNotifier {
       isValid = false;
     }
     if (geoLatitude == null || geoLongitude == null) {
-      if (locationError == null)
-        locationError = S.current.locationNotAvailableError;
+      locationError ??= S.current.locationNotAvailableError;
       isValid = false;
     }
 
@@ -599,8 +597,7 @@ class NewTicketViewmodel extends ChangeNotifier {
         // before an exception was thrown, or if the API was 200 OK but the structure was unexpected.
         // apiError should have been set by the service if it was an HTTP error.
         // If apiError is still null here, it's an unexpected state.
-        if (apiError == null)
-          apiError = S.current.failedToCreateTicket; // Generic fallback
+        apiError ??= S.current.failedToCreateTicket; // Generic fallback
         developer.log(
             '[NewTicketViewmodel] Service returned null for ticket IDs. API Error: $apiError',
             name: 'NewTicketViewmodel');
@@ -725,37 +722,37 @@ class NewTicketViewmodel extends ChangeNotifier {
     super.dispose();
   }
 
-  Future<void> pickImageFromGallery() async {
-    try {
-      imageCaptureError = null;
-      final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 80,
-      );
-      if (image != null) {
-        isLoading = true;
-        notifyListeners();
-        try {
-          final processedImageFile = await _processImage(image);
-          if (selectedImagePaths.isEmpty) {
-            firstImageCaptureTime = DateTime.now();
-          }
-          selectedImagePaths.add(processedImageFile.path);
-        } catch (e) {
-          developer.log(
-              '[NewTicketViewmodel] Error processing gallery image: $e',
-              name: 'NewTicketViewmodel');
-          imageCaptureError = S.current.imageProcessingError(e.toString());
-        } finally {
-          isLoading = false;
-          notifyListeners();
-        }
-      }
-    } catch (e) {
-      developer.log('[NewTicketViewmodel] Error picking gallery image: $e',
-          name: 'NewTicketViewmodel');
-      imageCaptureError = S.current.imageCaptureError(e.toString());
-      notifyListeners();
-    }
-  }
+  // Future<void> pickImageFromGallery() async {
+  //   try {
+  //     imageCaptureError = null;
+  //     final XFile? image = await _imagePicker.pickImage(
+  //       source: ImageSource.gallery,
+  //       imageQuality: 80,
+  //     );
+  //     if (image != null) {
+  //       isLoading = true;
+  //       notifyListeners();
+  //       try {
+  //         final processedImageFile = await _processImage(image);
+  //         if (selectedImagePaths.isEmpty) {
+  //           firstImageCaptureTime = DateTime.now();
+  //         }
+  //         selectedImagePaths.add(processedImageFile.path);
+  //       } catch (e) {
+  //         developer.log(
+  //             '[NewTicketViewmodel] Error processing gallery image: $e',
+  //             name: 'NewTicketViewmodel');
+  //         imageCaptureError = S.current.imageProcessingError(e.toString());
+  //       } finally {
+  //         isLoading = false;
+  //         notifyListeners();
+  //       }
+  //     }
+  //   } catch (e) {
+  //     developer.log('[NewTicketViewmodel] Error picking gallery image: $e',
+  //         name: 'NewTicketViewmodel');
+  //     imageCaptureError = S.current.imageCaptureError;
+  //     notifyListeners();
+  //   }
+  // }
 }

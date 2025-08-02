@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:merchant_app/config/app_config.dart';
 import 'package:merchant_app/config/app_colors.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
@@ -10,11 +9,12 @@ import 'package:merchant_app/utils/components/form_field.dart'; // Added for rem
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../generated/l10n.dart';
-import '../../../models/ticket.dart';
 import '../../../services/storage/secure_storage_service.dart';
 import '../../../viewmodels/ticket/mark_exit_viewmodel.dart';
 import '../../../viewmodels/ticket/open_ticket_viewmodel.dart';
+import '../../../viewmodels/ticket/ticket_history_viewmodel.dart';
 import '../mark_exit/mark_exit_details.dart';
+import '../ticket_history/view_ticket.dart';
 import 'modify_open_ticket.dart';
 import 'dart:developer' as developer;
 
@@ -40,7 +40,11 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
   static const Map<String, List<String>> _accessRules = {
     'modifyTicket': ['Plaza Owner', 'Plaza Admin', 'Plaza Operator'],
     'markExit': ['Plaza Owner', 'Plaza Admin', 'Plaza Operator'],
-    'rejectTicket': ['Plaza Owner', 'Plaza Admin', 'Plaza Operator'], // New rule
+    'rejectTicket': [
+      'Plaza Owner',
+      'Plaza Admin',
+      'Plaza Operator'
+    ], // New rule
   };
 
   @override
@@ -50,8 +54,7 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
         'Initializing ViewOpenTicketScreen for ticketId: ${widget.ticketId}',
         name: 'ViewOpenTicketScreen');
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      developer.log(
-          'Scheduling ticket details fetch and role retrieval',
+      developer.log('Scheduling ticket details fetch and role retrieval',
           name: 'ViewOpenTicketScreen');
       _fetchTicketDetails();
       _fetchUserRole();
@@ -166,7 +169,9 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                 right: 10,
                 child: IconButton(
                   icon: Icon(Icons.close,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer), // Adjusted color
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onPrimaryContainer), // Adjusted color
                   onPressed: () {
                     developer.log('Closing zoomable image dialog',
                         name: 'ViewOpenTicketScreen');
@@ -191,99 +196,116 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
 
     showDialog(
       context: context,
-      builder: (BuildContext dialogContext) { // Use a different context name
-        return StatefulBuilder( // To update error text within the dialog
+      builder: (BuildContext dialogContext) {
+        // Use a different context name
+        return StatefulBuilder(// To update error text within the dialog
             builder: (stfContext, stfSetState) {
-              return Dialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Container(
-                  width: AppConfig.deviceWidth * 0.9,
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(strings.buttonRejectTicket ?? "Reject Ticket", // Assuming l10n string
-                          style: Theme.of(dialogContext).textTheme.titleLarge),
-                      const SizedBox(height: 16),
-                      CustomFormFields.largeSizedTextFormField(
-                        label: strings.labelRemarks,
-                        controller: viewModel.remarksController,
-                        enabled: true,
-                        context: dialogContext, // Pass dialogContext here
-                        errorText: viewModel.remarksError,
-                        onChanged: (_) {
-                          // Clear error as user types or re-validate if desired
-                          if (viewModel.remarksError != null) {
-                            viewModel.validateRejectForm(); // Re-validate to clear error if condition met
-                            stfSetState(() {}); // Update dialog UI
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () {
-                              developer.log('Reject ticket dialog cancelled', name: 'ViewOpenTicketScreen');
-                              Navigator.pop(dialogContext);
-                            },
-                            child: Text(strings.buttonCancel),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: viewModel.isLoading ? null : () async {
-                              developer.log('Submit reject ticket tapped', name: 'ViewOpenTicketScreen');
-                              if (viewModel.validateRejectForm()) {
-                                Navigator.pop(dialogContext); // Close dialog first
-                                final success = await viewModel.rejectTicket();
-                                if (mounted) { // Check if widget is still in tree
-                                  if (success) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(strings.messageTicketRejectedSuccess),
-                                        backgroundColor: Colors.green,
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
-                                    );
-                                    Navigator.pop(context); // Pop ViewOpenTicketScreen
-                                  } else {
-                                    _showErrorSnackBar(
-                                      strings.errorFailedToRejectTicket,
-                                      viewModel.apiError ?? strings.errorUnknown,
-                                    );
-                                  }
-                                }
-                              } else {
-                                stfSetState(() {}); // Update dialog UI to show validation error
-                              }
-                            },
-                            child: viewModel.isLoading
-                                ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Theme.of(dialogContext).colorScheme.onPrimary,
-                                ),
-                              ),
-                            )
-                                : Text(strings.buttonSubmit),
-                          ),
-                        ],
-                      )
-                    ],
+          return Dialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Container(
+              width: AppConfig.deviceWidth * 0.9,
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                      strings.buttonRejectTicket ??
+                          "Reject Ticket", // Assuming l10n string
+                      style: Theme.of(dialogContext).textTheme.titleLarge),
+                  const SizedBox(height: 16),
+                  CustomFormFields.largeSizedTextFormField(
+                    label: strings.labelRemarks,
+                    controller: viewModel.remarksController,
+                    enabled: true,
+                    context: dialogContext, // Pass dialogContext here
+                    errorText: viewModel.remarksError,
+                    onChanged: (_) {
+                      // Clear error as user types or re-validate if desired
+                      if (viewModel.remarksError != null) {
+                        viewModel
+                            .validateRejectForm(); // Re-validate to clear error if condition met
+                        stfSetState(() {}); // Update dialog UI
+                      }
+                    },
                   ),
-                ),
-              );
-            }
-        );
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          developer.log('Reject ticket dialog cancelled',
+                              name: 'ViewOpenTicketScreen');
+                          Navigator.pop(dialogContext);
+                        },
+                        child: Text(strings.buttonCancel),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: viewModel.isLoading
+                            ? null
+                            : () async {
+                                developer.log('Submit reject ticket tapped',
+                                    name: 'ViewOpenTicketScreen');
+                                if (viewModel.validateRejectForm()) {
+                                  Navigator.pop(
+                                      dialogContext); // Close dialog first
+                                  final success =
+                                      await viewModel.rejectTicket();
+                                  if (mounted) {
+                                    // Check if widget is still in tree
+                                    if (success) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(strings
+                                              .messageTicketRejectedSuccess),
+                                          backgroundColor: Colors.green,
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                      Navigator.pop(
+                                          context); // Pop ViewOpenTicketScreen
+                                    } else {
+                                      _showErrorSnackBar(
+                                        strings.errorFailedToRejectTicket,
+                                        viewModel.apiError ??
+                                            strings.errorUnknown,
+                                      );
+                                    }
+                                  }
+                                } else {
+                                  stfSetState(
+                                      () {}); // Update dialog UI to show validation error
+                                }
+                              },
+                        child: viewModel.isLoading
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Theme.of(dialogContext)
+                                        .colorScheme
+                                        .onPrimary,
+                                  ),
+                                ),
+                              )
+                            : Text(strings.buttonSubmit),
+                      ),
+                    ],
+                  )
+                ],
+              ),
+            ),
+          );
+        });
       },
     );
   }
-
 
   Widget _buildShimmerPlaceholder(
       {double width = double.infinity, double height = 20}) {
@@ -335,7 +357,7 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                       const SizedBox(width: 20),
                       Expanded(
                           child:
-                          _buildShimmerFieldPair(strings.labelVehicleType)),
+                              _buildShimmerFieldPair(strings.labelVehicleType)),
                     ],
                   ),
                   const SizedBox(height: 18),
@@ -343,11 +365,11 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                     children: [
                       Expanded(
                           child:
-                          _buildShimmerFieldPair(strings.labelPlazaName)),
+                              _buildShimmerFieldPair(strings.labelPlazaName)),
                       const SizedBox(width: 20),
                       Expanded(
                           child:
-                          _buildShimmerFieldPair(strings.labelEntryLane)),
+                              _buildShimmerFieldPair(strings.labelEntryLane)),
                     ],
                   ),
                   const SizedBox(height: 18),
@@ -355,19 +377,17 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                     children: [
                       Expanded(
                           child:
-                          _buildShimmerFieldPair(strings.labelEntryTime)),
+                              _buildShimmerFieldPair(strings.labelEntryTime)),
                       const SizedBox(width: 20),
                       Expanded(
-                          child:
-                          _buildShimmerFieldPair(strings.labelFloorId)),
+                          child: _buildShimmerFieldPair(strings.labelFloorId)),
                     ],
                   ),
                   const SizedBox(height: 18),
                   Row(
                     children: [
                       Expanded(
-                          child:
-                          _buildShimmerFieldPair(strings.labelSlotId)),
+                          child: _buildShimmerFieldPair(strings.labelSlotId)),
                       const SizedBox(width: 20),
                       Expanded(
                           child: _buildShimmerFieldPair(
@@ -414,7 +434,7 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                       scrollDirection: Axis.horizontal,
                       children: List.generate(
                         3,
-                            (index) => Padding(
+                        (index) => Padding(
                           padding: const EdgeInsets.only(right: 8.0),
                           child: _buildShimmerPlaceholder(
                             width: (AppConfig.deviceWidth - 70) / 3,
@@ -428,7 +448,8 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
               ),
             ),
           ),
-          Card( // Shimmer for Mark Exit Button
+          Card(
+            // Shimmer for Mark Exit Button
             elevation: Theme.of(context).cardTheme.elevation,
             margin: Theme.of(context).cardTheme.margin,
             shape: Theme.of(context).cardTheme.shape,
@@ -450,7 +471,8 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
               ),
             ),
           ),
-          Card( // Shimmer for Reject Ticket Button
+          Card(
+            // Shimmer for Reject Ticket Button
             elevation: Theme.of(context).cardTheme.elevation,
             margin: Theme.of(context).cardTheme.margin,
             shape: Theme.of(context).cardTheme.shape,
@@ -492,8 +514,7 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
 
   Widget _buildImageSection(OpenTicketViewModel viewModel, S strings) {
     final imageCount = viewModel.capturedImageUrls?.length ?? 0;
-    developer.log(
-        'Building image section, image count: $imageCount',
+    developer.log('Building image section, image count: $imageCount',
         name: 'ViewOpenTicketScreen');
     return Card(
       elevation: Theme.of(context).cardTheme.elevation,
@@ -507,8 +528,8 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
             Text(
               strings.labelUploadedDocuments,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             if (imageCount > 0)
               Container(
@@ -520,9 +541,9 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                 child: Text(
                   '$imageCount',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w500,
-                  ),
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
                 ),
               ),
           ],
@@ -539,7 +560,7 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
         children: [
           Padding(
             padding:
-            const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -550,9 +571,14 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.image_not_supported_outlined, // Changed icon
+                          Icon(
+                              Icons
+                                  .image_not_supported_outlined, // Changed icon
                               size: 48,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6)), // Adjusted color
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withOpacity(0.6)), // Adjusted color
                           const SizedBox(height: 8),
                           Text(
                             strings.messageNoImagesAvailable,
@@ -560,11 +586,11 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant // Adjusted color
-                                  .withOpacity(0.6),
-                            ),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant // Adjusted color
+                                      .withOpacity(0.6),
+                                ),
                           ),
                         ],
                       ),
@@ -581,14 +607,18 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                         developer.log(
                             'Building image item $index with URL: $imageUrl',
                             name: 'ViewOpenTicketScreen');
-                        final imageWidth = (AppConfig.deviceWidth - 64) / 3; // Adjusted for padding
+                        final imageWidth = (AppConfig.deviceWidth - 64) /
+                            3; // Adjusted for padding
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0),
                           child: Container(
                             width: imageWidth,
                             decoration: BoxDecoration(
                               border: Border.all(
-                                  color: Theme.of(context).colorScheme.outline.withOpacity(0.5)), // Adjusted border
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outline
+                                      .withOpacity(0.5)), // Adjusted border
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: ClipRRect(
@@ -603,7 +633,8 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                                 child: CachedNetworkImage(
                                   imageUrl: imageUrl,
                                   fit: BoxFit.cover,
-                                  memCacheWidth: 300, // Optional: for performance
+                                  memCacheWidth:
+                                      300, // Optional: for performance
                                   placeholder: (context, url) =>
                                       _buildShimmerPlaceholder(
                                           width: imageWidth, height: 150),
@@ -614,7 +645,7 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                                     return Center(
                                       child: Column(
                                         mainAxisAlignment:
-                                        MainAxisAlignment.center,
+                                            MainAxisAlignment.center,
                                         children: [
                                           Icon(Icons.broken_image_outlined,
                                               size: 32,
@@ -623,17 +654,19 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                                                   .error),
                                           const SizedBox(height: 4),
                                           Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 4.0),
                                             child: Text(
-                                              strings.errorImageLoadFailed ?? "Load Error", // Use a shorter error message
+                                              strings.errorImageLoadFailed ??
+                                                  "Load Error", // Use a shorter error message
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall
                                                   ?.copyWith(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .error,
-                                              ),
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .error,
+                                                  ),
                                               textAlign: TextAlign.center,
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
@@ -662,16 +695,16 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                           color: _currentImagePage > 0
                               ? Theme.of(context).colorScheme.primary
                               : Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.5),
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.5),
                           onPressed: _currentImagePage > 0
                               ? () {
-                            developer.log(
-                                'Previous image page tapped, current: $_currentImagePage',
-                                name: 'ViewOpenTicketScreen');
-                            setState(() => _currentImagePage--);
-                          }
+                                  developer.log(
+                                      'Previous image page tapped, current: $_currentImagePage',
+                                      name: 'ViewOpenTicketScreen');
+                                  setState(() => _currentImagePage--);
+                                }
                               : null,
                         ),
                         Container(
@@ -690,29 +723,29 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                                 .textTheme
                                 .labelMedium
                                 ?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.arrow_forward_ios, size: 18),
                           color:
-                          _currentImagePage < _getTotalPages(viewModel) - 1
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.5),
+                              _currentImagePage < _getTotalPages(viewModel) - 1
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.5),
                           onPressed:
-                          _currentImagePage < _getTotalPages(viewModel) - 1
-                              ? () {
-                            developer.log(
-                                'Next image page tapped, current: $_currentImagePage',
-                                name: 'ViewOpenTicketScreen');
-                            setState(() => _currentImagePage++);
-                          }
-                              : null,
+                              _currentImagePage < _getTotalPages(viewModel) - 1
+                                  ? () {
+                                      developer.log(
+                                          'Next image page tapped, current: $_currentImagePage',
+                                          name: 'ViewOpenTicketScreen');
+                                      setState(() => _currentImagePage++);
+                                    }
+                                  : null,
                         ),
                       ],
                     ),
@@ -735,7 +768,7 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
     }
     final startIndex = _currentImagePage * 3;
     final endIndex =
-    (startIndex + 3).clamp(0, viewModel.capturedImageUrls!.length);
+        (startIndex + 3).clamp(0, viewModel.capturedImageUrls!.length);
     developer.log(
         'Getting images for page $_currentImagePage: start=$startIndex, end=$endIndex',
         name: 'ViewOpenTicketScreen');
@@ -762,7 +795,8 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
       return const SizedBox.shrink();
     }
 
-    developer.log('Building mark exit action button for ticket: ${widget.ticketId}',
+    developer.log(
+        'Building mark exit action button for ticket: ${widget.ticketId}',
         name: 'ViewOpenTicketScreen');
     return Card(
       elevation: Theme.of(context).cardTheme.elevation,
@@ -770,30 +804,51 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
       shape: Theme.of(context).cardTheme.shape,
       color: Theme.of(context).cardColor,
       child: InkWell(
-        onTap: viewModel.isLoading ? null : () {
-          if (_userRole == null ||
-              !_accessRules['markExit']!.contains(_userRole!)) {
-            _showAccessDeniedSnackBar('markExit');
-            return;
-          }
-          developer.log(
-              'Mark Exit button tapped for ticket: ${widget.ticketId}',
-              name: 'ViewOpenTicketScreen');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChangeNotifierProvider(
-                create: (_) => MarkExitViewModel(),
-                child: MarkExitDetailsScreen(ticketId: widget.ticketId),
-              ),
-            ),
-          ).then((value) { // value can be true if marked exit, or null/false
-            developer.log(
-                'Returned from MarkExitDetailsScreen, refresh details, returned value: $value',
-                name: 'ViewOpenTicketScreen');
-              _fetchTicketDetails();
-          });
-        },
+        onTap: viewModel.isLoading
+            ? null
+            : () {
+                if (_userRole == null ||
+                    !_accessRules['markExit']!.contains(_userRole!)) {
+                  _showAccessDeniedSnackBar('markExit');
+                  return;
+                }
+                developer.log(
+                    'Mark Exit button tapped for ticket: ${widget.ticketId}',
+                    name: 'ViewOpenTicketScreen');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ChangeNotifierProvider(
+                      create: (_) => MarkExitViewModel(),
+                      child: MarkExitDetailsScreen(ticketId: widget.ticketId),
+                    ),
+                  ),
+                ).then((value) {
+                  // value will be true if payment was successful
+                  if (value == true) {
+                    developer.log(
+                        'Returned from MarkExitDetailsScreen with success, replacing screen.',
+                        name: 'ViewOpenTicketScreen');
+                    // Payment was successful, ticket is no longer "open".
+                    // Replace this screen with the historical view of the ticket.
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChangeNotifierProvider(
+                          create: (_) => TicketHistoryViewModel(),
+                          child: ViewTicketScreen(ticketId: widget.ticketId),
+                        ),
+                      ),
+                    );
+                  } else {
+                    // No success, just refresh the open ticket details
+                    developer.log(
+                        'Returned from MarkExitDetailsScreen without success, refreshing details. Returned value: $value',
+                        name: 'ViewOpenTicketScreen');
+                    _fetchTicketDetails();
+                  }
+                });
+              },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -808,9 +863,9 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                   Text(
                     strings.markExitLabel ?? 'Mark Exit',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                 ],
               ),
@@ -824,14 +879,16 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
   }
 
   // New action button for Reject Ticket
-  Widget _buildRejectTicketActionButton(OpenTicketViewModel viewModel, S strings) {
+  Widget _buildRejectTicketActionButton(
+      OpenTicketViewModel viewModel, S strings) {
     if (viewModel.ticket == null) {
       developer.log('No ticket available for reject action button',
           name: 'ViewOpenTicketScreen');
       return const SizedBox.shrink();
     }
 
-    developer.log('Building reject ticket action button for ticket: ${widget.ticketId}',
+    developer.log(
+        'Building reject ticket action button for ticket: ${widget.ticketId}',
         name: 'ViewOpenTicketScreen');
     return Card(
       elevation: Theme.of(context).cardTheme.elevation,
@@ -839,17 +896,19 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
       shape: Theme.of(context).cardTheme.shape,
       color: Theme.of(context).cardColor,
       child: InkWell(
-        onTap: viewModel.isLoading ? null : () {
-          if (_userRole == null ||
-              !_accessRules['rejectTicket']!.contains(_userRole!)) {
-            _showAccessDeniedSnackBar('rejectTicket');
-            return;
-          }
-          developer.log(
-              'Reject Ticket button tapped for ticket: ${widget.ticketId}',
-              name: 'ViewOpenTicketScreen');
-          _showRejectTicketDialog(viewModel);
-        },
+        onTap: viewModel.isLoading
+            ? null
+            : () {
+                if (_userRole == null ||
+                    !_accessRules['rejectTicket']!.contains(_userRole!)) {
+                  _showAccessDeniedSnackBar('rejectTicket');
+                  return;
+                }
+                developer.log(
+                    'Reject Ticket button tapped for ticket: ${widget.ticketId}',
+                    name: 'ViewOpenTicketScreen');
+                _showRejectTicketDialog(viewModel);
+              },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -864,9 +923,9 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                   Text(
                     strings.buttonRejectTicket, // Assuming l10n string exists
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                      fontWeight: FontWeight.w600,
-                    ),
+                          color: Theme.of(context).colorScheme.error,
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                 ],
               ),
@@ -878,7 +937,6 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
       ),
     );
   }
-
 
   Widget _buildDetailItem({
     required String title,
@@ -897,52 +955,55 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
           Text(
             title,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.8), // Adjusted color
-              fontWeight: FontWeight.w500, // Adjusted weight
-            ),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withOpacity(0.8), // Adjusted color
+                  fontWeight: FontWeight.w500, // Adjusted weight
+                ),
           ),
           const SizedBox(height: 4),
           isBadge
               ? Container(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: value.toLowerCase() == 'open'
-                  ? Colors.green.withOpacity(0.1)
-                  : Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: value.toLowerCase() == 'open'
-                    ? Colors.green
-                    : Colors.orange,
-                width: 1,
-              ),
-            ),
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: value.toLowerCase() == 'open'
-                    ? Colors.green
-                    : Colors.orange,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          )
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: value.toLowerCase() == 'open'
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: value.toLowerCase() == 'open'
+                          ? Colors.green
+                          : Colors.orange,
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    value,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: value.toLowerCase() == 'open'
+                              ? Colors.green
+                              : Colors.orange,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                )
               : Text(
-            value.isEmpty ? strings.labelNA : value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight:
-              highlight ? FontWeight.bold : FontWeight.normal,
-              color: highlight
-                  ? (value.toLowerCase() == 'open'
-                  ? Colors.green
-                  : Colors.orange)
-                  : Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withOpacity(0.9),
-            ),
-          ),
+                  value.isEmpty ? strings.labelNA : value,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight:
+                            highlight ? FontWeight.bold : FontWeight.normal,
+                        color: highlight
+                            ? (value.toLowerCase() == 'open'
+                                ? Colors.green
+                                : Colors.orange)
+                            : Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.9),
+                      ),
+                ),
         ],
       ),
     );
@@ -962,15 +1023,17 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
       shape: Theme.of(context).cardTheme.shape,
       color: Theme.of(context).cardColor,
       child: InkWell(
-        onTap: widget.isEditable && onTap != null// Only enable onTap if editable and onTap provided
+        onTap: widget.isEditable &&
+                onTap !=
+                    null // Only enable onTap if editable and onTap provided
             ? () {
-          if (_userRole == null ||
-              !_accessRules['modifyTicket']!.contains(_userRole!)) {
-            _showAccessDeniedSnackBar('modifyTicket');
-            return;
-          }
-          onTap.call();
-        }
+                if (_userRole == null ||
+                    !_accessRules['modifyTicket']!.contains(_userRole!)) {
+                  _showAccessDeniedSnackBar('modifyTicket');
+                  return;
+                }
+                onTap.call();
+              }
             : null,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -984,8 +1047,8 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   if (trailing != null) trailing,
                 ],
@@ -1021,48 +1084,51 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
   }
 
   Widget _buildErrorContent(OpenTicketViewModel viewModel, S strings) {
-    developer.log('Building error content: ${viewModel.error ?? viewModel.apiError}',
+    developer.log(
+        'Building error content: ${viewModel.error ?? viewModel.apiError}',
         name: 'ViewOpenTicketScreen');
     return Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0), // Added padding
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline,
-                  size: 48, color: Theme.of(context).colorScheme.error),
-              const SizedBox(height: 16),
-              Text(
-                strings.errorLoadTicketDetails, // More specific error title
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+      padding: const EdgeInsets.all(16.0), // Added padding
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline,
+              size: 48, color: Theme.of(context).colorScheme.error),
+          const SizedBox(height: 16),
+          Text(
+            strings.errorLoadTicketDetails, // More specific error title
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                viewModel.apiError ?? viewModel.error?.toString() ?? strings.errorUnknown,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color:
-                  Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24), // Increased spacing
-              CustomButtons.primaryButton(
-                height: 40,
-                width: 175,
-                text: strings.buttonRetry,
-                onPressed: () {
-                  developer.log('Retry button pressed in error content',
-                      name: 'ViewOpenTicketScreen');
-                  _fetchTicketDetails();
-                },
-                context: context,
-              ),
-            ],
+            textAlign: TextAlign.center,
           ),
-        ));
+          const SizedBox(height: 8),
+          Text(
+            viewModel.apiError ??
+                viewModel.error?.toString() ??
+                strings.errorUnknown,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24), // Increased spacing
+          CustomButtons.primaryButton(
+            height: 40,
+            width: 175,
+            text: strings.buttonRetry,
+            onPressed: () {
+              developer.log('Retry button pressed in error content',
+                  name: 'ViewOpenTicketScreen');
+              _fetchTicketDetails();
+            },
+            context: context,
+          ),
+        ],
+      ),
+    ));
   }
 
   Widget _buildTicketDetails(OpenTicketViewModel viewModel, S strings) {
@@ -1077,8 +1143,8 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
           child: Text(
             strings.errorNoTicketData,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
             textAlign: TextAlign.center,
           ),
         ),
@@ -1097,50 +1163,58 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.15), // Slightly more opaque
+                    color:
+                        Colors.green.withOpacity(0.15), // Slightly more opaque
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.green.shade600, width: 1.5), // Darker green border
+                    border: Border.all(
+                        color: Colors.green.shade600,
+                        width: 1.5), // Darker green border
                   ),
                   child: Text(
                     strings.ticketStatusOpen, // Assuming l10n string
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Colors.green.shade700, // Darker green text
-                      fontWeight: FontWeight.bold,
-                    ),
+                          color: Colors.green.shade700, // Darker green text
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
                 if (widget.isEditable) ...[
                   const SizedBox(width: 8),
                   Icon(Icons.edit_outlined, // Changed to outlined
-                      color: Theme.of(context).colorScheme.primary, size: 20),
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20),
                 ],
               ],
             ),
             onTap: widget.isEditable // This onTap is for modification
                 ? () {
-              developer.log('Ticket details section tapped for modification',
-                  name: 'ViewOpenTicketScreen');
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                  ChangeNotifierProvider<OpenTicketViewModel>.value(
-                    value: viewModel, // Pass the existing viewModel
-                    child:
-                    ModifyViewOpenTicketScreen(ticketId: widget.ticketId),
-                  ),
-                ),
-              ).then((modified) { // Check if modification happened
-                developer.log(
-                    'Returned from ModifyViewOpenTicketScreen, modified: $modified, refreshing',
-                    name: 'ViewOpenTicketScreen');
-                if (modified == true) { // Only refresh if confirmed modification
-                  _fetchTicketDetails();
-                }
-              });
-            }
+                    developer.log(
+                        'Ticket details section tapped for modification',
+                        name: 'ViewOpenTicketScreen');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ChangeNotifierProvider<OpenTicketViewModel>.value(
+                          value: viewModel, // Pass the existing viewModel
+                          child: ModifyViewOpenTicketScreen(
+                              ticketId: widget.ticketId),
+                        ),
+                      ),
+                    ).then((modified) {
+                      // Check if modification happened
+                      developer.log(
+                          'Returned from ModifyViewOpenTicketScreen, modified: $modified, refreshing',
+                          name: 'ViewOpenTicketScreen');
+                      if (modified == true) {
+                        // Only refresh if confirmed modification
+                        _fetchTicketDetails();
+                      }
+                    });
+                  }
                 : null,
             children: [
               Row(
@@ -1166,7 +1240,8 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                   Expanded(
                     child: _buildDetailItem(
                       title: strings.labelPlazaName,
-                      value: viewModel.ticket!.plazaName ?? // Use plazaName from ticket
+                      value: viewModel
+                              .ticket!.plazaName ?? // Use plazaName from ticket
                           viewModel.ticket!.plazaId?.toString() ??
                           strings.labelNA,
                       strings: strings,
@@ -1228,7 +1303,8 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
                     ),
                   ),
                   Expanded(
-                    child: _buildDetailItem( // Simplified this part
+                    child: _buildDetailItem(
+                      // Simplified this part
                       title: strings.labelModificationTime,
                       // CORRECTED LINE: Use the ViewModel's formatted string
                       value: viewModel.getFormattedModificationTime(),
@@ -1241,7 +1317,8 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
           ),
           _buildImageSection(viewModel, strings),
           _buildMarkExitActionButton(viewModel, strings),
-          _buildRejectTicketActionButton(viewModel, strings), // Added Reject Ticket button
+          _buildRejectTicketActionButton(
+              viewModel, strings), // Added Reject Ticket button
         ],
       ),
     );
@@ -1255,8 +1332,10 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
     // final viewModel = Provider.of<OpenTicketViewModel>(context); // No need to listen here, use Consumer/Selector
 
     return Scaffold(
-      appBar: PreferredSize( // Wrap AppBar with PreferredSize to use Consumer
-        preferredSize: const Size.fromHeight(kToolbarHeight + 20), // Adjust height as needed for multiline title
+      appBar: PreferredSize(
+        // Wrap AppBar with PreferredSize to use Consumer
+        preferredSize: const Size.fromHeight(
+            kToolbarHeight + 20), // Adjust height as needed for multiline title
         child: Consumer<OpenTicketViewModel>(
           builder: (context, vm, child) => _buildCustomAppBar(vm, strings),
         ),
@@ -1275,13 +1354,17 @@ class _ViewOpenTicketScreenState extends State<ViewOpenTicketScreen> {
               'Consumer rebuilding, isLoading: ${viewModel.isLoading}, hasError: ${viewModel.error != null || viewModel.apiError != null}, ticket: ${viewModel.ticket?.ticketId}',
               name: 'ViewOpenTicketScreen',
             );
-            if (viewModel.isLoading && viewModel.ticket == null) { // Show loading only if ticket is not yet loaded
+            if (viewModel.isLoading && viewModel.ticket == null) {
+              // Show loading only if ticket is not yet loaded
               return _buildLoadingState(strings);
             }
-            if (viewModel.error != null || viewModel.apiError != null && viewModel.ticket == null) { // Show error if ticket failed to load
+            if (viewModel.error != null ||
+                viewModel.apiError != null && viewModel.ticket == null) {
+              // Show error if ticket failed to load
               return _buildErrorContent(viewModel, strings);
             }
-            if (viewModel.ticket == null) { // Fallback if somehow ticket is null after loading & no error
+            if (viewModel.ticket == null) {
+              // Fallback if somehow ticket is null after loading & no error
               return _buildLoadingState(strings); // Or an "empty state"
             }
             return _buildTicketDetails(viewModel, strings);

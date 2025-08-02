@@ -19,14 +19,17 @@ class RejectTicketViewModel extends ChangeNotifier {
   final TextEditingController ticketIdController = TextEditingController();
   final TextEditingController ticketRefIdController = TextEditingController();
   final TextEditingController plazaIdController = TextEditingController();
+  final TextEditingController plazaNameController = TextEditingController();
   final TextEditingController entryLaneIdController = TextEditingController();
-  final TextEditingController entryLaneDirectionController = TextEditingController();
+  final TextEditingController entryLaneDirectionController =
+      TextEditingController();
   final TextEditingController floorIdController = TextEditingController();
   final TextEditingController slotIdController = TextEditingController();
   final TextEditingController vehicleNumberController = TextEditingController();
   final TextEditingController vehicleTypeController = TextEditingController();
   final TextEditingController entryTimeController = TextEditingController();
-  final TextEditingController ticketCreationTimeController = TextEditingController();
+  final TextEditingController ticketCreationTimeController =
+      TextEditingController();
   final TextEditingController ticketStatusController = TextEditingController();
   final TextEditingController remarksController = TextEditingController();
 
@@ -67,28 +70,34 @@ class RejectTicketViewModel extends ChangeNotifier {
       notifyListeners();
 
       final fetchedTickets = await _ticketService.getOpenTickets();
-      tickets = fetchedTickets.map((ticket) => {
-        'ticketId': ticket.ticketId,
-        'ticketRefId': ticket.ticketRefId,
-        'plazaId': ticket.plazaId,
-        'vehicleNumber': ticket.vehicleNumber,
-        'vehicleType': ticket.vehicleType,
-        'plazaName': "Plaza: ${ticket.plazaId}", // Consider fetching actual plaza name if available
-        'entryTime': ticket.entryTime?.toIso8601String() ?? "NA",
-        'ticketStatus': ticket.status.toString().split('.').last,
-        'entryLaneId': ticket.entryLaneId,
-        'entryLaneDirection': ticket.entryLaneDirection,
-        'ticketCreationTime': ticket.createdTime.toIso8601String(),
-        'floorId': ticket.floorId ?? 'N/A',
-        'slotId': ticket.slotId ?? 'N/A',
-        'capturedImages': ticket.capturedImages ?? [],
-      }).toList();
+      tickets = fetchedTickets
+          .map((ticket) => {
+                'ticketId': ticket.ticketId,
+                'ticketRefId': ticket.ticketRefId,
+                'plazaId': ticket.plazaId,
+                'vehicleNumber': ticket.vehicleNumber,
+                'vehicleType': ticket.vehicleType,
+                'plazaName': ticket.plazaName?.isNotEmpty == true
+                    ? ticket.plazaName!
+                    : 'Plaza ${ticket.plazaId}',
+                'entryTime': ticket.entryTime?.toIso8601String() ?? "NA",
+                'ticketStatus': ticket.status.toString().split('.').last,
+                'entryLaneId': ticket.entryLaneId,
+                'entryLaneDirection': ticket.entryLaneDirection,
+                'ticketCreationTime': ticket.createdTime.toIso8601String(),
+                'floorId': ticket.floorId ?? 'N/A',
+                'slotId': ticket.slotId ?? 'N/A',
+                'capturedImages': ticket.capturedImages ?? [],
+              })
+          .toList();
 
-      developer.log('[RejectTicketViewModel] Fetched ${tickets.length} tickets', name: 'RejectTicketViewModel');
+      developer.log('[RejectTicketViewModel] Fetched ${tickets.length} tickets',
+          name: 'RejectTicketViewModel');
     } catch (e) {
       error = e as Exception;
       apiError = _getErrorMessage(e);
-      developer.log('[RejectTicketViewModel] Error fetching tickets: $e', name: 'RejectTicketViewModel');
+      developer.log('[RejectTicketViewModel] Error fetching tickets: $e',
+          name: 'RejectTicketViewModel');
     } finally {
       isLoading = false;
       notifyListeners();
@@ -105,11 +114,13 @@ class RejectTicketViewModel extends ChangeNotifier {
       final fetchedTicket = await _ticketService.getTicketDetails(ticketId);
       ticket = fetchedTicket; // Store the ticket object
       initializeTicketDataFromTicket(fetchedTicket);
-      developer.log('[RejectTicketViewModel] Fetched ticket details for $ticketId: ${fetchedTicket.ticketId}');
+      developer.log(
+          '[RejectTicketViewModel] Fetched ticket details for $ticketId: ${fetchedTicket.ticketId}');
     } catch (e) {
       error = e as Exception;
       apiError = _getErrorMessage(e);
-      developer.log('[RejectTicketViewModel] Error fetching ticket details: $e');
+      developer
+          .log('[RejectTicketViewModel] Error fetching ticket details: $e');
     } finally {
       isLoading = false;
       notifyListeners();
@@ -121,6 +132,9 @@ class RejectTicketViewModel extends ChangeNotifier {
     ticketIdController.text = ticket.ticketId ?? 'N/A';
     ticketRefIdController.text = ticket.ticketRefId ?? 'N/A';
     plazaIdController.text = ticket.plazaId?.toString() ?? 'N/A';
+    plazaNameController.text = ticket.plazaName?.isNotEmpty == true
+        ? ticket.plazaName!
+        : 'Plaza ${ticket.plazaId ?? 'N/A'}';
     entryLaneIdController.text = ticket.entryLaneId ?? 'N/A';
     entryLaneDirectionController.text = ticket.entryLaneDirection ?? 'N/A';
     floorIdController.text = ticket.floorId ?? 'N/A';
@@ -132,7 +146,8 @@ class RejectTicketViewModel extends ChangeNotifier {
     entryTimeController.text = ticket.entryTime != null
         ? DateFormat('dd MMM yyyy, hh:mm a').format(ticket.entryTime!)
         : 'N/A';
-    ticketCreationTimeController.text = DateFormat('dd MMM yyyy, hh:mm a').format(ticket.createdTime);
+    ticketCreationTimeController.text =
+        DateFormat('dd MMM yyyy, hh:mm a').format(ticket.createdTime);
     remarksController.text = ticket.remarks ?? '';
 
     resetErrors();
@@ -148,8 +163,10 @@ class RejectTicketViewModel extends ChangeNotifier {
       error = null;
       notifyListeners();
 
-      await _ticketService.rejectTicket(currentTicketId!, remarksController.text);
-      developer.log('[RejectTicketViewModel] Ticket $currentTicketId rejected successfully');
+      await _ticketService.rejectTicket(
+          currentTicketId!, remarksController.text);
+      developer.log(
+          '[RejectTicketViewModel] Ticket $currentTicketId rejected successfully');
       return true;
     } catch (e) {
       error = e as Exception;
@@ -187,6 +204,7 @@ class RejectTicketViewModel extends ChangeNotifier {
     ticketIdController.dispose();
     ticketRefIdController.dispose();
     plazaIdController.dispose();
+    plazaNameController.dispose();
     entryLaneIdController.dispose();
     entryLaneDirectionController.dispose();
     floorIdController.dispose();

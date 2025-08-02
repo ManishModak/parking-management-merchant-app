@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:merchant_app/config/app_theme.dart';
 import 'package:merchant_app/utils/components/appbar.dart';
 import 'package:merchant_app/utils/components/card.dart';
 import 'package:merchant_app/viewmodels/notification_viewmodel.dart';
@@ -66,7 +67,7 @@ class NotificationsScreen extends StatelessWidget {
           })
         ],
       ),
-      backgroundColor: Theme.of(context).colorScheme.background, // Use theme
+      backgroundColor: context.backgroundColor,
       body: Consumer<NotificationsViewModel>(
         builder: (context, viewModelConsumer, child) {
           // Renamed to avoid conflict
@@ -182,6 +183,7 @@ class NotificationsScreen extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
+              SizedBox(height: 90,)
             ],
           ),
         ),

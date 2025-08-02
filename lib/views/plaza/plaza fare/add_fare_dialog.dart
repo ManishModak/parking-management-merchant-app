@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:merchant_app/models/plaza_fare.dart'; // Import FareTypes
+// Import FareTypes
 import 'package:provider/provider.dart';
 import '../../../config/app_config.dart';
 import '../../../generated/l10n.dart'; // Import S for localization
@@ -13,10 +13,10 @@ class AddFareDialog extends StatelessWidget {
   const AddFareDialog({super.key});
 
   Future<void> _selectDate(
-      BuildContext context,
-      TextEditingController controller, {
-        DateTime? firstDate,
-      }) async {
+    BuildContext context,
+    TextEditingController controller, {
+    DateTime? firstDate,
+  }) async {
     // Use the viewmodel from the provider
     final viewModel = Provider.of<PlazaFareViewModel>(context, listen: false);
     DateTime initialDate = DateTime.now();
@@ -69,15 +69,19 @@ class AddFareDialog extends StatelessWidget {
     return GestureDetector(
       onTap: () => _selectDate(context, controller, firstDate: firstDate),
       child: AbsorbPointer(
-        child: CustomFormFields.normalSizedTextFormField(context:context,
+        child: CustomFormFields.normalSizedTextFormField(
+          context: context,
           label: label,
           controller: controller,
           errorText: errorText,
           keyboardType: TextInputType.datetime,
           isPassword: false,
-          enabled: true, // Keep enabled visually, AbsorbPointer prevents interaction
+          enabled:
+              true, // Keep enabled visually, AbsorbPointer prevents interaction
           // Add suffix icon for calendar visual cue
-          suffixIcon: Icon(Icons.calendar_today, size: 20, color: Theme.of(context).iconTheme.color?.withOpacity(0.6)),
+          suffixIcon: Icon(Icons.calendar_today,
+              size: 20,
+              color: Theme.of(context).iconTheme.color?.withOpacity(0.6)),
         ),
       ),
     );
@@ -88,9 +92,11 @@ class AddFareDialog extends StatelessWidget {
     required TextEditingController controller,
     required String? errorText,
     required BuildContext context,
-    TextInputType keyboardType = TextInputType.number, // Allow specifying keyboard type
+    TextInputType keyboardType =
+        TextInputType.number, // Allow specifying keyboard type
   }) {
-    return CustomFormFields.normalSizedTextFormField(context:context,
+    return CustomFormFields.normalSizedTextFormField(
+      context: context,
       label: label,
       controller: controller,
       errorText: errorText,
@@ -107,8 +113,10 @@ class AddFareDialog extends StatelessWidget {
     return Consumer<PlazaFareViewModel>(
       builder: (context, viewModel, child) {
         return Dialog(
-          shape: Theme.of(context).dialogTheme.shape ?? RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          insetPadding: EdgeInsets.zero, // Consider some padding like EdgeInsets.all(20)
+          shape: Theme.of(context).dialogTheme.shape ??
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          insetPadding:
+              EdgeInsets.zero, // Consider some padding like EdgeInsets.all(20)
           backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
           child: SizedBox(
             width: AppConfig.deviceWidth * 0.9,
@@ -125,12 +133,19 @@ class AddFareDialog extends StatelessWidget {
                       Text(
                         strings.dialogTitleAddNewFare, // Use localized string
                         style: Theme.of(context).dialogTheme.titleTextStyle ??
-                            Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                            Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       IconButton(
                         // Provide visual feedback on hover/press
                         splashRadius: 20,
-                        icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+                        icon: Icon(Icons.close,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.7)),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],
@@ -139,7 +154,8 @@ class AddFareDialog extends StatelessWidget {
 
                   // Plaza is already selected; show its name in a disabled field.
                   // Consider using SearchableDropdown with enabled: false if consistency is desired
-                  CustomFormFields.normalSizedTextFormField(context:context,
+                  CustomFormFields.normalSizedTextFormField(
+                    context: context,
                     label: strings.labelPlaza, // Localized
                     controller: viewModel.plazaController,
                     enabled: false, isPassword: false, // Visually disabled
@@ -148,7 +164,8 @@ class AddFareDialog extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   // Fare type dropdown
-                  CustomDropDown.normalDropDown(context:context,
+                  CustomDropDown.normalDropDown(
+                    context: context,
                     label: strings.labelSelectFareType, // Localized
                     value: viewModel.selectedFareType,
                     items: viewModel.fareTypes,
@@ -159,7 +176,8 @@ class AddFareDialog extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   // Vehicle type dropdown
-                  CustomDropDown.normalDropDown(context:context,
+                  CustomDropDown.normalDropDown(
+                    context: context,
                     label: strings.labelSelectVehicleType, // Localized
                     value: viewModel.selectedVehicleType,
                     items: viewModel.vehicleTypes,
@@ -191,16 +209,22 @@ class AddFareDialog extends StatelessWidget {
                     const SizedBox(height: 16),
                     _buildNumericInputField(
                       context: context,
-                      label: strings.labelFareAmount, // Localized (Generic Fare Amount)
+                      label: strings
+                          .labelFareAmount, // Localized (Generic Fare Amount)
                       controller: viewModel.progressiveFareController,
-                      errorText: viewModel.validationErrors['progressiveFare'] ?? viewModel.validationErrors['fareRate'], // Show specific or generic error
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      errorText:
+                          viewModel.validationErrors['progressiveFare'] ??
+                              viewModel.validationErrors[
+                                  'fareRate'], // Show specific or generic error
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                     ),
                     const SizedBox(height: 16),
                   ],
 
                   // Fields for standard fare types (NOT Progressive or FreePass)
-                  if (!viewModel.isProgressiveFareVisible && !viewModel.isFreePassSelected) ...[
+                  if (!viewModel.isProgressiveFareVisible &&
+                      !viewModel.isFreePassSelected) ...[
                     // Daily Fare
                     if (viewModel.isDailyFareVisible) ...[
                       _buildNumericInputField(
@@ -208,7 +232,8 @@ class AddFareDialog extends StatelessWidget {
                         label: strings.labelDailyFare, // Localized
                         controller: viewModel.dailyFareController,
                         errorText: viewModel.validationErrors['dailyFare'],
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -220,7 +245,8 @@ class AddFareDialog extends StatelessWidget {
                         label: strings.labelHourlyFare, // Localized
                         controller: viewModel.hourlyFareController,
                         errorText: viewModel.validationErrors['hourlyFare'],
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -240,7 +266,8 @@ class AddFareDialog extends StatelessWidget {
                         label: strings.labelBaseHourlyFare, // Localized
                         controller: viewModel.baseHourlyFareController,
                         errorText: viewModel.validationErrors['baseHourlyFare'],
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                       ),
                       const SizedBox(height: 16),
                       _buildNumericInputField(
@@ -248,7 +275,8 @@ class AddFareDialog extends StatelessWidget {
                         label: strings.labelDiscountExtendedHours, // Localized
                         controller: viewModel.discountController,
                         errorText: viewModel.validationErrors['discount'],
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -260,14 +288,14 @@ class AddFareDialog extends StatelessWidget {
                         label: strings.labelMonthlyFare, // Localized
                         controller: viewModel.monthlyFareController,
                         errorText: viewModel.validationErrors['monthlyFare'],
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                       ),
                       const SizedBox(height: 16),
                     ],
                   ], // End standard fare types condition
 
                   // --- CONDITIONAL FIELDS END ---
-
 
                   // --- Common Fields (Dates) ---
                   _buildDateField(
@@ -291,13 +319,15 @@ class AddFareDialog extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // --- Validation Error Display ---
-                  if (viewModel.validationErrors['duplicateFare'] != null || viewModel.validationErrors['dateOverlap'] != null) ...[
+                  if (viewModel.validationErrors['duplicateFare'] != null ||
+                      viewModel.validationErrors['dateOverlap'] != null) ...[
                     Text(
                       // Show whichever error is present, or combine them if needed
-                      viewModel.validationErrors['duplicateFare'] ?? viewModel.validationErrors['dateOverlap']!,
+                      viewModel.validationErrors['duplicateFare'] ??
+                          viewModel.validationErrors['dateOverlap']!,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
@@ -306,13 +336,12 @@ class AddFareDialog extends StatelessWidget {
                     Text(
                       viewModel.validationErrors['general']!,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                   ],
-
 
                   // --- Action Buttons ---
                   Row(
@@ -327,13 +356,17 @@ class AddFareDialog extends StatelessWidget {
                       // Consider ElevatedButton for the primary action
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.onPrimary,
                         ),
                         onPressed: () async {
-                          final success = await viewModel.addFareToList(context);
+                          final success =
+                              await viewModel.addFareToList(context);
                           if (success && context.mounted) {
-                            Navigator.pop(context); // Close dialog only on success
+                            Navigator.pop(
+                                context); // Close dialog only on success
                           }
                         },
                         child: Text(strings.buttonSave), // Localized

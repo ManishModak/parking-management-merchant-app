@@ -98,7 +98,7 @@ class PlazaFormValidation {
     // 1. Required Text Fields (Length & Format)
     requiredTextFields.forEach((key, config) {
       final value = data[key]?.toString().trim() ?? '';
-      final (String fieldName, int minLength, int? maxLength) =
+      final (String fieldName, int minLength, int maxLength) =
           config; // Use pattern matching
 
       if (value.isEmpty) {
@@ -107,7 +107,7 @@ class PlazaFormValidation {
       } else if (value.length < minLength) {
         errors[key] = strings.validationMinLength(fieldName, minLength);
         hasError = true;
-      } else if (maxLength != null && value.length > maxLength) {
+      } else if (value.length > maxLength) {
         // Check if exact length is required (min == max)
         if (minLength == maxLength) {
           errors[key] = strings.validationExactLength(fieldName, minLength);
@@ -372,7 +372,7 @@ class PlazaFormValidation {
       } else if (value.length < minLength) {
         errors[key] = strings.validationMinLength(fieldName, minLength);
         hasError = true;
-      } else if (maxLength != null && value.length > maxLength) {
+      } else if (value.length > maxLength) {
         // Use exact length check specifically for IFSC if maxLength == minLength
         if (key == 'IFSCcode' &&
             minLength == maxLength &&

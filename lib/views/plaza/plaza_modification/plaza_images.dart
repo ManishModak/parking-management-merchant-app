@@ -205,7 +205,7 @@ class _PlazaImagesModificationScreenState extends State<PlazaImagesModificationS
     developer.log('[PlazaImagesModScreen] Attempting to save images.', name: 'PlazaModify');
     try {
       // ViewModel's saveImages shows success/error messages internally
-      await viewModel.saveImages(context, wantPop: false);
+      await viewModel.saveImages(context, wantPop: true);
       developer.log('[PlazaImagesModScreen] Save operation completed by ViewModel.', name: 'PlazaModify');
       // ViewModel's saveImages should ideally refresh images on success
       // If not, uncomment the refresh call below

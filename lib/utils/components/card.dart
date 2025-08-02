@@ -26,7 +26,7 @@ class CustomCards {
   }) {
     final strings = S.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6,horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
       child: Card(
         margin: EdgeInsets.zero,
         elevation: 4,
@@ -247,7 +247,9 @@ class CustomCards {
       color: context.cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: context.inputBorderColor, width: 2), // Use theme-aware border
+        side: BorderSide(
+            color: context.inputBorderColor,
+            width: 2), // Use theme-aware border
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -256,10 +258,16 @@ class CustomCards {
             CircleAvatar(
               radius: 40,
               backgroundColor: context.surfaceColor,
-              child: imageUrl == null || imageUrl.isEmpty
-                  ? Icon(Icons.person, size: 50, color: Theme.of(context).brightness == Brightness.light ? AppColors.primary : AppColors.secondary)
+              backgroundImage: imageUrl != null && imageUrl.isNotEmpty
+                  ? NetworkImage(imageUrl)
                   : null,
-              backgroundImage: imageUrl != null && imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
+              child: imageUrl == null || imageUrl.isEmpty
+                  ? Icon(Icons.person,
+                      size: 50,
+                      color: Theme.of(context).brightness == Brightness.light
+                          ? AppColors.primary
+                          : AppColors.secondary)
+                  : null,
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -278,7 +286,8 @@ class CustomCards {
                   const SizedBox(height: 4),
                   Text(
                     "${strings.labelUserId} $userId",
-                    style: TextStyle(fontSize: 16, color: context.textSecondaryColor),
+                    style: TextStyle(
+                        fontSize: 16, color: context.textSecondaryColor),
                   ),
                 ],
               ),
@@ -303,22 +312,28 @@ class CustomCards {
         child: const Icon(Icons.delete, color: AppColors.textLight),
       ),
       onDismissed: (direction) {
-        context.read<NotificationsViewModel>().deleteNotification(notification.id);
-        developer.log('Notification dismissed: ${notification.title}', name: 'CustomCards');
+        context
+            .read<NotificationsViewModel>()
+            .deleteNotification(notification.id);
+        developer.log('Notification dismissed: ${notification.title}',
+            name: 'CustomCards');
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8),
         child: Card(
           elevation: 5,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          color: context.secondaryCardColor, // Use theme-aware notification color
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          color:
+              context.secondaryCardColor, // Use theme-aware notification color
           child: ListTile(
             leading: CustomIcons.buildNotificationIcon(notification, context),
             title: Text(
               notification.title,
               style: TextStyle(
                 fontSize: 16,
-                fontWeight: notification.isRead ? FontWeight.w400 : FontWeight.w500,
+                fontWeight:
+                    notification.isRead ? FontWeight.w400 : FontWeight.w500,
                 color: context.textPrimaryColor,
               ),
             ),
@@ -329,17 +344,20 @@ class CustomCards {
                   notification.message,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 14, color: context.textSecondaryColor),
+                  style: TextStyle(
+                      fontSize: 14, color: context.textSecondaryColor),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   _getTimeAgo(notification.timestamp, strings),
-                  style: TextStyle(fontSize: 12, color: context.textSecondaryColor),
+                  style: TextStyle(
+                      fontSize: 12, color: context.textSecondaryColor),
                 ),
               ],
             ),
             onTap: () {
-              developer.log('Notification tapped: ${notification.title}', name: 'CustomCards');
+              developer.log('Notification tapped: ${notification.title}',
+                  name: 'CustomCards');
               _handleNotificationTap(context, notification);
             },
           ),
@@ -348,23 +366,27 @@ class CustomCards {
     );
   }
 
-  static void _handleNotificationTap(BuildContext context, NotificationModel notification) {
+  static void _handleNotificationTap(
+      BuildContext context, NotificationModel notification) {
     if (!notification.isRead) {
       context.read<NotificationsViewModel>().markAsRead(notification.id);
     }
     switch (notification.type) {
       case NotificationType.newBooking:
         if (notification.bookingId != null) {
-          Navigator.pushNamed(context, '/booking-details', arguments: notification.bookingId);
+          Navigator.pushNamed(context, '/booking-details',
+              arguments: notification.bookingId);
         }
         break;
       case NotificationType.disputeRaised:
       case NotificationType.disputeResolved:
-        Navigator.pushNamed(context, '/dispute-details', arguments: notification.bookingId);
+        Navigator.pushNamed(context, '/dispute-details',
+            arguments: notification.bookingId);
         break;
       case NotificationType.plazaAlert:
         if (notification.plazaId != null) {
-          Navigator.pushNamed(context, '/plaza-details', arguments: notification.plazaId);
+          Navigator.pushNamed(context, '/plaza-details',
+              arguments: notification.plazaId);
         }
         break;
       default:
@@ -402,18 +424,24 @@ class CustomCards {
       child: ListTile(
         title: Text(
           transaction.title,
-          style: TextStyle(fontWeight: FontWeight.w600, color: context.textPrimaryColor),
+          style: TextStyle(
+              fontWeight: FontWeight.w600, color: context.textPrimaryColor),
         ),
         subtitle: Text(
           '${transaction.amount}',
           style: TextStyle(color: context.textSecondaryColor),
         ),
         trailing: Icon(
-          transaction.type == TransactionType.payment ? Icons.arrow_downward : Icons.arrow_upward,
-          color: transaction.type == TransactionType.payment ? AppColors.success : AppColors.error,
+          transaction.type == TransactionType.payment
+              ? Icons.arrow_downward
+              : Icons.arrow_upward,
+          color: transaction.type == TransactionType.payment
+              ? AppColors.success
+              : AppColors.error,
         ),
         onTap: () {
-          developer.log('Transaction card tapped: ${transaction.title}', name: 'CustomCards');
+          developer.log('Transaction card tapped: ${transaction.title}',
+              name: 'CustomCards');
         },
       ),
     );
@@ -434,7 +462,9 @@ class CustomCards {
         color: context.surfaceColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: context.inputBorderColor, width: 2), // Use theme-aware border
+          side: BorderSide(
+              color: context.inputBorderColor,
+              width: 2), // Use theme-aware border
         ),
         child: InkWell(
           onTap: () {
@@ -464,7 +494,8 @@ class CustomCards {
                             ),
                           ),
                         ),
-                        separatorBuilder: (context, index) => const SizedBox(width: 8),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(width: 8),
                       ),
                     ),
                   )
@@ -536,7 +567,8 @@ class CustomCards {
                     : AppColors.secondary,
                 width: 2),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         ),
         style: TextStyle(color: context.textPrimaryColor),
       ),
@@ -560,7 +592,8 @@ class CustomCards {
         color: context.cardColor,
         child: InkWell(
           onTap: () {
-            developer.log('Operator card tapped: $operatorName', name: 'CustomCards');
+            developer.log('Operator card tapped: $operatorName',
+                name: 'CustomCards');
             onTap();
           },
           borderRadius: BorderRadius.circular(16),
@@ -614,7 +647,8 @@ class CustomCards {
 
   static Widget _buildOperatorImage(String? imageUrl, BuildContext context) {
     final customCacheManager = CacheManager(
-      Config('operatorImageCache', stalePeriod: const Duration(hours: 24), maxNrOfCacheObjects: 100),
+      Config('operatorImageCache',
+          stalePeriod: const Duration(hours: 24), maxNrOfCacheObjects: 100),
     );
     final strings = S.of(context);
 
@@ -622,7 +656,11 @@ class CustomCards {
       return CircleAvatar(
         radius: 40,
         backgroundColor: context.surfaceColor,
-        child: Icon(Icons.person, size: 40, color: Theme.of(context).brightness == Brightness.light ? AppColors.primary : AppColors.secondary),
+        child: Icon(Icons.person,
+            size: 40,
+            color: Theme.of(context).brightness == Brightness.light
+                ? AppColors.primary
+                : AppColors.secondary),
       );
     }
 
@@ -671,56 +709,72 @@ class CustomCards {
   }) {
     // Determine fare details string based on fare type
     String fareDetails = '';
-    String timeDetails = ''; // For progressive range or hour-wise base hours/discount
+    String timeDetails =
+        ''; // For progressive range or hour-wise base hours/discount
 
     switch (fare.fareType) {
       case FareTypes.progressive:
-        fareDetails = '${strings.labelFareAmount}: ₹${fare.fareRate.toStringAsFixed(2)}'; // "Fare: ₹X.XX"
-        timeDetails = '${strings.labelTimeRange}: ${fare.from ?? '?'} - ${fare.toCustom ?? '?'} ${strings.labelMinutesAbbr}'; // "Range: X - Y min"
+        fareDetails =
+            '${strings.labelFareAmount}: ₹${fare.fareRate.toStringAsFixed(2)}'; // "Fare: ₹X.XX"
+        timeDetails =
+            '${strings.labelTimeRange}: ${fare.from ?? '?'} - ${fare.toCustom ?? '?'} ${strings.labelMinutesAbbr}'; // "Range: X - Y min"
         break;
       case FareTypes.freePass:
         fareDetails = strings.fareTypeFreePass; // "Free Pass"
         timeDetails = ''; // No extra details
         break;
       case FareTypes.daily:
-        fareDetails = '₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelDay}'; // "₹X.XX / Day"
+        fareDetails =
+            '₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelDay}'; // "₹X.XX / Day"
         break;
       case FareTypes.hourly:
-        fareDetails = '₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelHour}'; // "₹X.XX / Hour"
+        fareDetails =
+            '₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelHour}'; // "₹X.XX / Hour"
         break;
       case FareTypes.monthlyPass:
-        fareDetails = '₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelMonth}'; // "₹X.XX / Month"
+        fareDetails =
+            '₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelMonth}'; // "₹X.XX / Month"
         break;
       case FareTypes.hourWiseCustom:
-        fareDetails = '${strings.labelBaseRate}: ₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelHour}'; // "Base: ₹X.XX / Hour"
-        timeDetails = '${strings.labelBaseHours}: ${fare.baseHours ?? '-'}'; // "Base Hours: X"
+        fareDetails =
+            '${strings.labelBaseRate}: ₹${fare.fareRate.toStringAsFixed(2)} / ${strings.labelHour}'; // "Base: ₹X.XX / Hour"
+        timeDetails =
+            '${strings.labelBaseHours}: ${fare.baseHours ?? '-'}'; // "Base Hours: X"
         if (fare.discountRate != null && fare.discountRate! > 0) {
           // Add discount info if present and positive
-          timeDetails += '\n${strings.labelDiscount}: ${fare.discountRate}%'; // "Discount: Y%"
+          timeDetails +=
+              '\n${strings.labelDiscount}: ${fare.discountRate}%'; // "Discount: Y%"
         }
         break;
       default:
-      // Fallback for unknown types (shouldn't happen ideally)
-        fareDetails = '${strings.labelRate}: ₹${fare.fareRate.toStringAsFixed(2)}'; // "Rate: ₹X.XX"
+        // Fallback for unknown types (shouldn't happen ideally)
+        fareDetails =
+            '${strings.labelRate}: ₹${fare.fareRate.toStringAsFixed(2)}'; // "Rate: ₹X.XX"
     }
 
     return Card(
       margin: EdgeInsets.zero, // Keep margin as is unless specified otherwise
-      elevation: Theme.of(context).cardTheme.elevation ?? 2, // Use theme elevation
-      shape: Theme.of(context).cardTheme.shape ?? RoundedRectangleBorder( // Use theme shape
-        borderRadius: BorderRadius.circular(15),
-        side: BorderSide(
-          color: fare.isDeleted
-              ? AppColors.error.withOpacity(0.3) // Use defined AppColors more prominently
-              : AppColors.success.withOpacity(0.3), // Use defined AppColors
-          width: 1,
-        ),
-      ),
+      elevation:
+          Theme.of(context).cardTheme.elevation ?? 2, // Use theme elevation
+      shape: Theme.of(context).cardTheme.shape ??
+          RoundedRectangleBorder(
+            // Use theme shape
+            borderRadius: BorderRadius.circular(15),
+            side: BorderSide(
+              color: fare.isDeleted
+                  ? AppColors.error.withOpacity(
+                      0.3) // Use defined AppColors more prominently
+                  : AppColors.success.withOpacity(0.3), // Use defined AppColors
+              width: 1,
+            ),
+          ),
       color: context.cardColor, // Use theme extension
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
         onTap: () {
-          developer.log('Fare card tapped for plaza: $plazaName, Fare ID: ${fare.fareId}', name: 'CustomCards');
+          developer.log(
+              'Fare card tapped for plaza: $plazaName, Fare ID: ${fare.fareId}',
+              name: 'CustomCards');
           onTap();
         },
         child: Padding(
@@ -742,16 +796,24 @@ class CustomCards {
                             children: [
                               Text(
                                 strings.labelPlazaName, // Label text
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: context.textSecondaryColor, // Use theme secondary color
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: context
+                                          .textSecondaryColor, // Use theme secondary color
+                                    ),
                               ),
                               Text(
                                 plazaName, // Plaza name value
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: context.textPrimaryColor, // Use theme primary color
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: context
+                                          .textPrimaryColor, // Use theme primary color
+                                    ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -760,7 +822,8 @@ class CustomCards {
                         ),
                         const SizedBox(width: 8), // Space before status
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: fare.isDeleted
                                 ? AppColors.error.withOpacity(0.1)
@@ -768,11 +831,18 @@ class CustomCards {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            fare.isDeleted ? strings.labelInactive : strings.labelActive,
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: fare.isDeleted ? AppColors.error : AppColors.success,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            fare.isDeleted
+                                ? strings.labelInactive
+                                : strings.labelActive,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: fare.isDeleted
+                                      ? AppColors.error
+                                      : AppColors.success,
+                                  fontWeight: FontWeight.w600,
+                                ),
                             textAlign: TextAlign.center,
                           ),
                         ),
@@ -790,16 +860,22 @@ class CustomCards {
                             children: [
                               Text(
                                 strings.labelVehicleType,
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: context.textSecondaryColor,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: context.textSecondaryColor,
+                                    ),
                               ),
                               Text(
                                 fare.vehicleType,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: context.textPrimaryColor,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: context.textPrimaryColor,
+                                    ),
                               ),
                             ],
                           ),
@@ -810,16 +886,22 @@ class CustomCards {
                             children: [
                               Text(
                                 strings.labelFareType,
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: context.textSecondaryColor,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: context.textSecondaryColor,
+                                    ),
                               ),
                               Text(
                                 fare.fareType,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: context.textPrimaryColor,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: context.textPrimaryColor,
+                                    ),
                               ),
                             ],
                           ),
@@ -838,27 +920,39 @@ class CustomCards {
                             children: [
                               Text(
                                 // Dynamic label based on content
-                                fare.fareType == FareTypes.progressive ? strings.labelDetails : strings.labelFareDetails,
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: context.textSecondaryColor,
-                                ),
+                                fare.fareType == FareTypes.progressive
+                                    ? strings.labelDetails
+                                    : strings.labelFareDetails,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: context.textSecondaryColor,
+                                    ),
                               ),
                               Text(
                                 fareDetails, // The calculated fare string
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.bold, // Make rate bold
-                                  color: context.textPrimaryColor,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      fontWeight:
+                                          FontWeight.bold, // Make rate bold
+                                      color: context.textPrimaryColor,
+                                    ),
                               ),
                               // Show time details if present (Progressive, Hour-wise)
                               if (timeDetails.isNotEmpty) ...[
                                 const SizedBox(height: 4),
                                 Text(
                                   timeDetails,
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                    color: context.textSecondaryColor,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                        color: context.textSecondaryColor,
+                                      ),
                                 ),
                               ],
                             ],
@@ -870,17 +964,23 @@ class CustomCards {
                             children: [
                               Text(
                                 strings.labelEffectivePeriod,
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: context.textSecondaryColor,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: context.textSecondaryColor,
+                                    ),
                               ),
                               Text(
                                 // Format dates, use 'Ongoing' if end date is null
                                 '${DateFormat('dd MMM yyyy').format(fare.startEffectDate)} - ${fare.endEffectDate != null ? DateFormat('dd MMM yyyy').format(fare.endEffectDate!) : strings.labelOngoing}',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: context.textPrimaryColor,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: context.textPrimaryColor,
+                                    ),
                               ),
                             ],
                           ),
@@ -894,9 +994,9 @@ class CustomCards {
               Container(
                 width: 30,
                 alignment: Alignment.center,
-                child: Icon(
-                    Icons.chevron_right,
-                    color: context.textSecondaryColor, // Use secondary color for less emphasis
+                child: Icon(Icons.chevron_right,
+                    color: context
+                        .textSecondaryColor, // Use secondary color for less emphasis
                     size: Theme.of(context).iconTheme.size ?? 24),
               ),
             ],

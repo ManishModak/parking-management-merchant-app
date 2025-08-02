@@ -25,7 +25,8 @@ class DisputeList extends StatefulWidget {
   State<DisputeList> createState() => _DisputeListState();
 }
 
-class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedListMixin<Map<String, dynamic>> {
+class _DisputeListState extends State<DisputeList>
+    with RouteAware, PaginatedListMixin<Map<String, dynamic>> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   late DisputeListViewModel _viewModel;
@@ -35,9 +36,9 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
   Timer? _debounce;
   bool _isInitialized = false;
 
-  Set<String> _selectedStatuses = {};
-  Set<String> _selectedVehicleTypes = {};
-  Set<String> _selectedPlazaNames = {};
+  final Set<String> _selectedStatuses = {};
+  final Set<String> _selectedVehicleTypes = {};
+  final Set<String> _selectedPlazaNames = {};
   DateTimeRange? _selectedDateRange;
 
   @override
@@ -75,7 +76,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _routeObserver = Provider.of<RouteObserver<ModalRoute>>(context, listen: false);
+    _routeObserver =
+        Provider.of<RouteObserver<ModalRoute>>(context, listen: false);
     _routeObserver.subscribe(this, ModalRoute.of(context)!);
     if (!_isInitialized) {
       _isInitialized = true;
@@ -100,35 +102,69 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
     await _viewModel.fetchOpenDisputes(reset: true);
   }
 
-  List<Map<String, dynamic>> _getFilteredDisputes(List<Map<String, dynamic>> disputes) {
+  List<Map<String, dynamic>> _getFilteredDisputes(
+      List<Map<String, dynamic>> disputes) {
     return disputes.where((dispute) {
-      final entryTime = DateTime.tryParse(dispute['entryTime']?.toString() ?? '');
-      final entryTimeString = entryTime != null ? DateFormat('dd MMM yyyy, hh:mm a').format(entryTime) : '';
+      final entryTime =
+          DateTime.tryParse(dispute['entryTime']?.toString() ?? '');
+      final entryTimeString = entryTime != null
+          ? DateFormat('dd MMM yyyy, hh:mm a').format(entryTime)
+          : '';
 
       final matchesSearch = _searchQuery.isEmpty ||
-          (dispute['disputeId']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          (dispute['plazaId']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          (dispute['vehicleNumber']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          (dispute['vehicleType']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          (dispute['plazaName']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-          (dispute['status']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
+          (dispute['disputeId']
+                  ?.toString()
+                  .toLowerCase()
+                  .contains(_searchQuery) ??
+              false) ||
+          (dispute['plazaId']
+                  ?.toString()
+                  .toLowerCase()
+                  .contains(_searchQuery) ??
+              false) ||
+          (dispute['vehicleNumber']
+                  ?.toString()
+                  .toLowerCase()
+                  .contains(_searchQuery) ??
+              false) ||
+          (dispute['vehicleType']
+                  ?.toString()
+                  .toLowerCase()
+                  .contains(_searchQuery) ??
+              false) ||
+          (dispute['plazaName']
+                  ?.toString()
+                  .toLowerCase()
+                  .contains(_searchQuery) ??
+              false) ||
+          (dispute['status']?.toString().toLowerCase().contains(_searchQuery) ??
+              false) ||
           entryTimeString.toLowerCase().contains(_searchQuery);
 
       final disputeStatus = dispute['status']?.toString().toLowerCase() ?? '';
-      final matchesStatus = _selectedStatuses.isEmpty || _selectedStatuses.contains(disputeStatus);
+      final matchesStatus = _selectedStatuses.isEmpty ||
+          _selectedStatuses.contains(disputeStatus);
 
       final matchesVehicleType = _selectedVehicleTypes.isEmpty ||
-          _selectedVehicleTypes.contains(dispute['vehicleType']?.toString().toLowerCase());
+          _selectedVehicleTypes
+              .contains(dispute['vehicleType']?.toString().toLowerCase());
 
       final matchesPlazaName = _selectedPlazaNames.isEmpty ||
-          _selectedPlazaNames.contains(dispute['plazaName']?.toString().toLowerCase());
+          _selectedPlazaNames
+              .contains(dispute['plazaName']?.toString().toLowerCase());
 
       final matchesDate = _selectedDateRange == null ||
           (entryTime != null &&
-              entryTime.isAfter(_selectedDateRange!.start.subtract(const Duration(days: 1))) &&
-              entryTime.isBefore(_selectedDateRange!.end.add(const Duration(days: 1))));
+              entryTime.isAfter(_selectedDateRange!.start
+                  .subtract(const Duration(days: 1))) &&
+              entryTime.isBefore(
+                  _selectedDateRange!.end.add(const Duration(days: 1))));
 
-      return matchesSearch && matchesStatus && matchesVehicleType && matchesPlazaName && matchesDate;
+      return matchesSearch &&
+          matchesStatus &&
+          matchesVehicleType &&
+          matchesPlazaName &&
+          matchesDate;
     }).toList();
   }
 
@@ -161,7 +197,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
               const SizedBox(height: 8),
               Text(
                 '${strings.lastUpdated}: ${DateTime.now().toString().substring(0, 16)}. ${strings.swipeToRefresh}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: Colors.grey[400]),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -185,7 +224,7 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
       displayText = strings.last30DaysLabel;
     } else {
       displayText =
-      '${DateFormat('dd MMM').format(_selectedDateRange!.start)} - ${DateFormat('dd MMM').format(_selectedDateRange!.end)}';
+          '${DateFormat('dd MMM').format(_selectedDateRange!.start)} - ${DateFormat('dd MMM').format(_selectedDateRange!.end)}';
     }
 
     final textColor = context.textPrimaryColor;
@@ -208,7 +247,9 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
               displayText,
               style: TextStyle(
                 color: textColor,
-                fontWeight: _selectedDateRange != null ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: _selectedDateRange != null
+                    ? FontWeight.w600
+                    : FontWeight.normal,
               ),
             ),
           ],
@@ -218,8 +259,9 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
   }
 
   Widget _buildMoreFiltersChip(S strings) {
-    final hasActiveFilters =
-        _selectedStatuses.isNotEmpty || _selectedVehicleTypes.isNotEmpty || _selectedPlazaNames.isNotEmpty;
+    final hasActiveFilters = _selectedStatuses.isNotEmpty ||
+        _selectedVehicleTypes.isNotEmpty ||
+        _selectedPlazaNames.isNotEmpty;
     final textColor = context.textPrimaryColor;
 
     return GestureDetector(
@@ -239,7 +281,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
               strings.filtersLabel,
               style: TextStyle(
                 color: textColor,
-                fontWeight: hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
+                fontWeight:
+                    hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ],
@@ -250,8 +293,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
 
   Widget _buildFilterChipsRow(S strings) {
     final selectedFilters = [
-      ..._selectedStatuses.map((s) => '${strings.labelStatus}: ${s.capitalize()}'),
-      ..._selectedVehicleTypes.map((v) => '${strings.vehicleLabel}: ${v.capitalize()}'),
+      ..._selectedStatuses
+          .map((s) => '${strings.labelStatus}: ${s.capitalize()}'),
+      ..._selectedVehicleTypes
+          .map((v) => '${strings.vehicleLabel}: ${v.capitalize()}'),
       ..._selectedPlazaNames.map((p) => '${strings.plazaLabel}: $p'),
     ];
     final textColor = context.textPrimaryColor;
@@ -276,14 +321,16 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                     });
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: context.secondaryCardColor,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       strings.resetAllLabel,
-                      style: TextStyle(color: textColor, fontWeight: FontWeight.normal),
+                      style: TextStyle(
+                          color: textColor, fontWeight: FontWeight.normal),
                     ),
                   ),
                 ),
@@ -295,26 +342,30 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
               if (selectedFilters.isNotEmpty) ...[
                 const SizedBox(width: 8),
                 ...selectedFilters.map((filter) => Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  child: Chip(
-                    label: Text(filter),
-                    onDeleted: () {
-                      setState(() {
-                        if (filter.startsWith('${strings.labelStatus}:')) {
-                          _selectedStatuses.remove(filter.split(': ')[1].toLowerCase());
-                        } else if (filter.startsWith('${strings.vehicleLabel}:')) {
-                          _selectedVehicleTypes.remove(filter.split(': ')[1].toLowerCase());
-                        } else if (filter.startsWith('${strings.plazaLabel}:')) {
-                          _selectedPlazaNames.remove(filter.split(': ')[1]);
-                        }
-                      });
-                    },
-                    deleteIcon: const Icon(Icons.close, size: 16),
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
-                    labelStyle: TextStyle(color: textColor),
-                    deleteIconColor: textColor,
-                  ),
-                )),
+                      margin: const EdgeInsets.only(right: 8),
+                      child: Chip(
+                        label: Text(filter),
+                        onDeleted: () {
+                          setState(() {
+                            if (filter.startsWith('${strings.labelStatus}:')) {
+                              _selectedStatuses
+                                  .remove(filter.split(': ')[1].toLowerCase());
+                            } else if (filter
+                                .startsWith('${strings.vehicleLabel}:')) {
+                              _selectedVehicleTypes
+                                  .remove(filter.split(': ')[1].toLowerCase());
+                            } else if (filter
+                                .startsWith('${strings.plazaLabel}:')) {
+                              _selectedPlazaNames.remove(filter.split(': ')[1]);
+                            }
+                          });
+                        },
+                        deleteIcon: const Icon(Icons.close, size: 16),
+                        backgroundColor: AppColors.primary.withOpacity(0.1),
+                        labelStyle: TextStyle(color: textColor),
+                        deleteIconColor: textColor,
+                      ),
+                    )),
               ],
             ],
           ),
@@ -336,14 +387,16 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
       context: context,
       isScrollControlled: true,
       backgroundColor: context.cardColor,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return Container(
               decoration: BoxDecoration(
                 color: context.cardColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               height: MediaQuery.of(context).size.height * 0.8,
               child: Column(
@@ -354,16 +407,22 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                       width: 50,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600],
+                        color: Theme.of(context).brightness == Brightness.light
+                            ? Colors.grey[300]
+                            : Colors.grey[600],
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       strings.advancedFiltersLabel,
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.textPrimaryColor),
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: context.textPrimaryColor),
                     ),
                   ),
                   Expanded(
@@ -373,9 +432,18 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                           title: strings.disputeStatusLabel,
                           options: [
                             {'key': 'open', 'label': strings.openDisputesLabel},
-                            {'key': 'inprogress', 'label': strings.inProgressDisputesLabel},
-                            {'key': 'accepted', 'label': strings.acceptedDisputesLabel},
-                            {'key': 'rejected', 'label': strings.rejectedDisputesLabel},
+                            {
+                              'key': 'inprogress',
+                              'label': strings.inProgressDisputesLabel
+                            },
+                            {
+                              'key': 'accepted',
+                              'label': strings.acceptedDisputesLabel
+                            },
+                            {
+                              'key': 'rejected',
+                              'label': strings.rejectedDisputesLabel
+                            },
                           ],
                           selectedItems: _selectedStatuses,
                           onChanged: (value, isSelected) {
@@ -392,11 +460,20 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                           title: strings.vehicleTypeLabel,
                           options: [
                             {'key': 'bike', 'label': strings.bikeLabel},
-                            {'key': '3-wheeler', 'label': strings.threeWheelerLabel},
-                            {'key': '4-wheeler', 'label': strings.fourWheelerLabel},
+                            {
+                              'key': '3-wheeler',
+                              'label': strings.threeWheelerLabel
+                            },
+                            {
+                              'key': '4-wheeler',
+                              'label': strings.fourWheelerLabel
+                            },
                             {'key': 'bus', 'label': strings.busLabel},
                             {'key': 'truck', 'label': strings.truckLabel},
-                            {'key': 'hmv', 'label': strings.heavyMachineryLabel},
+                            {
+                              'key': 'hmv',
+                              'label': strings.heavyMachineryLabel
+                            },
                           ],
                           selectedItems: _selectedVehicleTypes,
                           onChanged: (value, isSelected) {
@@ -482,7 +559,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           child: Text(
             title,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+            style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
           ),
         ),
         Padding(
@@ -508,7 +586,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
           ),
         ),
         const SizedBox(height: 16),
-        Divider(color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600]),
+        Divider(
+            color: Theme.of(context).brightness == Brightness.light
+                ? Colors.grey[300]
+                : Colors.grey[600]),
       ],
     );
   }
@@ -530,21 +611,27 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
               child: Text(
                 title,
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: textColor),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: TextField(
                 controller: searchController,
                 decoration: InputDecoration(
                   hintText: strings.searchPlazaHint,
                   hintStyle: TextStyle(color: Colors.grey[400]),
                   prefixIcon: Icon(Icons.search, color: textColor),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide(color: Colors.grey[400]!),
@@ -561,8 +648,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                 style: TextStyle(color: textColor),
                 onChanged: (value) {
                   setLocalState(() {
-                    filteredOptions =
-                        options.where((option) => option.toLowerCase().contains(value.toLowerCase())).toList();
+                    filteredOptions = options
+                        .where((option) =>
+                            option.toLowerCase().contains(value.toLowerCase()))
+                        .toList();
                   });
                 },
               ),
@@ -586,7 +675,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                         backgroundColor: context.secondaryCardColor,
                         labelStyle: TextStyle(
                           color: isSelected ? textColor : Colors.grey[400],
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
                         ),
                       );
                     }).toList(),
@@ -595,14 +685,18 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
               ),
             ),
             const SizedBox(height: 16),
-            Divider(color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600]),
+            Divider(
+                color: Theme.of(context).brightness == Brightness.light
+                    ? Colors.grey[300]
+                    : Colors.grey[600]),
           ],
         );
       },
     );
   }
 
-  Future<DateTimeRange?> _selectCustomDateRange(BuildContext context, DateTimeRange? initialRange) async {
+  Future<DateTimeRange?> _selectCustomDateRange(
+      BuildContext context, DateTimeRange? initialRange) async {
     final strings = S.of(context);
     final earliestDate = DateTime.now().subtract(const Duration(days: 365 * 5));
 
@@ -622,16 +716,14 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
               onSecondary: context.textPrimaryColor,
               surface: context.cardColor,
               onSurface: context.textPrimaryColor,
-              background: context.cardColor,
-              onBackground: context.textPrimaryColor,
               error: Colors.red,
               onError: Colors.white,
             ),
-            dialogBackgroundColor: context.cardColor,
             textTheme: TextTheme(
               bodyMedium: TextStyle(color: context.textPrimaryColor),
               titleLarge: TextStyle(color: context.textPrimaryColor),
             ),
+            dialogTheme: DialogThemeData(backgroundColor: context.cardColor),
           ),
           child: child!,
         );
@@ -640,14 +732,17 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
 
     if (picked == null) return null;
 
-    final start = picked.start.isBefore(earliestDate) ? earliestDate : picked.start;
-    final end = picked.end.isAfter(DateTime.now()) ? DateTime.now() : picked.end;
+    final start =
+        picked.start.isBefore(earliestDate) ? earliestDate : picked.start;
+    final end =
+        picked.end.isAfter(DateTime.now()) ? DateTime.now() : picked.end;
 
     final maxAllowedRange = const Duration(days: 365);
     if (end.difference(start) > maxAllowedRange) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(strings.dateRangeTooLongWarning, style: TextStyle(color: context.textPrimaryColor)),
+          content: Text(strings.dateRangeTooLongWarning,
+              style: TextStyle(color: context.textPrimaryColor)),
           backgroundColor: Colors.red,
         ),
       );
@@ -663,7 +758,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
       context: context,
       isScrollControlled: true,
       backgroundColor: context.cardColor,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         DateTimeRange? tempDateRange = _selectedDateRange;
         String? selectedOption = _getSelectedOption(tempDateRange);
@@ -674,7 +770,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
             return Container(
               decoration: BoxDecoration(
                 color: context.cardColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               height: MediaQuery.of(context).size.height * 0.4,
               child: Column(
@@ -685,20 +782,27 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                       width: 50,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.light ? Colors.grey[300] : Colors.grey[600],
+                        color: Theme.of(context).brightness == Brightness.light
+                            ? Colors.grey[300]
+                            : Colors.grey[600],
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       strings.selectDateRangeLabel,
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: textColor),
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Column(
@@ -713,8 +817,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                                   setDialogState(() {
                                     final now = DateTime.now();
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(now.year, now.month, now.day),
-                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
+                                      start: DateTime(
+                                          now.year, now.month, now.day),
+                                      end: DateTime(now.year, now.month,
+                                          now.day, 23, 59, 59),
                                     );
                                     selectedOption = 'Today';
                                   });
@@ -726,10 +832,18 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                                 isSelected: selectedOption == 'Yesterday',
                                 onTap: () {
                                   setDialogState(() {
-                                    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+                                    final yesterday = DateTime.now()
+                                        .subtract(const Duration(days: 1));
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(yesterday.year, yesterday.month, yesterday.day),
-                                      end: DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59),
+                                      start: DateTime(yesterday.year,
+                                          yesterday.month, yesterday.day),
+                                      end: DateTime(
+                                          yesterday.year,
+                                          yesterday.month,
+                                          yesterday.day,
+                                          23,
+                                          59,
+                                          59),
                                     );
                                     selectedOption = 'Yesterday';
                                   });
@@ -743,8 +857,11 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                                   setDialogState(() {
                                     final now = DateTime.now();
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7)),
-                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
+                                      start: DateTime(
+                                              now.year, now.month, now.day)
+                                          .subtract(const Duration(days: 7)),
+                                      end: DateTime(now.year, now.month,
+                                          now.day, 23, 59, 59),
                                     );
                                     selectedOption = 'Last 7 Days';
                                   });
@@ -763,8 +880,11 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                                   setDialogState(() {
                                     final now = DateTime.now();
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 30)),
-                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
+                                      start: DateTime(
+                                              now.year, now.month, now.day)
+                                          .subtract(const Duration(days: 30)),
+                                      end: DateTime(now.year, now.month,
+                                          now.day, 23, 59, 59),
                                     );
                                     selectedOption = 'Last 30 Days';
                                   });
@@ -775,7 +895,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                                 label: strings.customLabel,
                                 isSelected: selectedOption == 'Custom',
                                 onTap: () async {
-                                  final picked = await _selectCustomDateRange(context, tempDateRange);
+                                  final picked = await _selectCustomDateRange(
+                                      context, tempDateRange);
                                   if (picked != null) {
                                     setDialogState(() {
                                       tempDateRange = picked;
@@ -792,10 +913,14 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                   ),
                   if (selectedOption == 'Custom' && tempDateRange != null)
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 8.0),
                       child: Text(
                         '${strings.selectedRangeLabel}: ${DateFormat('dd MMM yyyy').format(tempDateRange!.start)} - ${DateFormat('dd MMM yyyy').format(tempDateRange!.end)}',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor),
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: textColor),
                       ),
                     ),
                   const Spacer(),
@@ -852,9 +977,13 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.2) : context.secondaryCardColor,
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.2)
+              : context.secondaryCardColor,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? AppColors.primary : Colors.transparent, width: 1),
+          border: Border.all(
+              color: isSelected ? AppColors.primary : Colors.transparent,
+              width: 1),
         ),
         child: Text(
           label,
@@ -885,28 +1014,35 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
 
   bool _isYesterdayRange(DateTimeRange range) {
     final yesterday = DateTime.now().subtract(const Duration(days: 1));
-    final yesterdayStart = DateTime(yesterday.year, yesterday.month, yesterday.day);
-    final yesterdayEnd = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
-    return range.start == yesterdayStart && range.end.isAtSameMomentAs(yesterdayEnd);
+    final yesterdayStart =
+        DateTime(yesterday.year, yesterday.month, yesterday.day);
+    final yesterdayEnd =
+        DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
+    return range.start == yesterdayStart &&
+        range.end.isAtSameMomentAs(yesterdayEnd);
   }
 
   bool _isLast7DaysRange(DateTimeRange range) {
     final now = DateTime.now();
-    final sevenDaysAgo = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7));
+    final sevenDaysAgo = DateTime(now.year, now.month, now.day)
+        .subtract(const Duration(days: 7));
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
     return range.start == sevenDaysAgo && range.end.isAtSameMomentAs(todayEnd);
   }
 
   bool _isLast30DaysRange(DateTimeRange range) {
     final now = DateTime.now();
-    final thirtyDaysAgo = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 30));
+    final thirtyDaysAgo = DateTime(now.year, now.month, now.day)
+        .subtract(const Duration(days: 30));
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
     return range.start == thirtyDaysAgo && range.end.isAtSameMomentAs(todayEnd);
   }
 
   Widget _buildDisputeCard(Map<String, dynamic> dispute, S strings) {
     final entryTime = DateTime.tryParse(dispute['entryTime']?.toString() ?? '');
-    final entryTimeString = entryTime != null ? DateFormat('dd MMM, hh:mm a').format(entryTime) : strings.naLabel;
+    final entryTimeString = entryTime != null
+        ? DateFormat('dd MMM, hh:mm a').format(entryTime)
+        : strings.naLabel;
     final textColor = context.textPrimaryColor;
     final status = dispute['status']?.toString().toLowerCase() ?? 'open';
     final statusColor = _getStatusColor(status);
@@ -921,7 +1057,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
       ),
       child: InkWell(
         onTap: () {
-          if (widget.viewDisputeOptionSelect) { // Fixed syntax
+          if (widget.viewDisputeOptionSelect) {
+            // Fixed syntax
             Navigator.pushNamed(
               context,
               AppRoutes.disputeDetails,
@@ -936,7 +1073,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
           }
         },
         child: Padding(
-          padding: const EdgeInsets.only(left: 8.0, right: 4, top: 8, bottom: 8),
+          padding:
+              const EdgeInsets.only(left: 8.0, right: 4, top: 8, bottom: 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -946,7 +1084,10 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                   children: [
                     Text(
                       '${dispute['plazaName']?.toString() ?? strings.naLabel} | ${dispute['disputeId']?.toString() ?? strings.naLabel}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: textColor),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: textColor),
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -969,7 +1110,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: statusColor.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(10),
@@ -984,7 +1126,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color, size: 20),
+                    Icon(Icons.chevron_right,
+                        color: Theme.of(context).iconTheme.color, size: 20),
                   ],
                 ),
               ),
@@ -1035,11 +1178,20 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(width: 150, height: 18, color: context.backgroundColor),
+                        Container(
+                            width: 150,
+                            height: 18,
+                            color: context.backgroundColor),
                         const SizedBox(height: 4),
-                        Container(width: 100, height: 14, color: context.backgroundColor),
+                        Container(
+                            width: 100,
+                            height: 14,
+                            color: context.backgroundColor),
                         const SizedBox(height: 4),
-                        Container(width: 120, height: 14, color: context.backgroundColor),
+                        Container(
+                            width: 120,
+                            height: 14,
+                            color: context.backgroundColor),
                       ],
                     ),
                   ),
@@ -1107,11 +1259,17 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
         children: [
           Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
           const SizedBox(height: 16),
-          Text(errorTitle, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.textPrimaryColor)),
+          Text(errorTitle,
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: context.textPrimaryColor)),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(errorMessage, style: TextStyle(fontSize: 16, color: context.textPrimaryColor), textAlign: TextAlign.center),
+            child: Text(errorMessage,
+                style: TextStyle(fontSize: 16, color: context.textPrimaryColor),
+                textAlign: TextAlign.center),
           ),
           const SizedBox(height: 24),
           CustomButtons.primaryButton(
@@ -1139,14 +1297,20 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
           const SizedBox(height: 16),
           Text(
             strings.noDisputesFound,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textPrimaryColor),
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: context.textPrimaryColor),
           ),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
               strings.adjustFiltersMessage,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: Colors.grey[400]),
               textAlign: TextAlign.center,
             ),
           ),
@@ -1162,7 +1326,8 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
       builder: (context, viewModel, _) {
         final filteredDisputes = _getFilteredDisputes(viewModel.disputes);
         final totalPages = getTotalPages(filteredDisputes);
-        final paginatedDisputes = getPaginatedItems(filteredDisputes, _currentPage);
+        final paginatedDisputes =
+            getPaginatedItems(filteredDisputes, _currentPage);
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -1188,18 +1353,21 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
                         physics: const AlwaysScrollableScrollPhysics(),
                         children: [
                           const SizedBox(height: 8),
-                          if (viewModel.errorMessage != null && !viewModel.isLoading)
+                          if (viewModel.errorMessage != null &&
+                              !viewModel.isLoading)
                             SizedBox(
                               height: MediaQuery.of(context).size.height * 0.6,
                               child: _buildErrorState(strings),
                             )
-                          else if (filteredDisputes.isEmpty && !viewModel.isLoading)
+                          else if (filteredDisputes.isEmpty &&
+                              !viewModel.isLoading)
                             SizedBox(
                               height: MediaQuery.of(context).size.height * 0.6,
                               child: _buildEmptyState(strings),
                             )
                           else if (!viewModel.isLoading)
-                              ...paginatedDisputes.map((dispute) => _buildDisputeCard(dispute, strings)),
+                            ...paginatedDisputes.map((dispute) =>
+                                _buildDisputeCard(dispute, strings)),
                         ],
                       ),
                       if (viewModel.isLoading)
@@ -1213,19 +1381,20 @@ class _DisputeListState extends State<DisputeList> with RouteAware, PaginatedLis
               ),
             ],
           ),
-          bottomNavigationBar: filteredDisputes.isNotEmpty && !viewModel.isLoading
-              ? Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            padding: const EdgeInsets.all(4.0),
-            child: SafeArea(
-              child: PaginationControls(
-                currentPage: _currentPage,
-                totalPages: totalPages,
-                onPageChange: _updatePage,
-              ),
-            ),
-          )
-              : null,
+          bottomNavigationBar:
+              filteredDisputes.isNotEmpty && !viewModel.isLoading
+                  ? Container(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      padding: const EdgeInsets.all(4.0),
+                      child: SafeArea(
+                        child: PaginationControls(
+                          currentPage: _currentPage,
+                          totalPages: totalPages,
+                          onPageChange: _updatePage,
+                        ),
+                      ),
+                    )
+                  : null,
         );
       },
     );

@@ -35,9 +35,9 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
   int _currentPage = 1;
   Timer? _debounce;
 
-  Set<String> _selectedStatuses = {};
-  Set<String> _selectedVehicleTypes = {};
-  Set<String> _selectedPlazaNames = {};
+  final Set<String> _selectedStatuses = {};
+  final Set<String> _selectedVehicleTypes = {};
+  final Set<String> _selectedPlazaNames = {};
 
   @override
   void initState() {
@@ -51,7 +51,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
         setState(() {
           _searchQuery = _searchController.text.toLowerCase();
           _currentPage = 1;
-          developer.log('Search query updated: $_searchQuery', name: 'RejectTicketScreen');
+          developer.log('Search query updated: $_searchQuery',
+              name: 'RejectTicketScreen');
         });
       });
     });
@@ -96,16 +97,37 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
     await _viewModel.fetchOpenTickets();
   }
 
-  List<Map<String, dynamic>> _getFilteredTickets(List<Map<String, dynamic>> tickets) {
+  List<Map<String, dynamic>> _getFilteredTickets(
+      List<Map<String, dynamic>> tickets) {
     var filtered = tickets;
 
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((ticket) {
-        return (ticket['ticketId']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-            (ticket['plazaId']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-            (ticket['vehicleNumber']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-            (ticket['vehicleType']?.toString().toLowerCase().contains(_searchQuery) ?? false) ||
-            (ticket['plazaName']?.toString().toLowerCase().contains(_searchQuery) ?? false);
+        return (ticket['ticketId']
+                    ?.toString()
+                    .toLowerCase()
+                    .contains(_searchQuery) ??
+                false) ||
+            (ticket['plazaId']
+                    ?.toString()
+                    .toLowerCase()
+                    .contains(_searchQuery) ??
+                false) ||
+            (ticket['vehicleNumber']
+                    ?.toString()
+                    .toLowerCase()
+                    .contains(_searchQuery) ??
+                false) ||
+            (ticket['vehicleType']
+                    ?.toString()
+                    .toLowerCase()
+                    .contains(_searchQuery) ??
+                false) ||
+            (ticket['plazaName']
+                    ?.toString()
+                    .toLowerCase()
+                    .contains(_searchQuery) ??
+                false);
       }).toList();
     }
 
@@ -115,24 +137,38 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
         if (entryTimeStr == null) return false;
         final entryTime = DateTime.tryParse(entryTimeStr);
         if (entryTime == null) return false;
-        final inRange = entryTime.isAfter(_selectedDateRange!.start.subtract(const Duration(milliseconds: 1))) &&
-            entryTime.isBefore(_selectedDateRange!.end.add(const Duration(milliseconds: 1)));
-        developer.log('Ticket ${ticket['ticketId']} entryTime: $entryTime, in range: $inRange', name: 'RejectTicketScreen');
+        final inRange = entryTime.isAfter(_selectedDateRange!.start
+                .subtract(const Duration(milliseconds: 1))) &&
+            entryTime.isBefore(
+                _selectedDateRange!.end.add(const Duration(milliseconds: 1)));
+        developer.log(
+            'Ticket ${ticket['ticketId']} entryTime: $entryTime, in range: $inRange',
+            name: 'RejectTicketScreen');
         return inRange;
       }).toList();
     }
 
     if (_selectedStatuses.isNotEmpty) {
-      filtered = filtered.where((ticket) => _selectedStatuses.contains(ticket['ticketStatus']?.toString().toLowerCase())).toList();
+      filtered = filtered
+          .where((ticket) => _selectedStatuses
+              .contains(ticket['ticketStatus']?.toString().toLowerCase()))
+          .toList();
     }
     if (_selectedVehicleTypes.isNotEmpty) {
-      filtered = filtered.where((ticket) => _selectedVehicleTypes.contains(ticket['vehicleType']?.toString().toLowerCase())).toList();
+      filtered = filtered
+          .where((ticket) => _selectedVehicleTypes
+              .contains(ticket['vehicleType']?.toString().toLowerCase()))
+          .toList();
     }
     if (_selectedPlazaNames.isNotEmpty) {
-      filtered = filtered.where((ticket) => _selectedPlazaNames.contains(ticket['plazaName']?.toString().toLowerCase())).toList();
+      filtered = filtered
+          .where((ticket) => _selectedPlazaNames
+              .contains(ticket['plazaName']?.toString().toLowerCase()))
+          .toList();
     }
 
-    developer.log('Filtered tickets count: ${filtered.length}', name: 'RejectTicketScreen');
+    developer.log('Filtered tickets count: ${filtered.length}',
+        name: 'RejectTicketScreen');
     return filtered;
   }
 
@@ -140,7 +176,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
     final filteredTickets = _getFilteredTickets(_viewModel.tickets);
     updatePage(newPage, filteredTickets, (page) {
       setState(() => _currentPage = page);
-      developer.log('Page updated to: $_currentPage', name: 'RejectTicketScreen');
+      developer.log('Page updated to: $_currentPage',
+          name: 'RejectTicketScreen');
       _scrollController.animateTo(
         0,
         duration: const Duration(milliseconds: 300),
@@ -163,7 +200,7 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
       displayText = strings.last30DaysLabel;
     } else {
       displayText =
-      '${DateFormat('dd MMM').format(_selectedDateRange!.start)} - ${DateFormat('dd MMM').format(_selectedDateRange!.end)}';
+          '${DateFormat('dd MMM').format(_selectedDateRange!.start)} - ${DateFormat('dd MMM').format(_selectedDateRange!.end)}';
     }
 
     final textColor = context.textPrimaryColor;
@@ -174,7 +211,9 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: _selectedDateRange != null ? AppColors.primary.withOpacity(0.1) : context.secondaryCardColor,
+          color: _selectedDateRange != null
+              ? AppColors.primary.withOpacity(0.1)
+              : context.secondaryCardColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -189,8 +228,11 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
             Text(
               displayText,
               style: TextStyle(
-                color: _selectedDateRange != null ? AppColors.primary : textColor,
-                fontWeight: _selectedDateRange != null ? FontWeight.w600 : FontWeight.normal,
+                color:
+                    _selectedDateRange != null ? AppColors.primary : textColor,
+                fontWeight: _selectedDateRange != null
+                    ? FontWeight.w600
+                    : FontWeight.normal,
               ),
             ),
           ],
@@ -200,7 +242,9 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
   }
 
   Widget _buildMoreFiltersChip(S strings) {
-    final hasActiveFilters = _selectedStatuses.isNotEmpty || _selectedVehicleTypes.isNotEmpty || _selectedPlazaNames.isNotEmpty;
+    final hasActiveFilters = _selectedStatuses.isNotEmpty ||
+        _selectedVehicleTypes.isNotEmpty ||
+        _selectedPlazaNames.isNotEmpty;
     final textColor = context.textPrimaryColor;
 
     return GestureDetector(
@@ -208,7 +252,9 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: hasActiveFilters ? AppColors.primary.withOpacity(0.1) : context.secondaryCardColor,
+          color: hasActiveFilters
+              ? AppColors.primary.withOpacity(0.1)
+              : context.secondaryCardColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -224,7 +270,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
               strings.filtersLabel,
               style: TextStyle(
                 color: hasActiveFilters ? AppColors.primary : textColor,
-                fontWeight: hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
+                fontWeight:
+                    hasActiveFilters ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ],
@@ -235,8 +282,10 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
 
   Widget _buildFilterChipsRow(S strings) {
     final selectedFilters = [
-      ..._selectedStatuses.map((s) => '${strings.statusLabel}: ${s.capitalize()}'),
-      ..._selectedVehicleTypes.map((v) => '${strings.vehicleLabel}: ${v.capitalize()}'),
+      ..._selectedStatuses
+          .map((s) => '${strings.statusLabel}: ${s.capitalize()}'),
+      ..._selectedVehicleTypes
+          .map((v) => '${strings.vehicleLabel}: ${v.capitalize()}'),
       ..._selectedPlazaNames.map((p) => '${strings.plazaLabel}: $p'),
     ];
     final textColor = context.textPrimaryColor;
@@ -261,7 +310,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                     });
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: context.secondaryCardColor,
                       borderRadius: BorderRadius.circular(12),
@@ -283,17 +333,21 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
               if (selectedFilters.isNotEmpty) ...[
                 const SizedBox(width: 8),
                 ...selectedFilters.map(
-                      (filter) => Container(
+                  (filter) => Container(
                     margin: const EdgeInsets.only(right: 8),
                     child: Chip(
                       label: Text(filter),
                       onDeleted: () {
                         setState(() {
                           if (filter.startsWith('${strings.statusLabel}:')) {
-                            _selectedStatuses.remove(filter.split(': ')[1].toLowerCase());
-                          } else if (filter.startsWith('${strings.vehicleLabel}:')) {
-                            _selectedVehicleTypes.remove(filter.split(': ')[1].toLowerCase());
-                          } else if (filter.startsWith('${strings.plazaLabel}:')) {
+                            _selectedStatuses
+                                .remove(filter.split(': ')[1].toLowerCase());
+                          } else if (filter
+                              .startsWith('${strings.vehicleLabel}:')) {
+                            _selectedVehicleTypes
+                                .remove(filter.split(': ')[1].toLowerCase());
+                          } else if (filter
+                              .startsWith('${strings.plazaLabel}:')) {
                             _selectedPlazaNames.remove(filter.split(': ')[1]);
                           }
                           _currentPage = 1;
@@ -327,14 +381,16 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return Container(
               decoration: BoxDecoration(
                 color: context.cardColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               height: MediaQuery.of(context).size.height * 0.8,
               child: Column(
@@ -353,7 +409,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       strings.advancedFiltersLabel,
                       style: TextStyle(
@@ -386,11 +443,20 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                           title: strings.vehicleTypeLabel,
                           options: [
                             {'key': 'bike', 'label': strings.bikeLabel},
-                            {'key': '3-wheeler', 'label': strings.threeWheelerLabel},
-                            {'key': '4-wheeler', 'label': strings.fourWheelerLabel},
+                            {
+                              'key': '3-wheeler',
+                              'label': strings.threeWheelerLabel
+                            },
+                            {
+                              'key': '4-wheeler',
+                              'label': strings.fourWheelerLabel
+                            },
                             {'key': 'bus', 'label': strings.busLabel},
                             {'key': 'truck', 'label': strings.truckLabel},
-                            {'key': 'hmv', 'label': strings.heavyMachineryLabel},
+                            {
+                              'key': 'hmv',
+                              'label': strings.heavyMachineryLabel
+                            },
                           ],
                           selectedItems: _selectedVehicleTypes,
                           onChanged: (value, isSelected) {
@@ -533,7 +599,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
               child: Text(
                 title,
                 style: TextStyle(
@@ -544,14 +611,16 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: TextField(
                 controller: searchController,
                 decoration: InputDecoration(
                   hintText: strings.searchPlazaHint,
                   hintStyle: TextStyle(color: Colors.grey[400]),
                   prefixIcon: Icon(Icons.search, color: textColor),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide(color: Colors.grey[300]!),
@@ -568,8 +637,10 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                 style: TextStyle(color: textColor),
                 onChanged: (value) {
                   setLocalState(() {
-                    filteredOptions =
-                        options.where((option) => option.toLowerCase().contains(value.toLowerCase())).toList();
+                    filteredOptions = options
+                        .where((option) =>
+                            option.toLowerCase().contains(value.toLowerCase()))
+                        .toList();
                   });
                 },
               ),
@@ -593,7 +664,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                         backgroundColor: context.secondaryCardColor,
                         labelStyle: TextStyle(
                           color: isSelected ? textColor : Colors.grey[400],
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
                         ),
                       );
                     }).toList(),
@@ -635,8 +707,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
               Text(
                 '${strings.lastUpdated}: ${DateTime.now().toString().substring(0, 16)}. ${strings.swipeToRefresh}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[400],
-                ),
+                      color: Colors.grey[400],
+                    ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -646,7 +718,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
     );
   }
 
-  Future<DateTimeRange?> _selectCustomDateRange(BuildContext context, DateTimeRange? initialRange) async {
+  Future<DateTimeRange?> _selectCustomDateRange(
+      BuildContext context, DateTimeRange? initialRange) async {
     final strings = S.of(context);
     final earliestDate = DateTime.now().subtract(const Duration(days: 365 * 5));
 
@@ -664,11 +737,11 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
               surface: context.cardColor,
               onSurface: context.textPrimaryColor,
             ),
-            dialogBackgroundColor: context.cardColor,
             textTheme: Theme.of(context).textTheme.copyWith(
-              bodyLarge: TextStyle(color: context.textPrimaryColor),
-              bodyMedium: TextStyle(color: context.textPrimaryColor),
-            ),
+                  bodyLarge: TextStyle(color: context.textPrimaryColor),
+                  bodyMedium: TextStyle(color: context.textPrimaryColor),
+                ),
+            dialogTheme: DialogThemeData(backgroundColor: context.cardColor),
           ),
           child: child!,
         );
@@ -677,8 +750,10 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
 
     if (picked == null) return null;
 
-    final start = picked.start.isBefore(earliestDate) ? earliestDate : picked.start;
-    final end = picked.end.isAfter(DateTime.now()) ? DateTime.now() : picked.end;
+    final start =
+        picked.start.isBefore(earliestDate) ? earliestDate : picked.start;
+    final end =
+        picked.end.isAfter(DateTime.now()) ? DateTime.now() : picked.end;
 
     const maxAllowedRange = Duration(days: 365);
     if (end.difference(start) > maxAllowedRange) {
@@ -700,7 +775,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         DateTimeRange? tempDateRange = _selectedDateRange;
         String? selectedOption = _getSelectedOption(tempDateRange);
@@ -711,7 +787,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
             return Container(
               decoration: BoxDecoration(
                 color: context.cardColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               height: MediaQuery.of(context).size.height * 0.4,
               child: Column(
@@ -730,7 +807,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       strings.selectDateRangeLabel,
                       style: TextStyle(
@@ -741,7 +819,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Column(
@@ -756,8 +835,10 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                                   setDialogState(() {
                                     final now = DateTime.now();
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(now.year, now.month, now.day),
-                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
+                                      start: DateTime(
+                                          now.year, now.month, now.day),
+                                      end: DateTime(now.year, now.month,
+                                          now.day, 23, 59, 59),
                                     );
                                     selectedOption = 'Today';
                                   });
@@ -769,10 +850,18 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                                 isSelected: selectedOption == 'Yesterday',
                                 onTap: () {
                                   setDialogState(() {
-                                    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+                                    final yesterday = DateTime.now()
+                                        .subtract(const Duration(days: 1));
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(yesterday.year, yesterday.month, yesterday.day),
-                                      end: DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59),
+                                      start: DateTime(yesterday.year,
+                                          yesterday.month, yesterday.day),
+                                      end: DateTime(
+                                          yesterday.year,
+                                          yesterday.month,
+                                          yesterday.day,
+                                          23,
+                                          59,
+                                          59),
                                     );
                                     selectedOption = 'Yesterday';
                                   });
@@ -786,8 +875,11 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                                   setDialogState(() {
                                     final now = DateTime.now();
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7)),
-                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
+                                      start: DateTime(
+                                              now.year, now.month, now.day)
+                                          .subtract(const Duration(days: 7)),
+                                      end: DateTime(now.year, now.month,
+                                          now.day, 23, 59, 59),
                                     );
                                     selectedOption = 'Last 7 Days';
                                   });
@@ -805,8 +897,11 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                                   setDialogState(() {
                                     final now = DateTime.now();
                                     tempDateRange = DateTimeRange(
-                                      start: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 30)),
-                                      end: DateTime(now.year, now.month, now.day, 23, 59, 59),
+                                      start: DateTime(
+                                              now.year, now.month, now.day)
+                                          .subtract(const Duration(days: 30)),
+                                      end: DateTime(now.year, now.month,
+                                          now.day, 23, 59, 59),
                                     );
                                     selectedOption = 'Last 30 Days';
                                   });
@@ -817,7 +912,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                                 label: strings.customLabel,
                                 isSelected: selectedOption == 'Custom',
                                 onTap: () async {
-                                  final picked = await _selectCustomDateRange(context, tempDateRange);
+                                  final picked = await _selectCustomDateRange(
+                                      context, tempDateRange);
                                   if (picked != null) {
                                     setDialogState(() {
                                       tempDateRange = picked;
@@ -834,7 +930,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                   ),
                   if (selectedOption == 'Custom' && tempDateRange != null) ...[
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 8.0),
                       child: Text(
                         '${strings.selectedRangeLabel}: ${DateFormat('dd MMM yyyy').format(tempDateRange!.start)} - ${DateFormat('dd MMM yyyy').format(tempDateRange!.end)}',
                         style: TextStyle(
@@ -911,9 +1008,13 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.2) : context.secondaryCardColor,
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.2)
+              : context.secondaryCardColor,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? AppColors.primary : Colors.transparent, width: 1),
+          border: Border.all(
+              color: isSelected ? AppColors.primary : Colors.transparent,
+              width: 1),
         ),
         child: Text(
           label,
@@ -935,21 +1036,26 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
 
   bool _isYesterdayRange(DateTimeRange range) {
     final yesterday = DateTime.now().subtract(const Duration(days: 1));
-    final yesterdayStart = DateTime(yesterday.year, yesterday.month, yesterday.day);
-    final yesterdayEnd = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
-    return range.start == yesterdayStart && range.end.isAtSameMomentAs(yesterdayEnd);
+    final yesterdayStart =
+        DateTime(yesterday.year, yesterday.month, yesterday.day);
+    final yesterdayEnd =
+        DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
+    return range.start == yesterdayStart &&
+        range.end.isAtSameMomentAs(yesterdayEnd);
   }
 
   bool _isLast7DaysRange(DateTimeRange range) {
     final now = DateTime.now();
-    final sevenDaysAgo = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 7));
+    final sevenDaysAgo = DateTime(now.year, now.month, now.day)
+        .subtract(const Duration(days: 7));
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
     return range.start == sevenDaysAgo && range.end.isAtSameMomentAs(todayEnd);
   }
 
   bool _isLast30DaysRange(DateTimeRange range) {
     final now = DateTime.now();
-    final thirtyDaysAgo = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 30));
+    final thirtyDaysAgo = DateTime(now.year, now.month, now.day)
+        .subtract(const Duration(days: 30));
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
     return range.start == thirtyDaysAgo && range.end.isAtSameMomentAs(todayEnd);
   }
@@ -968,23 +1074,23 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
           Text(
             strings.noRejectableTicketsLabel,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: context.textPrimaryColor,
-            ),
+                  color: context.textPrimaryColor,
+                ),
           ),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
               _searchQuery.isEmpty &&
-                  _selectedDateRange == null &&
-                  _selectedStatuses.isEmpty &&
-                  _selectedVehicleTypes.isEmpty &&
-                  _selectedPlazaNames.isEmpty
+                      _selectedDateRange == null &&
+                      _selectedStatuses.isEmpty &&
+                      _selectedVehicleTypes.isEmpty &&
+                      _selectedPlazaNames.isEmpty
                   ? strings.noTicketsToRejectMessage
                   : strings.noTicketsMatchSearchMessage,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[400],
-              ),
+                    color: Colors.grey[400],
+                  ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -1035,7 +1141,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
             child: Card(
               margin: const EdgeInsets.symmetric(horizontal: 12),
               elevation: 3,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -1047,8 +1154,16 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                         children: [
                           Stack(
                             children: [
-                              Container(width: 150, height: 16, color: context.backgroundColor),
-                              Positioned(right: 0, child: Container(width: 60, height: 24, color: context.backgroundColor)),
+                              Container(
+                                  width: 150,
+                                  height: 16,
+                                  color: context.backgroundColor),
+                              Positioned(
+                                  right: 0,
+                                  child: Container(
+                                      width: 60,
+                                      height: 24,
+                                      color: context.backgroundColor)),
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -1058,9 +1173,15 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(width: 80, height: 12, color: context.backgroundColor),
+                                    Container(
+                                        width: 80,
+                                        height: 12,
+                                        color: context.backgroundColor),
                                     const SizedBox(height: 4),
-                                    Container(width: 100, height: 14, color: context.backgroundColor),
+                                    Container(
+                                        width: 100,
+                                        height: 14,
+                                        color: context.backgroundColor),
                                   ],
                                 ),
                               ),
@@ -1068,9 +1189,15 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(width: 80, height: 12, color: context.backgroundColor),
+                                    Container(
+                                        width: 80,
+                                        height: 12,
+                                        color: context.backgroundColor),
                                     const SizedBox(height: 4),
-                                    Container(width: 100, height: 14, color: context.backgroundColor),
+                                    Container(
+                                        width: 100,
+                                        height: 14,
+                                        color: context.backgroundColor),
                                   ],
                                 ),
                               ),
@@ -1083,9 +1210,15 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(width: 80, height: 12, color: context.backgroundColor),
+                                    Container(
+                                        width: 80,
+                                        height: 12,
+                                        color: context.backgroundColor),
                                     const SizedBox(height: 4),
-                                    Container(width: 120, height: 14, color: context.backgroundColor),
+                                    Container(
+                                        width: 120,
+                                        height: 14,
+                                        color: context.backgroundColor),
                                   ],
                                 ),
                               ),
@@ -1093,9 +1226,15 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(width: 80, height: 12, color: context.backgroundColor),
+                                    Container(
+                                        width: 80,
+                                        height: 12,
+                                        color: context.backgroundColor),
                                     const SizedBox(height: 4),
-                                    Container(width: 140, height: 13, color: context.backgroundColor),
+                                    Container(
+                                        width: 140,
+                                        height: 13,
+                                        color: context.backgroundColor),
                                   ],
                                 ),
                               ),
@@ -1104,7 +1243,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                         ],
                       ),
                     ),
-                    Container(width: 30, height: 24, color: context.backgroundColor),
+                    Container(
+                        width: 30, height: 24, color: context.backgroundColor),
                   ],
                 ),
               ),
@@ -1134,7 +1274,9 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
         case HttpException _:
           final httpError = error as HttpException;
           errorTitle = strings.errorServerError;
-          errorMessage = httpError.message.isNotEmpty ? httpError.message : strings.errorServerErrorMessage;
+          errorMessage = httpError.message.isNotEmpty
+              ? httpError.message
+              : strings.errorServerErrorMessage;
           break;
         case ServiceException _:
           errorTitle = strings.errorUnexpected;
@@ -1154,7 +1296,10 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
           const SizedBox(height: 16),
           Text(
             errorTitle,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.textPrimaryColor),
+            style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: context.textPrimaryColor),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
@@ -1180,8 +1325,10 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
   }
 
   Widget _buildTicketCard(Map<String, dynamic> ticket, S strings) {
-    DateTime createdTime = DateTime.parse(ticket['ticketCreationTime'] ?? DateTime.now().toIso8601String());
-    String formattedCreatedTime = DateFormat('dd MMM, hh:mm a').format(createdTime);
+    DateTime createdTime = DateTime.parse(
+        ticket['ticketCreationTime'] ?? DateTime.now().toIso8601String());
+    String formattedCreatedTime =
+        DateFormat('dd MMM, hh:mm a').format(createdTime);
     Color statusColor;
     final ticketStatus = ticket['ticketStatus'] is Status
         ? ticket['ticketStatus'].toString().split('.').last.toLowerCase()
@@ -1210,21 +1357,25 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
       ),
       child: InkWell(
         onTap: () {
-          developer.log('Ticket card tapped: ${ticket['ticketId']}', name: 'TicketHistory');
+          developer.log('Ticket card tapped: ${ticket['ticketId']}',
+              name: 'TicketHistory');
 
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ChangeNotifierProvider<RejectTicketViewModel>.value(
-                  value: Provider.of<RejectTicketViewModel>(context, listen: false),
-                  child: ViewRejectTicketScreen(ticketId: ticket['ticketId'].toString()),
-                ),
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  ChangeNotifierProvider<RejectTicketViewModel>.value(
+                value:
+                    Provider.of<RejectTicketViewModel>(context, listen: false),
+                child: ViewRejectTicketScreen(
+                    ticketId: ticket['ticketId'].toString()),
               ),
-            ).then((_) => _refreshData());
-
+            ),
+          ).then((_) => _refreshData());
         },
         child: Padding(
-          padding: const EdgeInsets.only(left: 8.0, right: 4, top: 8, bottom: 8),
+          padding:
+              const EdgeInsets.only(left: 8.0, right: 4, top: 8, bottom: 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1234,31 +1385,36 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                   children: [
                     Text(
                       '${ticket['plazaName']?.toString() ?? strings.naLabel} | ${ticket['entryLaneId']?.toString() ?? strings.naLabel} | ${ticket['ticketRefId']?.toString() ?? strings.naLabel}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.textPrimaryColor),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: context.textPrimaryColor),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       '${ticket['vehicleNumber']?.toString() ?? strings.naLabel} | ${ticket['vehicleType']?.toString() ?? strings.naLabel} | $formattedCreatedTime',
-                      style: TextStyle(color: context.textPrimaryColor, fontSize: 14),
+                      style: TextStyle(
+                          color: context.textPrimaryColor, fontSize: 14),
                     ),
                     if (ticket['remarks']?.isNotEmpty ?? false)
                       Text(
                         ticket['remarks'],
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: context.textPrimaryColor, fontSize: 14),
+                        style: TextStyle(
+                            color: context.textPrimaryColor, fontSize: 14),
                       ),
                   ],
                 ),
               ),
-
               SizedBox(
                 width: 75,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: statusColor.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(10),
@@ -1273,7 +1429,8 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color, size: 20),
+                    Icon(Icons.chevron_right,
+                        color: Theme.of(context).iconTheme.color, size: 20),
                   ],
                 ),
               ),
@@ -1291,9 +1448,11 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
       builder: (context, viewModel, _) {
         final filteredTickets = _getFilteredTickets(viewModel.tickets);
         final totalPages = getTotalPages(filteredTickets);
-        final paginatedTickets = getPaginatedItems(filteredTickets, _currentPage);
+        final paginatedTickets =
+            getPaginatedItems(filteredTickets, _currentPage);
 
-        developer.log('Filtered tickets: ${filteredTickets.length}, Paginated tickets: ${paginatedTickets.length}',
+        developer.log(
+            'Filtered tickets: ${filteredTickets.length}, Paginated tickets: ${paginatedTickets.length}',
             name: 'RejectTicketScreen');
 
         return Scaffold(
@@ -1325,13 +1484,15 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
                               height: MediaQuery.of(context).size.height * 0.6,
                               child: _buildErrorState(strings),
                             )
-                          else if (filteredTickets.isEmpty && !viewModel.isLoading)
+                          else if (filteredTickets.isEmpty &&
+                              !viewModel.isLoading)
                             SizedBox(
                               height: MediaQuery.of(context).size.height * 0.6,
                               child: _buildEmptyState(strings),
                             )
                           else if (!viewModel.isLoading)
-                              ...paginatedTickets.map((ticket) => _buildTicketCard(ticket, strings)),
+                            ...paginatedTickets.map(
+                                (ticket) => _buildTicketCard(ticket, strings)),
                         ],
                       ),
                       if (viewModel.isLoading)
@@ -1345,19 +1506,20 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
               ),
             ],
           ),
-          bottomNavigationBar: filteredTickets.isNotEmpty && !viewModel.isLoading
-              ? Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            padding: const EdgeInsets.all(4.0),
-            child: SafeArea(
-              child: PaginationControls(
-                currentPage: _currentPage,
-                totalPages: totalPages,
-                onPageChange: _updatePage,
-              ),
-            ),
-          )
-              : null,
+          bottomNavigationBar:
+              filteredTickets.isNotEmpty && !viewModel.isLoading
+                  ? Container(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      padding: const EdgeInsets.all(4.0),
+                      child: SafeArea(
+                        child: PaginationControls(
+                          currentPage: _currentPage,
+                          totalPages: totalPages,
+                          onPageChange: _updatePage,
+                        ),
+                      ),
+                    )
+                  : null,
         );
       },
     );
@@ -1365,5 +1527,6 @@ class _RejectTicketScreenState extends State<RejectTicketScreen>
 }
 
 extension StringExtension on String {
-  String capitalize() => "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
+  String capitalize() =>
+      "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
 }

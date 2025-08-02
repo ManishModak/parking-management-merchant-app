@@ -25,8 +25,10 @@ class ImageService {
   }
 
   String _normalizeUrl(String base, String path) {
-    developer.log('[IMAGE] Normalizing URL - Base: $base', name: 'ImageService');
-    developer.log('[IMAGE] Normalizing URL - Path: $path', name: 'ImageService');
+    developer.log('[IMAGE] Normalizing URL - Base: $base',
+        name: 'ImageService');
+    developer.log('[IMAGE] Normalizing URL - Path: $path',
+        name: 'ImageService');
 
     String cleanBase = base.trim();
     if (!cleanBase.startsWith('http://') && !cleanBase.startsWith('https://')) {
@@ -38,7 +40,8 @@ class ImageService {
 
     if (path.startsWith('http://') || path.startsWith('https://')) {
       String result = path.replaceAll(RegExp(r'/+'), '/');
-      developer.log('[IMAGE] Normalized URL (full): $result', name: 'ImageService');
+      developer.log('[IMAGE] Normalized URL (full): $result',
+          name: 'ImageService');
       return result;
     }
 
@@ -49,7 +52,8 @@ class ImageService {
 
   Future<String> uploadSingleImage(String plazaId, File image) async {
     final fullUrl = ApiConfig.getFullUrl(PlazaApi.uploadSingleImage);
-    developer.log('[IMAGE] Uploading single image at URL: $fullUrl', name: 'ImageService');
+    developer.log('[IMAGE] Uploading single image at URL: $fullUrl',
+        name: 'ImageService');
     developer.log('[IMAGE] Plaza ID: $plazaId', name: 'ImageService');
 
     try {
@@ -59,8 +63,11 @@ class ImageService {
       request.fields['plazaId'] = plazaId;
       request.headers.addAll(headers);
 
-      final extension = path.extension(image.path).toLowerCase().replaceAll('.', '');
-      developer.log('[IMAGE] File details - Path: ${image.path}, Extension: $extension', name: 'ImageService');
+      final extension =
+          path.extension(image.path).toLowerCase().replaceAll('.', '');
+      developer.log(
+          '[IMAGE] File details - Path: ${image.path}, Extension: $extension',
+          name: 'ImageService');
 
       final mimeType = switch (extension) {
         'jpg' || 'jpeg' => MediaType('image', 'jpeg'),
@@ -69,7 +76,8 @@ class ImageService {
         _ => throw PlazaException('Unsupported image type: $extension')
       };
 
-      developer.log('[IMAGE] MIME type: ${mimeType.mimeType}', name: 'ImageService');
+      developer.log('[IMAGE] MIME type: ${mimeType.mimeType}',
+          name: 'ImageService');
 
       final file = await http.MultipartFile.fromPath(
         'image',
@@ -83,26 +91,31 @@ class ImageService {
       final streamedResponse = await request.send().timeout(
         const Duration(seconds: 15),
         onTimeout: () {
-          developer.log('[IMAGE] Upload timed out after 15 seconds', name: 'ImageService');
+          developer.log('[IMAGE] Upload timed out after 15 seconds',
+              name: 'ImageService');
           throw RequestTimeoutException('Upload timed out after 15 seconds');
         },
       );
 
       final response = await http.Response.fromStream(streamedResponse);
-      developer.log('[IMAGE] Response Status Code: ${response.statusCode}', name: 'ImageService');
-      developer.log('[IMAGE] Response Body: ${response.body}', name: 'ImageService');
+      developer.log('[IMAGE] Response Status Code: ${response.statusCode}',
+          name: 'ImageService');
+      developer.log('[IMAGE] Response Body: ${response.body}',
+          name: 'ImageService');
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         final imageUrl = responseData['data']?['imageUrl'] ?? '';
         final normalizedUrl = _normalizeUrl(baseUrl, imageUrl);
-        developer.log('[IMAGE] Success - Normalized URL: $normalizedUrl', name: 'ImageService');
+        developer.log('[IMAGE] Success - Normalized URL: $normalizedUrl',
+            name: 'ImageService');
         return normalizedUrl;
       } else {
         throw _handleError(response);
       }
     } on TimeoutException catch (e) {
-      developer.log('[IMAGE] Timeout while uploading single image: $e', name: 'ImageService');
+      developer.log('[IMAGE] Timeout while uploading single image: $e',
+          name: 'ImageService');
       throw RequestTimeoutException('Upload timed out: $e');
     } catch (e, stackTrace) {
       developer.log('[IMAGE] Error uploading single image: $e',
@@ -111,11 +124,14 @@ class ImageService {
     }
   }
 
-  Future<List<String>> uploadMultipleImages(String plazaId, List<File> images) async {
+  Future<List<String>> uploadMultipleImages(
+      String plazaId, List<File> images) async {
     final fullUrl = ApiConfig.getFullUrl(PlazaApi.uploadMultipleImages);
-    developer.log('[IMAGE] Uploading multiple images at URL: $fullUrl', name: 'ImageService');
+    developer.log('[IMAGE] Uploading multiple images at URL: $fullUrl',
+        name: 'ImageService');
     developer.log('[IMAGE] Plaza ID: $plazaId', name: 'ImageService');
-    developer.log('[IMAGE] Number of images: ${images.length}', name: 'ImageService');
+    developer.log('[IMAGE] Number of images: ${images.length}',
+        name: 'ImageService');
 
     try {
       _validateImages(images);
@@ -125,7 +141,8 @@ class ImageService {
       request.headers.addAll(headers);
 
       for (var (index, image) in images.indexed) {
-        final extension = path.extension(image.path).toLowerCase().replaceAll('.', '');
+        final extension =
+            path.extension(image.path).toLowerCase().replaceAll('.', '');
         final mimeType = switch (extension) {
           'jpg' || 'jpeg' => MediaType('image', 'jpeg'),
           'png' => MediaType('image', 'png'),
@@ -140,21 +157,25 @@ class ImageService {
           filename: path.basename(image.path),
         );
         request.files.add(file);
-        developer.log('[IMAGE] Added file $index: ${image.path}', name: 'ImageService');
+        developer.log('[IMAGE] Added file $index: ${image.path}',
+            name: 'ImageService');
       }
 
       developer.log('[IMAGE] Sending request...', name: 'ImageService');
       final streamedResponse = await request.send().timeout(
         const Duration(seconds: 15),
         onTimeout: () {
-          developer.log('[IMAGE] Upload timed out after 15 seconds', name: 'ImageService');
+          developer.log('[IMAGE] Upload timed out after 15 seconds',
+              name: 'ImageService');
           throw RequestTimeoutException('Upload timed out after 15 seconds');
         },
       );
 
       final response = await http.Response.fromStream(streamedResponse);
-      developer.log('[IMAGE] Response Status Code: ${response.statusCode}', name: 'ImageService');
-      developer.log('[IMAGE] Response Body: ${response.body}', name: 'ImageService');
+      developer.log('[IMAGE] Response Status Code: ${response.statusCode}',
+          name: 'ImageService');
+      developer.log('[IMAGE] Response Body: ${response.body}',
+          name: 'ImageService');
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -162,16 +183,20 @@ class ImageService {
         final imageUrls = urls.map((item) {
           final originalUrl = item['imageUrl'].toString();
           final normalizedUrl = _normalizeUrl(baseUrl, originalUrl);
-          developer.log('[IMAGE] Normalized URL: $normalizedUrl', name: 'ImageService');
+          developer.log('[IMAGE] Normalized URL: $normalizedUrl',
+              name: 'ImageService');
           return normalizedUrl;
         }).toList();
-        developer.log('[IMAGE] Successfully uploaded ${imageUrls.length} images', name: 'ImageService');
+        developer.log(
+            '[IMAGE] Successfully uploaded ${imageUrls.length} images',
+            name: 'ImageService');
         return imageUrls;
       } else {
         throw _handleError(response);
       }
     } on TimeoutException catch (e) {
-      developer.log('[IMAGE] Timeout while uploading multiple images: $e', name: 'ImageService');
+      developer.log('[IMAGE] Timeout while uploading multiple images: $e',
+          name: 'ImageService');
       throw RequestTimeoutException('Upload timed out: $e');
     } catch (e, stackTrace) {
       developer.log('[IMAGE] Error uploading multiple images: $e',
@@ -183,7 +208,8 @@ class ImageService {
   Future<List<Map<String, dynamic>>> getImagesByPlazaId(String plazaId) async {
     final uri = Uri.parse(ApiConfig.getFullUrl(PlazaApi.getImagesByPlaza))
         .replace(queryParameters: {'plazaId': plazaId});
-    developer.log('[IMAGE] Fetching images by Plaza ID at URL: $uri', name: 'ImageService');
+    developer.log('[IMAGE] Fetching images by Plaza ID at URL: $uri',
+        name: 'ImageService');
     developer.log('[IMAGE] Plaza ID: $plazaId', name: 'ImageService');
 
     try {
@@ -194,8 +220,10 @@ class ImageService {
           .get(uri, headers: headers)
           .timeout(const Duration(seconds: 30));
 
-      developer.log('[IMAGE] Response Status Code: ${response.statusCode}', name: 'ImageService');
-      developer.log('[IMAGE] Response Body: ${response.body}', name: 'ImageService');
+      developer.log('[IMAGE] Response Status Code: ${response.statusCode}',
+          name: 'ImageService');
+      developer.log('[IMAGE] Response Body: ${response.body}',
+          name: 'ImageService');
 
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
@@ -209,17 +237,21 @@ class ImageService {
               'imageUrl': normalizedUrl,
             };
           }).toList();
-          developer.log('[IMAGE] Successfully retrieved ${results.length} images', name: 'ImageService');
+          developer.log(
+              '[IMAGE] Successfully retrieved ${results.length} images',
+              name: 'ImageService');
           return results;
         } else {
-          developer.log('[IMAGE] Unexpected response structure', name: 'ImageService');
+          developer.log('[IMAGE] Unexpected response structure',
+              name: 'ImageService');
           throw PlazaException('Unexpected response structure');
         }
       } else {
         throw _handleError(response);
       }
     } on TimeoutException catch (e) {
-      developer.log('[IMAGE] Timeout while fetching images: $e', name: 'ImageService');
+      developer.log('[IMAGE] Timeout while fetching images: $e',
+          name: 'ImageService');
       throw RequestTimeoutException('Request timed out while fetching images');
     } catch (e, stackTrace) {
       developer.log('[IMAGE] Error fetching images by plaza ID: $e',
@@ -229,9 +261,20 @@ class ImageService {
   }
 
   Future<bool> deleteImage(String imageId) async {
-    final fullUrl = ApiConfig.getFullUrl('${PlazaApi.deleteImage}$imageId');
-    developer.log('[IMAGE] Deleting image at URL: $fullUrl', name: 'ImageService');
+    // Get the current user ID from secure storage
+    final userId = await _secureStorage.getUserId();
+    if (userId == null) {
+      developer.log('[IMAGE] No user ID found in secure storage',
+          name: 'ImageService');
+      throw ServiceException('User ID not found. Please login again.');
+    }
+
+    final fullUrl =
+        ApiConfig.getFullUrl('${PlazaApi.deleteImage}$imageId/$userId');
+    developer.log('[IMAGE] Deleting image at URL: $fullUrl',
+        name: 'ImageService');
     developer.log('[IMAGE] Image ID: $imageId', name: 'ImageService');
+    developer.log('[IMAGE] Removed by: $userId', name: 'ImageService');
 
     try {
       final headers = await _getHeaders();
@@ -241,19 +284,26 @@ class ImageService {
           .delete(Uri.parse(fullUrl), headers: headers)
           .timeout(const Duration(seconds: 30));
 
-      developer.log('[IMAGE] Response Status Code: ${response.statusCode}', name: 'ImageService');
-      developer.log('[IMAGE] Response Body: ${response.body}', name: 'ImageService');
+      developer.log('[IMAGE] Response Status Code: ${response.statusCode}',
+          name: 'ImageService');
+      developer.log('[IMAGE] Response Body: ${response.body}',
+          name: 'ImageService');
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body.isEmpty ? '{}' : response.body);
-        final success = responseData['success'] == true || response.statusCode == 204;
-        developer.log('[IMAGE] Delete operation ${success ? 'successful' : 'failed'}', name: 'ImageService');
+        final Map<String, dynamic> responseData =
+            jsonDecode(response.body.isEmpty ? '{}' : response.body);
+        final success =
+            responseData['success'] == true || response.statusCode == 204;
+        developer.log(
+            '[IMAGE] Delete operation ${success ? 'successful' : 'failed'}',
+            name: 'ImageService');
         return success;
       } else {
         throw _handleError(response);
       }
     } on TimeoutException catch (e) {
-      developer.log('[IMAGE] Timeout while deleting image: $e', name: 'ImageService');
+      developer.log('[IMAGE] Timeout while deleting image: $e',
+          name: 'ImageService');
       throw RequestTimeoutException('Request timed out while deleting image');
     } catch (e, stackTrace) {
       developer.log('[IMAGE] Error deleting image: $e',
@@ -266,17 +316,21 @@ class ImageService {
     final extension = image.path.split('.').last.toLowerCase();
     const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
     if (!allowedExtensions.contains(extension)) {
-      developer.log('[IMAGE] Invalid image format: $extension', name: 'ImageService');
-      throw PlazaException('Invalid image format. Allowed: ${allowedExtensions.join(", ")}');
+      developer.log('[IMAGE] Invalid image format: $extension',
+          name: 'ImageService');
+      throw PlazaException(
+          'Invalid image format. Allowed: ${allowedExtensions.join(", ")}');
     }
 
     const maxSize = 5 * 1024 * 1024; // 5MB
     final fileSize = image.lengthSync();
     if (fileSize > maxSize) {
-      developer.log('[IMAGE] Image size exceeds 5MB limit: $fileSize bytes', name: 'ImageService');
+      developer.log('[IMAGE] Image size exceeds 5MB limit: $fileSize bytes',
+          name: 'ImageService');
       throw PlazaException('Image size exceeds 5MB limit');
     }
-    developer.log('[IMAGE] Image validated - Size: $fileSize bytes', name: 'ImageService');
+    developer.log('[IMAGE] Image validated - Size: $fileSize bytes',
+        name: 'ImageService');
     return true;
   }
 
@@ -287,7 +341,9 @@ class ImageService {
     }
     const maxImages = 10;
     if (images.length > maxImages) {
-      developer.log('[IMAGE] Too many images: ${images.length} (max: $maxImages)', name: 'ImageService');
+      developer.log(
+          '[IMAGE] Too many images: ${images.length} (max: $maxImages)',
+          name: 'ImageService');
       throw PlazaException('Maximum $maxImages images allowed per request');
     }
     for (var image in images) {
@@ -299,13 +355,18 @@ class ImageService {
     if (error is http.Response) {
       try {
         final errorBody = jsonDecode(error.body);
-        final message = errorBody['message'] ?? 'Server error: ${error.statusCode}';
-        developer.log('[IMAGE] Server error - Status: ${error.statusCode}, Message: $message',
+        final message =
+            errorBody['message'] ?? 'Server error: ${error.statusCode}';
+        developer.log(
+            '[IMAGE] Server error - Status: ${error.statusCode}, Message: $message',
             name: 'ImageService');
-        return HttpException('Server error', statusCode: error.statusCode, serverMessage: message);
+        return HttpException('Server error',
+            statusCode: error.statusCode, serverMessage: message);
       } catch (_) {
-        developer.log('[IMAGE] Server error - Status: ${error.statusCode}', name: 'ImageService');
-        return HttpException('Server error: ${error.statusCode}', statusCode: error.statusCode);
+        developer.log('[IMAGE] Server error - Status: ${error.statusCode}',
+            name: 'ImageService');
+        return HttpException('Server error: ${error.statusCode}',
+            statusCode: error.statusCode);
       }
     }
     developer.log('[IMAGE] Unexpected error: $error', name: 'ImageService');

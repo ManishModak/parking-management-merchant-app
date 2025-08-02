@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../generated/l10n.dart';
-import '../../../viewmodels/plaza/plaza_images_viewmodel.dart';
 import '../../../viewmodels/plaza/plaza_viewmodel.dart';
 import 'dart:developer' as developer;
 
@@ -34,22 +33,33 @@ class PlazaImagesStep extends StatelessWidget {
                 icon: Icon(
                   Icons.photo_library_outlined,
                   size: 18,
-                  color: isLoading ? theme.disabledColor : theme.colorScheme.primary,
+                  color: isLoading
+                      ? theme.disabledColor
+                      : theme.colorScheme.primary,
                 ),
                 label: Text(
                   strings.buttonPickGallery,
-                  style: TextStyle(color: isLoading ? theme.disabledColor : theme.colorScheme.primary),
+                  style: TextStyle(
+                      color: isLoading
+                          ? theme.disabledColor
+                          : theme.colorScheme.primary),
                 ),
                 onPressed: isLoading
                     ? null
                     : () {
-                  developer.log('[PlazaImagesStep] Pick from Gallery button pressed.', name: 'PlazaImagesStep');
-                  if (context.mounted) {
-                    imagesVM.pickImages(context, source: ImageSource.gallery);
-                  }
-                },
+                        developer.log(
+                            '[PlazaImagesStep] Pick from Gallery button pressed.',
+                            name: 'PlazaImagesStep');
+                        if (context.mounted) {
+                          imagesVM.pickImages(context,
+                              source: ImageSource.gallery);
+                        }
+                      },
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: isLoading ? theme.disabledColor : theme.colorScheme.primary),
+                  side: BorderSide(
+                      color: isLoading
+                          ? theme.disabledColor
+                          : theme.colorScheme.primary),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -61,22 +71,33 @@ class PlazaImagesStep extends StatelessWidget {
                 icon: Icon(
                   Icons.camera_alt_outlined,
                   size: 18,
-                  color: isLoading ? theme.disabledColor : theme.colorScheme.primary,
+                  color: isLoading
+                      ? theme.disabledColor
+                      : theme.colorScheme.primary,
                 ),
                 label: Text(
                   strings.buttonTakePhoto,
-                  style: TextStyle(color: isLoading ? theme.disabledColor : theme.colorScheme.primary),
+                  style: TextStyle(
+                      color: isLoading
+                          ? theme.disabledColor
+                          : theme.colorScheme.primary),
                 ),
                 onPressed: isLoading
                     ? null
                     : () {
-                  developer.log('[PlazaImagesStep] Take Photo button pressed.', name: 'PlazaImagesStep');
-                  if (context.mounted) {
-                    imagesVM.pickImages(context, source: ImageSource.camera);
-                  }
-                },
+                        developer.log(
+                            '[PlazaImagesStep] Take Photo button pressed.',
+                            name: 'PlazaImagesStep');
+                        if (context.mounted) {
+                          imagesVM.pickImages(context,
+                              source: ImageSource.camera);
+                        }
+                      },
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: isLoading ? theme.disabledColor : theme.colorScheme.primary),
+                  side: BorderSide(
+                      color: isLoading
+                          ? theme.disabledColor
+                          : theme.colorScheme.primary),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -89,7 +110,8 @@ class PlazaImagesStep extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 16.0),
             child: Text(
               strings.messageMaxImagesHint(imagesVM.maxImages),
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           ),
         ),
@@ -123,7 +145,8 @@ class PlazaImagesStep extends StatelessWidget {
                           );
                           return Container(
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                              color: theme.colorScheme.surfaceContainerHighest
+                                  .withOpacity(0.5),
                               borderRadius: BorderRadius.circular(8.0),
                             ),
                             child: Icon(
@@ -147,12 +170,12 @@ class PlazaImagesStep extends StatelessWidget {
                         onTap: isLoading
                             ? null
                             : () {
-                          developer.log(
-                            '[PlazaImagesStep] Remove image button pressed for index $index.',
-                            name: 'PlazaImagesStep',
-                          );
-                          imagesVM.removeImage(index);
-                        },
+                                developer.log(
+                                  '[PlazaImagesStep] Remove image button pressed for index $index.',
+                                  name: 'PlazaImagesStep',
+                                );
+                                imagesVM.removeImage(index);
+                              },
                         customBorder: const CircleBorder(),
                         child: Padding(
                           padding: const EdgeInsets.all(3.0),
@@ -185,7 +208,8 @@ class PlazaImagesStep extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   strings.messageNoImagesSelected,
-                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -202,7 +226,8 @@ class PlazaImagesStep extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     strings.messageUploadingImages,
-                    style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.primary),
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: theme.colorScheme.primary),
                   ),
                 ],
               ),
@@ -213,8 +238,11 @@ class PlazaImagesStep extends StatelessWidget {
             padding: const EdgeInsets.only(top: 20.0, bottom: 8.0),
             child: Center(
               child: Text(
-                imagesVM.errors['images'] ?? imagesVM.errors['general'] ?? strings.errorUnknown,
-                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
+                imagesVM.errors['images'] ??
+                    imagesVM.errors['general'] ??
+                    strings.errorUnknown,
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(color: theme.colorScheme.error),
                 textAlign: TextAlign.center,
               ),
             ),

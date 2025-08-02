@@ -14,21 +14,26 @@ class ModifyViewOpenTicketScreen extends StatefulWidget {
   const ModifyViewOpenTicketScreen({super.key, required this.ticketId});
 
   @override
-  State<ModifyViewOpenTicketScreen> createState() => _ModifyViewOpenTicketScreenState();
+  State<ModifyViewOpenTicketScreen> createState() =>
+      _ModifyViewOpenTicketScreenState();
 }
 
-class _ModifyViewOpenTicketScreenState extends State<ModifyViewOpenTicketScreen> {
+class _ModifyViewOpenTicketScreenState
+    extends State<ModifyViewOpenTicketScreen> {
   bool isEditing = false;
   Map<String, String> originalValues = {};
 
   @override
   void initState() {
     super.initState();
-    developer.log('Initializing ModifyViewOpenTicketScreen for ticketId: ${widget.ticketId}',
+    developer.log(
+        'Initializing ModifyViewOpenTicketScreen for ticketId: ${widget.ticketId}',
         name: 'ModifyViewOpenTicketScreen');
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final viewModel = Provider.of<OpenTicketViewModel>(context, listen: false);
-      developer.log('Fetching ticket details in post frame callback for ticketId: ${widget.ticketId}',
+      final viewModel =
+          Provider.of<OpenTicketViewModel>(context, listen: false);
+      developer.log(
+          'Fetching ticket details in post frame callback for ticketId: ${widget.ticketId}',
           name: 'ModifyViewOpenTicketScreen');
       viewModel.fetchTicketDetails(widget.ticketId);
     });
@@ -43,7 +48,8 @@ class _ModifyViewOpenTicketScreenState extends State<ModifyViewOpenTicketScreen>
       'vehicleNumber': viewModel.vehicleNumberController.text,
       'vehicleType': viewModel.vehicleTypeController.text,
     };
-    developer.log('Original values stored: $originalValues', name: 'ModifyViewOpenTicketScreen');
+    developer.log('Original values stored: $originalValues',
+        name: 'ModifyViewOpenTicketScreen');
   }
 
   void _restoreOriginalValues(OpenTicketViewModel viewModel) {
@@ -51,11 +57,13 @@ class _ModifyViewOpenTicketScreenState extends State<ModifyViewOpenTicketScreen>
         name: 'ModifyViewOpenTicketScreen');
     viewModel.floorIdController.text = originalValues['floorId'] ?? '';
     viewModel.slotIdController.text = originalValues['slotId'] ?? '';
-    viewModel.vehicleNumberController.text = originalValues['vehicleNumber'] ?? '';
+    viewModel.vehicleNumberController.text =
+        originalValues['vehicleNumber'] ?? '';
     viewModel.vehicleTypeController.text = originalValues['vehicleType'] ?? '';
     viewModel.selectedVehicleType = originalValues['vehicleType'];
     viewModel.resetErrors();
-    developer.log('Original values restored: $originalValues', name: 'ModifyViewOpenTicketScreen');
+    developer.log('Original values restored: $originalValues',
+        name: 'ModifyViewOpenTicketScreen');
   }
 
   void _handleCancel() {
@@ -69,12 +77,14 @@ class _ModifyViewOpenTicketScreenState extends State<ModifyViewOpenTicketScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Changes discarded')),
     );
-    developer.log('Editing cancelled, changes discarded', name: 'ModifyViewOpenTicketScreen');
+    developer.log('Editing cancelled, changes discarded',
+        name: 'ModifyViewOpenTicketScreen');
   }
 
   Future<void> _handleSave() async {
     if (!isEditing) {
-      developer.log('Save attempted but not in editing mode', name: 'ModifyViewOpenTicketScreen');
+      developer.log('Save attempted but not in editing mode',
+          name: 'ModifyViewOpenTicketScreen');
       return;
     }
 
@@ -112,7 +122,8 @@ class _ModifyViewOpenTicketScreenState extends State<ModifyViewOpenTicketScreen>
   }
 
   Widget _buildReadOnlyField(String label, TextEditingController controller) {
-    developer.log('Building read-only field: $label', name: 'ModifyViewOpenTicketScreen');
+    developer.log('Building read-only field: $label',
+        name: 'ModifyViewOpenTicketScreen');
     return CustomFormFields.normalSizedTextFormField(
       context: context,
       label: label,
@@ -123,15 +134,18 @@ class _ModifyViewOpenTicketScreenState extends State<ModifyViewOpenTicketScreen>
     );
   }
 
-  PreferredSizeWidget _buildCustomAppBar(OpenTicketViewModel viewModel, S strings) {
-    developer.log('Building custom app bar, ticketRefId: ${viewModel.ticket?.ticketRefId ?? "loading"}',
+  PreferredSizeWidget _buildCustomAppBar(
+      OpenTicketViewModel viewModel, S strings) {
+    developer.log(
+        'Building custom app bar, ticketRefId: ${viewModel.ticket?.ticketRefId ?? "loading"}',
         name: 'ModifyViewOpenTicketScreen');
     return CustomAppBar.appBarWithNavigation(
       screenTitle: viewModel.ticket == null
           ? strings.titleModifyViewTicketDetails
           : "${strings.titleModifyViewTicketDetails}\n#${viewModel.ticket!.ticketRefId ?? strings.labelNA}",
       onPressed: () {
-        developer.log('App bar back button pressed', name: 'ModifyViewOpenTicketScreen');
+        developer.log('App bar back button pressed',
+            name: 'ModifyViewOpenTicketScreen');
         Navigator.pop(context);
       },
       darkBackground: Theme.of(context).brightness == Brightness.dark,
@@ -144,11 +158,13 @@ class _ModifyViewOpenTicketScreenState extends State<ModifyViewOpenTicketScreen>
   @override
   Widget build(BuildContext context) {
     final strings = S.of(context);
-    developer.log('Building ModifyViewOpenTicketScreen for ticketId: ${widget.ticketId}',
+    developer.log(
+        'Building ModifyViewOpenTicketScreen for ticketId: ${widget.ticketId}',
         name: 'ModifyViewOpenTicketScreen');
     return Consumer<OpenTicketViewModel>(
       builder: (context, viewModel, child) {
-        developer.log('Consumer rebuilding, isLoading: ${viewModel.isLoading}, isEditing: $isEditing',
+        developer.log(
+            'Consumer rebuilding, isLoading: ${viewModel.isLoading}, isEditing: $isEditing',
             name: 'ModifyViewOpenTicketScreen');
         return Scaffold(
           appBar: _buildCustomAppBar(viewModel, strings),
@@ -156,18 +172,23 @@ class _ModifyViewOpenTicketScreenState extends State<ModifyViewOpenTicketScreen>
           body: Stack(
             children: [
               SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 16),
-                    _buildReadOnlyField('Ticket ID', viewModel.ticketRefIdController),
+                    _buildReadOnlyField(
+                        'Ticket ID', viewModel.ticketRefIdController),
                     const SizedBox(height: 16),
-                    _buildReadOnlyField('Plaza ID', viewModel.plazaIdController),
+                    _buildReadOnlyField(
+                        'Plaza Name', viewModel.plazaNameController),
                     const SizedBox(height: 16),
-                    _buildReadOnlyField('Entry Lane ID', viewModel.entryLaneIdController),
+                    _buildReadOnlyField(
+                        'Entry Lane ID', viewModel.entryLaneIdController),
                     const SizedBox(height: 16),
-                    _buildReadOnlyField('Entry Lane Direction', viewModel.entryLaneDirectionController),
+                    _buildReadOnlyField('Entry Lane Direction',
+                        viewModel.entryLaneDirectionController),
                     const SizedBox(height: 16),
                     CustomFormFields.normalSizedTextFormField(
                       context: context,
@@ -207,14 +228,19 @@ class _ModifyViewOpenTicketScreenState extends State<ModifyViewOpenTicketScreen>
                       context: context,
                     ),
                     const SizedBox(height: 16),
-                    _buildReadOnlyField('Vehicle Entry Timestamp', viewModel.vehicleEntryTimestampController),
+                    _buildReadOnlyField('Vehicle Entry Timestamp',
+                        viewModel.vehicleEntryTimestampController),
                     const SizedBox(height: 16),
-                    _buildReadOnlyField('Ticket Creation Time', viewModel.ticketCreationTimeController),
+                    _buildReadOnlyField('Ticket Creation Time',
+                        viewModel.ticketCreationTimeController),
                     const SizedBox(height: 16),
-                    _buildReadOnlyField('Ticket Status', viewModel.ticketStatusController),
-                    if (viewModel.modificationTimeController.text.isNotEmpty) ...[
+                    _buildReadOnlyField(
+                        'Ticket Status', viewModel.ticketStatusController),
+                    if (viewModel
+                        .modificationTimeController.text.isNotEmpty) ...[
                       const SizedBox(height: 16),
-                      _buildReadOnlyField('Modification Time', viewModel.modificationTimeController),
+                      _buildReadOnlyField('Modification Time',
+                          viewModel.modificationTimeController),
                     ],
                     const SizedBox(height: 80),
                   ],
@@ -225,7 +251,8 @@ class _ModifyViewOpenTicketScreenState extends State<ModifyViewOpenTicketScreen>
                   color: Colors.black.withOpacity(0.5),
                   child: const Center(
                     child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(AppColors.primary),
                     ),
                   ),
                 ),
@@ -248,15 +275,16 @@ class _ModifyViewOpenTicketScreenState extends State<ModifyViewOpenTicketScreen>
                 onPressed: viewModel.isLoading
                     ? null
                     : isEditing
-                    ? _handleSave
-                    : () {
-                  developer.log('Edit button pressed, entering edit mode',
-                      name: 'ModifyViewOpenTicketScreen');
-                  _storeOriginalValues(viewModel);
-                  setState(() {
-                    isEditing = true;
-                  });
-                },
+                        ? _handleSave
+                        : () {
+                            developer.log(
+                                'Edit button pressed, entering edit mode',
+                                name: 'ModifyViewOpenTicketScreen');
+                            _storeOriginalValues(viewModel);
+                            setState(() {
+                              isEditing = true;
+                            });
+                          },
                 heroTag: 'editSave',
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 child: Icon(isEditing ? Icons.save : Icons.edit),

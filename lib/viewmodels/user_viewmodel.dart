@@ -107,13 +107,52 @@ class UserViewModel extends ChangeNotifier {
       // Populate _userPlazas based on role
       if (user.role == 'Plaza Owner') {
         _userPlazas = await _plazaService.fetchUserPlazas(user.entityId!);
-      } else if (user.subEntity.isNotEmpty) {
-        // Use subEntity objects from response
-        _userPlazas = user.subEntity.map((subEntityItem) {
-          final data = subEntityItem as Map<String, dynamic>;
+      } else if (user.subEntityData != null && user.subEntityData!.isNotEmpty) {
+        // Use subEntityData objects from response
+        _userPlazas = user.subEntityData!.map((data) {
           return Plaza(
             plazaId: data['plazaId'].toString(),
             plazaName: data['plazaName'] ?? 'Unnamed Plaza',
+            companyName: data['companyName'],
+            companyType: data['companyType'],
+            plazaOwner: data['plazaOwner'],
+            plazaOrgId: data['plazaOrgId'],
+            plazaOwnerId: data['plazaOwnerId'],
+            email: data['email'],
+            mobileNumber: data['mobileNumber'],
+            address: data['address'],
+            city: data['city'],
+            district: data['district'],
+            state: data['state'],
+            pincode: data['pincode'],
+            geoLatitude:
+                double.tryParse(data['geoLatitude']?.toString() ?? '0') ?? 0.0,
+            geoLongitude:
+                double.tryParse(data['geoLongitude']?.toString() ?? '0') ?? 0.0,
+            plazaCategory: data['plazaCategory'] ?? 'Public',
+            plazaSubCategory: data['plazaSubCategory'] ?? 'Apartment',
+            structureType: data['structureType'] ?? 'Underground',
+            plazaStatus: data['plazaStatus'] ?? 'Active',
+            noOfParkingSlots:
+                int.tryParse(data['noOfParkingSlots']?.toString() ?? '0') ?? 0,
+            freeParking: data['freeParking'] ?? false,
+            priceCategory: data['priceCategory'] ?? 'Premium',
+            capacityBike:
+                int.tryParse(data['capacityBike']?.toString() ?? '0') ?? 0,
+            capacity3Wheeler:
+                int.tryParse(data['capacity3Wheeler']?.toString() ?? '0') ?? 0,
+            capacity4Wheeler:
+                int.tryParse(data['capacity4Wheeler']?.toString() ?? '0') ?? 0,
+            capacityBus:
+                int.tryParse(data['capacityBus']?.toString() ?? '0') ?? 0,
+            capacityTruck:
+                int.tryParse(data['capacityTruck']?.toString() ?? '0') ?? 0,
+            capacityHeavyMachinaryVehicle: int.tryParse(
+                    data['capacityHeavyMachinaryVehicle']?.toString() ?? '0') ??
+                0,
+            plazaOpenTimings: data['plazaOpenTimings'] ?? '00:01:00',
+            plazaClosingTime: data['plazaClosingTime'] ?? '23:59:00',
+            isDeleted: data['isDeleted'] ?? false,
           );
         }).toList();
       } else {
@@ -161,14 +200,55 @@ class UserViewModel extends ChangeNotifier {
           throw ServiceException('No entity ID found for Plaza Owner');
         }
         _userPlazas =
-        await _plazaService.fetchUserPlazas(_currentUser!.entityId!);
-      } else if (_currentUser != null && _currentUser!.subEntity.isNotEmpty) {
-        // Use subEntity objects from response
-        _userPlazas = _currentUser!.subEntity.map((subEntityItem) {
-          final data = subEntityItem as Map<String, dynamic>;
+            await _plazaService.fetchUserPlazas(_currentUser!.entityId!);
+      } else if (_currentUser != null &&
+          _currentUser!.subEntityData != null &&
+          _currentUser!.subEntityData!.isNotEmpty) {
+        // Use subEntityData objects from response
+        _userPlazas = _currentUser!.subEntityData!.map((data) {
           return Plaza(
             plazaId: data['plazaId'].toString(),
             plazaName: data['plazaName'] ?? 'Unnamed Plaza',
+            companyName: data['companyName'],
+            companyType: data['companyType'],
+            plazaOwner: data['plazaOwner'],
+            plazaOrgId: data['plazaOrgId'],
+            plazaOwnerId: data['plazaOwnerId'],
+            email: data['email'],
+            mobileNumber: data['mobileNumber'],
+            address: data['address'],
+            city: data['city'],
+            district: data['district'],
+            state: data['state'],
+            pincode: data['pincode'],
+            geoLatitude:
+                double.tryParse(data['geoLatitude']?.toString() ?? '0') ?? 0.0,
+            geoLongitude:
+                double.tryParse(data['geoLongitude']?.toString() ?? '0') ?? 0.0,
+            plazaCategory: data['plazaCategory'] ?? 'Public',
+            plazaSubCategory: data['plazaSubCategory'] ?? 'Apartment',
+            structureType: data['structureType'] ?? 'Underground',
+            plazaStatus: data['plazaStatus'] ?? 'Active',
+            noOfParkingSlots:
+                int.tryParse(data['noOfParkingSlots']?.toString() ?? '0') ?? 0,
+            freeParking: data['freeParking'] ?? false,
+            priceCategory: data['priceCategory'] ?? 'Premium',
+            capacityBike:
+                int.tryParse(data['capacityBike']?.toString() ?? '0') ?? 0,
+            capacity3Wheeler:
+                int.tryParse(data['capacity3Wheeler']?.toString() ?? '0') ?? 0,
+            capacity4Wheeler:
+                int.tryParse(data['capacity4Wheeler']?.toString() ?? '0') ?? 0,
+            capacityBus:
+                int.tryParse(data['capacityBus']?.toString() ?? '0') ?? 0,
+            capacityTruck:
+                int.tryParse(data['capacityTruck']?.toString() ?? '0') ?? 0,
+            capacityHeavyMachinaryVehicle: int.tryParse(
+                    data['capacityHeavyMachinaryVehicle']?.toString() ?? '0') ??
+                0,
+            plazaOpenTimings: data['plazaOpenTimings'] ?? '00:01:00',
+            plazaClosingTime: data['plazaClosingTime'] ?? '23:59:00',
+            isDeleted: data['isDeleted'] ?? false,
           );
         }).toList();
       } else {
@@ -216,14 +296,55 @@ class UserViewModel extends ChangeNotifier {
           throw ServiceException('No entity ID found for Plaza Owner');
         }
         _userPlazas =
-        await _plazaService.fetchUserPlazas(_currentUser!.entityId!);
-      } else if (_currentUser != null && _currentUser!.subEntity.isNotEmpty) {
-        // Use subEntity objects from response
-        _userPlazas = _currentUser!.subEntity.map((subEntityItem) {
-          final data = subEntityItem as Map<String, dynamic>;
+            await _plazaService.fetchUserPlazas(_currentUser!.entityId!);
+      } else if (_currentUser != null &&
+          _currentUser!.subEntityData != null &&
+          _currentUser!.subEntityData!.isNotEmpty) {
+        // Use subEntityData objects from response
+        _userPlazas = _currentUser!.subEntityData!.map((data) {
           return Plaza(
             plazaId: data['plazaId'].toString(),
             plazaName: data['plazaName'] ?? 'Unnamed Plaza',
+            companyName: data['companyName'],
+            companyType: data['companyType'],
+            plazaOwner: data['plazaOwner'],
+            plazaOrgId: data['plazaOrgId'],
+            plazaOwnerId: data['plazaOwnerId'],
+            email: data['email'],
+            mobileNumber: data['mobileNumber'],
+            address: data['address'],
+            city: data['city'],
+            district: data['district'],
+            state: data['state'],
+            pincode: data['pincode'],
+            geoLatitude:
+                double.tryParse(data['geoLatitude']?.toString() ?? '0') ?? 0.0,
+            geoLongitude:
+                double.tryParse(data['geoLongitude']?.toString() ?? '0') ?? 0.0,
+            plazaCategory: data['plazaCategory'] ?? 'Public',
+            plazaSubCategory: data['plazaSubCategory'] ?? 'Apartment',
+            structureType: data['structureType'] ?? 'Underground',
+            plazaStatus: data['plazaStatus'] ?? 'Active',
+            noOfParkingSlots:
+                int.tryParse(data['noOfParkingSlots']?.toString() ?? '0') ?? 0,
+            freeParking: data['freeParking'] ?? false,
+            priceCategory: data['priceCategory'] ?? 'Premium',
+            capacityBike:
+                int.tryParse(data['capacityBike']?.toString() ?? '0') ?? 0,
+            capacity3Wheeler:
+                int.tryParse(data['capacity3Wheeler']?.toString() ?? '0') ?? 0,
+            capacity4Wheeler:
+                int.tryParse(data['capacity4Wheeler']?.toString() ?? '0') ?? 0,
+            capacityBus:
+                int.tryParse(data['capacityBus']?.toString() ?? '0') ?? 0,
+            capacityTruck:
+                int.tryParse(data['capacityTruck']?.toString() ?? '0') ?? 0,
+            capacityHeavyMachinaryVehicle: int.tryParse(
+                    data['capacityHeavyMachinaryVehicle']?.toString() ?? '0') ??
+                0,
+            plazaOpenTimings: data['plazaOpenTimings'] ?? '00:01:00',
+            plazaClosingTime: data['plazaClosingTime'] ?? '23:59:00',
+            isDeleted: data['isDeleted'] ?? false,
           );
         }).toList();
       } else {
@@ -341,22 +462,22 @@ class UserViewModel extends ChangeNotifier {
       // Validate role
       final currentUserRole = await _secureStorageService.getUserRole();
       final allowedRoles = {
-        'Plaza Owner': [
-          'Plaza Owner',
-          'Centralized Controller',
-          'Plaza Admin',
-          'Plaza Operator',
-          'Cashier',
-          'Backend Monitoring Operator',
-          'Supervisor'
-        ],
-        'Plaza Admin': [
-          'Plaza Operator',
-          'Cashier',
-          'Backend Monitoring Operator',
-          'Supervisor'
-        ],
-      }[currentUserRole] ??
+            'Plaza Owner': [
+              'Plaza Owner',
+              'Centralized Controller',
+              'Plaza Admin',
+              'Plaza Operator',
+              'Cashier',
+              'Backend Monitoring Operator',
+              'Supervisor'
+            ],
+            'Plaza Admin': [
+              'Plaza Operator',
+              'Cashier',
+              'Backend Monitoring Operator',
+              'Supervisor'
+            ],
+          }[currentUserRole] ??
           [];
       if (role != null && !allowedRoles.contains(role)) {
         throw ServiceException('Unauthorized role assignment: $role');
@@ -451,22 +572,22 @@ class UserViewModel extends ChangeNotifier {
       // Validate role
       final currentUserRole = await _secureStorageService.getUserRole();
       final allowedRoles = {
-        'Plaza Owner': [
-          'Plaza Owner',
-          'Centralized Controller',
-          'Plaza Admin',
-          'Plaza Operator',
-          'Cashier',
-          'Backend Monitoring Operator',
-          'Supervisor'
-        ],
-        'Plaza Admin': [
-          'Plaza Operator',
-          'Cashier',
-          'Backend Monitoring Operator',
-          'Supervisor'
-        ],
-      }[currentUserRole] ??
+            'Plaza Owner': [
+              'Plaza Owner',
+              'Centralized Controller',
+              'Plaza Admin',
+              'Plaza Operator',
+              'Cashier',
+              'Backend Monitoring Operator',
+              'Supervisor'
+            ],
+            'Plaza Admin': [
+              'Plaza Operator',
+              'Cashier',
+              'Backend Monitoring Operator',
+              'Supervisor'
+            ],
+          }[currentUserRole] ??
           [];
       if (role != null && !allowedRoles.contains(role)) {
         throw ServiceException('Unauthorized role assignment: $role');
@@ -581,22 +702,22 @@ class UserViewModel extends ChangeNotifier {
       final currentUserRole = await _secureStorageService.getUserRole();
       final user = await _userService.fetchUserInfo(userId, false);
       final allowedRoles = {
-        'Plaza Owner': [
-          'Plaza Owner',
-          'Centralized Controller',
-          'Plaza Admin',
-          'Plaza Operator',
-          'Cashier',
-          'Backend Monitoring Operator',
-          'Supervisor'
-        ],
-        'Plaza Admin': [
-          'Plaza Operator',
-          'Cashier',
-          'Backend Monitoring Operator',
-          'Supervisor'
-        ],
-      }[currentUserRole] ??
+            'Plaza Owner': [
+              'Plaza Owner',
+              'Centralized Controller',
+              'Plaza Admin',
+              'Plaza Operator',
+              'Cashier',
+              'Backend Monitoring Operator',
+              'Supervisor'
+            ],
+            'Plaza Admin': [
+              'Plaza Operator',
+              'Cashier',
+              'Backend Monitoring Operator',
+              'Supervisor'
+            ],
+          }[currentUserRole] ??
           [];
       if (!allowedRoles.contains(user.role)) {
         throw ServiceException(
@@ -689,7 +810,7 @@ class UserViewModel extends ChangeNotifier {
       errors['password'] = 'Password is required';
     } else if (!Validation.isValidPassword(password)) {
       errors['password'] =
-      'Password must be at least 8 characters with uppercase, lowercase, number, and special character';
+          'Password must be at least 8 characters with uppercase, lowercase, number, and special character';
     }
 
     if (confirmPassword.isEmpty) {
@@ -710,12 +831,12 @@ class UserViewModel extends ChangeNotifier {
         role != 'Centralized Controller' &&
         (subEntity == null || subEntity.isEmpty)) {
       errors['subEntity'] =
-      'Exactly one sub-entity is required for role: $role';
+          'Exactly one sub-entity is required for role: $role';
     }
     if (role == 'Centralized Controller' &&
         (subEntity == null || subEntity.isEmpty)) {
       errors['subEntity'] =
-      'At least one sub-entity is required for Centralized Controller';
+          'At least one sub-entity is required for Centralized Controller';
     }
 
     return errors;
@@ -783,12 +904,12 @@ class UserViewModel extends ChangeNotifier {
           role != 'Centralized Controller' &&
           (subEntity == null || subEntity.isEmpty)) {
         errors['subEntity'] =
-        'Exactly one sub-entity is required for role: $role';
+            'Exactly one sub-entity is required for role: $role';
       }
       if (role == 'Centralized Controller' &&
           (subEntity == null || subEntity.isEmpty)) {
         errors['subEntity'] =
-        'At least one sub-entity is required for Centralized Controller';
+            'At least one sub-entity is required for Centralized Controller';
       }
     }
 
@@ -805,7 +926,7 @@ class UserViewModel extends ChangeNotifier {
       errors['password'] = 'Password is required';
     } else if (!Validation.isValidPassword(password)) {
       errors['password'] =
-      'Password must be at least 8 characters with uppercase, lowercase, number, and special character';
+          'Password must be at least 8 characters with uppercase, lowercase, number, and special character';
     }
 
     if (confirmPassword.isEmpty) {

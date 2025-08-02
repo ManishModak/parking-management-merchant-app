@@ -23,7 +23,8 @@ class ViewDisputeViewModel with ChangeNotifier {
   })  : _disputesService = disputesService ?? DisputesService(),
         _ticketService = ticketService ?? TicketService();
 
-  Future<void> fetchDisputeDetails(String id, {bool useDisputeId = false}) async {
+  Future<void> fetchDisputeDetails(String id,
+      {bool useDisputeId = false}) async {
     if (isLoading) return;
 
     isLoading = true;
@@ -38,7 +39,7 @@ class ViewDisputeViewModel with ChangeNotifier {
         // Fetch dispute by disputeId
         dispute = await _disputesService.getDisputeById(id);
         // Force ticketId access since it's guaranteed to be non-null
-        ticket = await _ticketService.getTicketDetails(dispute!.ticketId!);
+        ticket = await _ticketService.getTicketDetails(dispute!.ticketId);
         capturedImageUrls = ticket?.capturedImages;
       } else {
         // Fetch ticket details by ticketId
@@ -54,7 +55,8 @@ class ViewDisputeViewModel with ChangeNotifier {
       }
     } catch (e) {
       errorMessage = 'Failed to fetch dispute details: $e';
-      developer.log('Error in fetchDisputeDetails: $e', name: 'ViewDisputeViewModel');
+      developer.log('Error in fetchDisputeDetails: $e',
+          name: 'ViewDisputeViewModel');
     } finally {
       isLoading = false;
       notifyListeners();
@@ -66,7 +68,8 @@ class ViewDisputeViewModel with ChangeNotifier {
       return {};
     }
 
-    final payment = ticket!.payments?.isNotEmpty ?? false ? ticket!.payments!.first : null;
+    final payment =
+        ticket!.payments?.isNotEmpty ?? false ? ticket!.payments!.first : null;
     final entryTime = ticket!.entryTime;
     final exitTime = ticket!.exitTime;
 
@@ -79,7 +82,9 @@ class ViewDisputeViewModel with ChangeNotifier {
     String? formatDateTime(dynamic dateTime) {
       if (dateTime == null) return 'N/A';
       try {
-        final parsedDate = dateTime is String ? DateTime.parse(dateTime) : dateTime as DateTime;
+        final parsedDate = dateTime is String
+            ? DateTime.parse(dateTime)
+            : dateTime as DateTime;
         return _dateFormat.format(parsedDate);
       } catch (e) {
         developer.log('Error formatting date: $dateTime, error: $e',
@@ -91,22 +96,27 @@ class ViewDisputeViewModel with ChangeNotifier {
     return {
       'ticketId': dispute!.ticketId ?? 'N/A',
       'ticketRefId': ticket!.ticketRefId ?? 'N/A',
-      'plazaName': dispute!.plazaId != null ? 'Plaza ${dispute!.plazaId}' : 'N/A',
+      'plazaName':
+          dispute!.plazaId != null ? 'Plaza ${dispute!.plazaId}' : 'N/A',
       'vehicleNumber': dispute!.vehicleNumber ?? 'N/A',
       'vehicleType': dispute!.vehicleType ?? 'N/A',
       'vehicleEntryTime': formatDateTime(entryTime),
       'vehicleExitTime': formatDateTime(exitTime),
       'parkingDuration': parkingDuration ?? dispute!.parkingDuration ?? 'N/A',
-      'paymentAmount': dispute!.paymentAmount != null ? '₹${dispute!.paymentAmount}' : 'N/A',
+      'paymentAmount':
+          dispute!.paymentAmount != null ? '₹${dispute!.paymentAmount}' : 'N/A',
       'fareType': payment?.fareType ?? 'N/A',
-      'fareAmount': dispute!.fareAmount != null ? '₹${dispute!.fareAmount}' : 'N/A',
+      'fareAmount':
+          dispute!.fareAmount != null ? '₹${dispute!.fareAmount}' : 'N/A',
       'paymentDate': formatDateTime(dispute!.paymentTime),
       'disputeExpiryDate': formatDateTime(dispute!.ticketCreationTime),
       'disputeReason': dispute!.disputeReason ?? 'N/A',
-      'disputeAmount': dispute!.disputeAmount != null ? '₹${dispute!.disputeAmount}' : 'N/A',
+      'disputeAmount':
+          dispute!.disputeAmount != null ? '₹${dispute!.disputeAmount}' : 'N/A',
       'disputeRemark': dispute!.remarks ?? 'N/A',
       'disputeStatus': dispute!.status ?? 'N/A',
-      'disputeRaisedBy': dispute!.userId != null ? 'User ${dispute!.userId}' : 'N/A',
+      'disputeRaisedBy':
+          dispute!.userId != null ? 'User ${dispute!.userId}' : 'N/A',
       'disputeRaisedDate': formatDateTime(dispute!.ticketCreationTime),
       'disputeProcessedBy': dispute!.processedBy ?? 'N/A',
       'disputeProcessedDate': dispute!.latestRemark != null

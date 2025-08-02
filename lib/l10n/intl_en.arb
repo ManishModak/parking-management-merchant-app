@@ -27,7 +27,7 @@
   "labelCompanyType": "Company Type",
   "labelCompanyName": "Company Name",
   "labelPlazaOrgId": "Plaza Org ID",
-  "failedToPickImages": "Failed To Pick Images: {error}",
+  "failedToPickImages": "Failed To Pick Images: ",
   "@failedToPickImages": {
     "description": "Error message shown when image picking fails",
     "placeholders": {
@@ -40,7 +40,7 @@
   "imageRemovedSuccess": "Image Removed Successfully",
   "imageRemoveFailed": "Image Remove Failed",
   "titlePlazaImages": "Plaza Images",
-  "failedToRefreshImages": "Failed to refresh images: {error}",
+  "failedToRefreshImages": "Failed to refresh images: ",
   "@failedToRefreshImages": {
     "description": "Error message shown when image refresh fails",
     "placeholders": {
@@ -448,7 +448,6 @@
   "noTicketsMatchSearch": "No tickets match your search criteria",
   "errorUnableToLoadTickets": "Unable to Load Tickets",
   "errorGeneric": "Something went wrong. Please try again.",
-  "buttonRetry": "Retry",
   "labelTicketId": "Ticket ID:",
   "labelEntryTime": "Entry Time",
   "labelVehicleNumber": "Vehicle Number",
@@ -457,11 +456,11 @@
   "errorRequestTimeout": "Request Timed Out",
   "errorRequestTimeoutMessage": "The server is taking too long to respond. Please try again later.",
   "errorServerError": "Server Error",
-  "errorServerErrorMessage": "We couldn’t reach the server. Please try again.",
+  "errorServerErrorMessage": "We couldn't reach the server. Please try again.",
   "errorInvalidRequestMessage": "The request was incorrect.",
   "errorUnauthorized": "Unauthorized",
   "errorUnauthorizedMessage": "Please log in again.",
-  "errorAccessDeniedMessage": "You don’t have permission.",
+  "errorAccessDeniedMessage": "You don't have permission.",
   "errorNotFound": "Not Found",
   "errorNotFoundMessage": "No open tickets were found.",
   "errorServerIssue": "Server Issue",
@@ -739,6 +738,9 @@
   "messageNoPlazasFound": "No plazas found",
   "buttonMarkExit": "Mark Exit",
   "errorMarkExitFailed": "Failed to mark exit",
+  "errorFareNotConfigured": "Fare not configured for this plaza. Please configure fare and retry.",
+  "buttonConfigureFare": "Configure Fare",
+  "labelOr": "OR",
   "ticketMarkedExitSuccess": "Marked Exit",
   "resendOtpInSeconds": "Resend OTP in {seconds} s",
   "@resendOtpInSeconds": {
@@ -819,13 +821,13 @@
   "errorMessageUnknown": "An unknown error occurred.",
   "messageNoImagesUploaded": "No images uploaded yet.",
   "plazaImagesTitle": "Plaza Images",
-  "messageFailedToPickImages": "Failed to pick images: {error}",
+  "messageFailedToPickImages": "Failed to pick images: ",
   "messageFailedToPickImages_error": "error details",
   "messageImageRemovedSuccess": "Image removed successfully!",
   "messageImageRemovedFailed": "Failed to remove image.",
-  "messageFailedToRefreshImages": "Failed to refresh images: {error}",
+  "messageFailedToRefreshImages": "Failed to refresh images: ",
   "messageFailedToRefreshImages_error": "error details",
-  "messageFailedToSaveImages": "Failed to save images: {error}",
+  "messageFailedToSaveImages": "Failed to save images: ",
   "messageFailedToSaveImages_error": "error details",
   "tooltipCancelChanges": "Cancel Changes",
   "tooltipSaveChanges": "Save Changes",
@@ -875,7 +877,7 @@
   "noTransactionsSubtitle": "You haven't made any transactions yet.",
   "refreshNotifications": "Refreshing notifications...",
   "noNotificationsTitle": "No Notifications",
-  "noNotificationsSubtitle": "You don’t have any notifications yet.",
+  "noNotificationsSubtitle": "You don't have any notifications yet.",
   "profileRefreshSuccess": "Profile refreshed successfully",
   "profileRefreshFailed": "Failed to refresh profile",
   "bankDetails": "Bank Details",
@@ -978,7 +980,7 @@
   "validationInvalidEmail": "Please enter a valid email address",
   "validationInvalidEmail_description": "Error when email format is invalid",
   "validationInvalidNumber": "{field} must be a valid number",
-  "validationInvalidNumber_description": "Error when a field isn’t a valid number",
+  "validationInvalidNumber_description": "Error when a field isn't a valid number",
   "@validationInvalidNumber": {
     "placeholders": {
       "field": {}
@@ -994,7 +996,7 @@
     }
   },
   "validationSelectRequired": "Please select {field}",
-  "validationSelectRequired_description": "Error when a dropdown isn’t selected",
+  "validationSelectRequired_description": "Error when a dropdown isn't selected",
   "@validationSelectRequired": {
     "placeholders": {
       "field": {}
@@ -1020,7 +1022,7 @@
   "messageFeatureNotImplemented": "This feature is not yet implemented.",
   "messageNoLanesAvailable": "No filters available at this time.",
   "plazaInfoTitle": "Plaza Information",
-  "errorLoadingPlazaDetails": "Error loading plaza details: {error}",
+  "errorLoadingPlazaDetails": "Error loading plaza details: ",
   "@errorLoadingPlazaDetails": {
     "description": "Error message with details for loading plaza details",
     "placeholders": {
@@ -1132,7 +1134,7 @@
     "description": "Message shown when trying to open the filter dialog but there are no statuses (or other criteria) to filter by."
   },
   "validationClosingAfterOpening": "Closing time must be after opening time",
-  "validationClosingAfterOpening_description": "Error when closing time isn’t after opening time",
+  "validationClosingAfterOpening_description": "Error when closing time isn't after opening time",
   "validationParkingSlotSum": "Total slots ({total}) must be at least the sum of individual capacities ({sum})",
   "validationParkingSlotSum_description": "Error when total slots are less than sum of capacities",
   "@validationParkingSlotSum": {
@@ -1199,14 +1201,14 @@
   "noInternetError": "No Internet Connection: Please check your connection and try again.",
   "timeoutError": "Request Timed Out: Server took too long to respond. Please try again.",
   "messageWarningImagesLimited": "Only {0} images can be added. Extra selections ignored.",
-  "imageCaptureError": "Error capturing image: {error}",
+  "imageCaptureError": "Error capturing image: ",
   "plazaIdRequired": "Plaza ID is required",
   "laneIdRequired": "Entry Lane ID is required",
   "errorUpdatingLane": "Error updating lane. Please try again.",
   "imageRequired": "Please capture at least one vehicle image",
   "vehicleNumberError": "Vehicle number must be between 1 and 20 characters",
   "vehicleTypeRequired": "Vehicle type is required",
-  "ticketCreationError": "Failed to create ticket: {error}",
+  "ticketCreationError": "Failed to create ticket: ",
   "dialogContentLanesModified": "Lanes Details Modified Successfully",
   "titleEditNewLane": "Edit New Lane",
   "validationGeneralError": "Please complete all required fields correctly",
@@ -1289,8 +1291,8 @@
 
   "validationInvalidIfscFormat": "Please enter a valid IFSC code format (e.g., SBIN0123456)",
   "noUserIdError": "No user ID found. Please log in again.",
-  "plazaFetchError": "Failed to fetch plazas: {error}",
-  "laneFetchError": "Failed to fetch lanes: {error}",
+  "plazaFetchError": "Failed to fetch plazas: ",
+  "laneFetchError": "Failed to fetch lanes: ",
   "@noUserIdError": {
     "description": "Error message when no user ID is found in secure storage."
   },
@@ -1478,7 +1480,7 @@
   },
   "errorInvalidRecordStatus": "Cannot update lane: Invalid record status.",
   "@errorInvalidRecordStatus": {
-    "description": "Error message when the original lane’s record status is missing or invalid."
+    "description": "Error message when the original lane's record status is missing or invalid."
   },
   "errorEditingDisabled": "Editing is currently disabled.",
   "@errorEditingDisabled": {
@@ -1599,9 +1601,9 @@
   "buttonNo": "No",
   "locationServiceDisabled": "Location services are disabled. Please enable them.",
   "locationPermissionDeniedForever": "Location permission permanently denied. Please enable it in settings.",
-  "locationFetchError": "Failed to fetch location: {error}",
-  "locationRequired": "Location is required to create a ticket.",
+  "locationFetchError": "Failed to fetch location: ",
   "buttonYes": "Yes",
+  "userModified": "User Modified Successfully",
   "labelBaseRate": "Base Rate",
   "titleEditFare": "Edit Fare",
   "titleViewFare": "View Fare",
@@ -1978,5 +1980,10 @@
   "anprFailedMessage": "Automatic Number Plate Recognition failed to identify vehicle details. Please try again or use manual entry.",
   "locationRequired": "Location Required",
   "buttonRetry": "Retry",
-  "buttonSettings": "Settings"
+  "buttonSubmitting": "Submitting",
+  "messageCollectCashConfirmation": "Collect Cash Amount",
+  "buttonDone": "Done",
+  "validationFailedTitle": "Validation Failed",
+  "errorFareNotConfigured": "Fare not configured for this plaza.",
+  "ticketMarkedExitSuccess": "Marked Exit"
 }

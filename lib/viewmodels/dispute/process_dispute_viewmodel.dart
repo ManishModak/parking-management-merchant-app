@@ -48,26 +48,31 @@ class ProcessDisputeViewModel extends ChangeNotifier {
 
   Future<void> pickFile() async {
     try {
-      developer.log('Attempting to pick files with FileType.custom', name: 'ProcessDisputeViewModel.PickFile');
+      developer.log('Attempting to pick files with FileType.custom',
+          name: 'ProcessDisputeViewModel.PickFile');
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
         allowMultiple: true,
       );
-      developer.log('FilePicker result: ${result?.paths}', name: 'ProcessDisputeViewModel.PickFile');
+      developer.log('FilePicker result: ${result?.paths}',
+          name: 'ProcessDisputeViewModel.PickFile');
 
       if (result != null) {
-        filePaths.addAll(result.paths.where((path) => path != null).cast<String>());
+        filePaths
+            .addAll(result.paths.where((path) => path != null).cast<String>());
         fileError = null;
       } else {
         fileError = 'No files selected';
       }
     } catch (e) {
       fileError = 'Error picking files: $e';
-      developer.log('Error picking files: $e', name: 'ProcessDisputeViewModel.PickFile');
+      developer.log('Error picking files: $e',
+          name: 'ProcessDisputeViewModel.PickFile');
       if (e.toString().contains('MissingPluginException')) {
         try {
-          FilePickerResult? fallbackResult = await FilePicker.platform.pickFiles(
+          FilePickerResult? fallbackResult =
+              await FilePicker.platform.pickFiles(
             type: FileType.any,
             allowMultiple: true,
           );
@@ -75,8 +80,9 @@ class ProcessDisputeViewModel extends ChangeNotifier {
             final allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
             filePaths.addAll(fallbackResult.paths
                 .where((path) =>
-            path != null &&
-                allowedExtensions.contains(path.split('.').last.toLowerCase()))
+                    path != null &&
+                    allowedExtensions
+                        .contains(path.split('.').last.toLowerCase()))
                 .cast<String>());
             fileError = filePaths.isEmpty ? 'No valid files selected' : null;
           } else {
@@ -131,7 +137,8 @@ class ProcessDisputeViewModel extends ChangeNotifier {
       final disputes = await _disputesService.getDisputesByTicket(ticketId);
       if (disputes.isNotEmpty) {
         dispute = disputes.first;
-        developer.log('[ProcessDisputeViewModel] Fetched dispute for ticket $ticketId',
+        developer.log(
+            '[ProcessDisputeViewModel] Fetched dispute for ticket $ticketId',
             name: 'ProcessDisputeViewModel');
       } else {
         error = 'No dispute found for ticket ID: $ticketId';
@@ -151,7 +158,8 @@ class ProcessDisputeViewModel extends ChangeNotifier {
       return {};
     }
 
-    final payment = ticket!.payments?.isNotEmpty ?? false ? ticket!.payments!.first : null;
+    final payment =
+        ticket!.payments?.isNotEmpty ?? false ? ticket!.payments!.first : null;
     final entryTime = ticket!.entryTime;
     final exitTime = ticket!.exitTime;
 
@@ -164,7 +172,9 @@ class ProcessDisputeViewModel extends ChangeNotifier {
     String? formatDateTime(dynamic dateTime) {
       if (dateTime == null) return 'N/A';
       try {
-        final parsedDate = dateTime is String ? DateTime.parse(dateTime) : dateTime as DateTime;
+        final parsedDate = dateTime is String
+            ? DateTime.parse(dateTime)
+            : dateTime as DateTime;
         return _dateFormat.format(parsedDate);
       } catch (e) {
         developer.log('Error formatting date: $dateTime, error: $e',
@@ -175,22 +185,27 @@ class ProcessDisputeViewModel extends ChangeNotifier {
 
     return {
       'ticketId': dispute!.ticketId ?? 'N/A',
-      'plazaName': dispute!.plazaId != null ? 'Plaza ${dispute!.plazaId}' : 'N/A',
+      'plazaName':
+          dispute!.plazaId != null ? 'Plaza ${dispute!.plazaId}' : 'N/A',
       'vehicleNumber': dispute!.vehicleNumber ?? 'N/A',
       'vehicleType': dispute!.vehicleType ?? 'N/A',
       'vehicleEntryTime': formatDateTime(entryTime),
       'vehicleExitTime': formatDateTime(exitTime),
       'parkingDuration': parkingDuration ?? dispute!.parkingDuration ?? 'N/A',
-      'paymentAmount': dispute!.paymentAmount != null ? '₹${dispute!.paymentAmount}' : 'N/A',
+      'paymentAmount':
+          dispute!.paymentAmount != null ? '₹${dispute!.paymentAmount}' : 'N/A',
       'fareType': payment?.fareType ?? 'N/A',
-      'fareAmount': dispute!.fareAmount != null ? '₹${dispute!.fareAmount}' : 'N/A',
+      'fareAmount':
+          dispute!.fareAmount != null ? '₹${dispute!.fareAmount}' : 'N/A',
       'paymentDate': formatDateTime(dispute!.paymentTime),
       'disputeExpiryDate': formatDateTime(dispute!.ticketCreationTime),
       'disputeReason': dispute!.disputeReason ?? 'N/A',
-      'disputeAmount': dispute!.disputeAmount != null ? '₹${dispute!.disputeAmount}' : 'N/A',
+      'disputeAmount':
+          dispute!.disputeAmount != null ? '₹${dispute!.disputeAmount}' : 'N/A',
       'disputeRemark': dispute!.remarks ?? 'N/A',
       'disputeStatus': dispute!.status ?? 'N/A',
-      'disputeRaisedBy': dispute!.userId != null ? 'User ${dispute!.userId}' : 'N/A',
+      'disputeRaisedBy':
+          dispute!.userId != null ? 'User ${dispute!.userId}' : 'N/A',
       'disputeRaisedDate': formatDateTime(dispute!.ticketCreationTime),
       'disputeProcessedBy': dispute!.processedBy ?? 'N/A',
       'disputeProcessedDate': dispute!.latestRemark != null
@@ -200,7 +215,10 @@ class ProcessDisputeViewModel extends ChangeNotifier {
   }
 
   Future<bool> submitDisputeAction(String processedBy) async {
-    if (isLoading || !validateInputs() || dispute == null || dispute!.disputeId == null) {
+    if (isLoading ||
+        !validateInputs() ||
+        dispute == null ||
+        dispute!.disputeId == null) {
       error = dispute == null || dispute!.disputeId == null
           ? 'No dispute loaded to process'
           : error;
@@ -224,8 +242,9 @@ class ProcessDisputeViewModel extends ChangeNotifier {
         selectedAction = null;
         remark = '';
         filePaths.clear();
-        await fetchDisputeDetails(dispute!.ticketId!);
-        developer.log('[ProcessDisputeViewModel] Processed dispute ID: ${dispute!.disputeId}',
+        await fetchDisputeDetails(dispute!.ticketId);
+        developer.log(
+            '[ProcessDisputeViewModel] Processed dispute ID: ${dispute!.disputeId}',
             name: 'ProcessDisputeViewModel');
       }
       return success;
