@@ -35,6 +35,10 @@ CityPark Merchant App is a comprehensive parking management solution that enable
 - **Geolocation**: Location-based services
 - **Real-time Communication**: WebSocket and Socket.IO integration
 
+## 📱 Demo
+
+**Screen Recording of the App**: [Watch the app in action](https://drive.google.com/file/d/19jxe3WODNVjl6a4ZXgAJnHCSE6ZMwmCl/view?usp=sharing)
+
 ## 📋 Requirements
 
 ### System Requirements
